@@ -1,59 +1,133 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { supabase } from '../supabase' // Conecta com o seu banco de dados
+import { supabase } from '../supabase'
 
-// Estado das mesas
+const props = defineProps({
+  currentUser: Object,
+})
+
+// --- CONFIGURAÇÃO INICIAL ---
+const viewMode = ref('salon')
+
 const tables = ref([
-  { id: 1, number: 1, status: 'Livre', total: 0, items: [] },
-  { id: 2, number: 2, status: 'Livre', total: 0, items: [] },
-  { id: 3, number: 3, status: 'Livre', total: 0, items: [] },
-  { id: 4, number: 4, status: 'Livre', total: 0, items: [] },
+  {
+    id: 1,
+    number: 1,
+    type: 'table',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+  {
+    id: 2,
+    number: 2,
+    type: 'table',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+  {
+    id: 3,
+    number: 3,
+    type: 'table',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+  {
+    id: 4,
+    number: 4,
+    type: 'table',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
 ])
 
-const activeTable = ref(null)
+const rooms = ref([
+  {
+    id: 101,
+    number: 101,
+    type: 'room',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+  {
+    id: 102,
+    number: 102,
+    type: 'room',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+  {
+    id: 201,
+    number: 201,
+    type: 'room',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+])
 
-// Lista de produtos que virá do Supabase
+const activeItem = ref(null)
 const availableProducts = ref([])
-
 const selectedProduct = ref('')
 const selectedQuantity = ref(1)
 
-// Busca os produtos reais no banco de dados
+const showReceipt = ref(false)
+const receiptData = ref(null)
+
+// --- BUSCA PRODUTOS ---
 const fetchProducts = async () => {
-  try {
-    const { data, error } = await supabase.from('products').select('*').order('name')
+  const { data } = await supabase.from('products').select('*').order('name')
+  if (data) availableProducts.value = data
+}
 
-    if (error) throw error
-    if (data) availableProducts.value = data
-  } catch (err) {
-    console.error('Erro ao buscar produtos:', err.message)
+onMounted(fetchProducts)
+
+// --- LÓGICA DE ABERTURA ---
+const openItem = (item) => {
+  activeItem.value = item
+  if (item.status === 'Livre') {
+    item.status = 'Ocupada'
+  }
+  selectedProduct.value = ''
+  selectedQuantity.value = 1
+}
+
+const closeItem = () => {
+  activeItem.value = null
+}
+
+// --- TRUQUE MOBILE: Botões de + e - ---
+const changeQuantity = (amount) => {
+  if (selectedQuantity.value + amount >= 1) {
+    selectedQuantity.value += amount
   }
 }
 
-// Quando a tela abre, ele roda a busca
-onMounted(() => {
-  fetchProducts()
-})
-
-// --- FUNÇÕES DA MESA ---
-const openTable = (table) => {
-  activeTable.value = table
-  if (table.status === 'Livre') {
-    table.status = 'Ocupada'
-  }
-}
-
-const closeTable = () => {
-  activeTable.value = null
-}
-
+// --- LÓGICA DE ITENS ---
 const addItem = () => {
   if (!selectedProduct.value || selectedQuantity.value < 1) return
-
-  // Calcula o valor (preço unitário real do banco x quantidade)
   const itemTotal = selectedProduct.value.unit_price * selectedQuantity.value
 
-  activeTable.value.items.push({
+  activeItem.value.items.push({
     id: Date.now(),
     name: selectedProduct.value.name,
     price: selectedProduct.value.unit_price,
@@ -61,344 +135,530 @@ const addItem = () => {
     total: itemTotal,
   })
 
-  updateTableTotal()
+  updateTotal()
   selectedProduct.value = ''
   selectedQuantity.value = 1
 }
 
 const removeItem = (itemId) => {
-  activeTable.value.items = activeTable.value.items.filter((item) => item.id !== itemId)
-  updateTableTotal()
+  activeItem.value.items = activeItem.value.items.filter((item) => item.id !== itemId)
+  updateTotal()
 }
 
-const updateTableTotal = () => {
-  activeTable.value.total = activeTable.value.items.reduce((soma, item) => soma + item.total, 0)
-  if (activeTable.value.items.length === 0) {
-    activeTable.value.status = 'Livre'
-  }
+const updateTotal = () => {
+  activeItem.value.total = activeItem.value.items.reduce((s, i) => s + i.total, 0)
 }
 
+// --- RECIBO E PAGAMENTO ---
 const payCommand = () => {
-  alert(`Pagamento de R$ ${activeTable.value.total.toFixed(2)} recebido com sucesso!`)
-  activeTable.value.items = []
-  activeTable.value.total = 0
-  activeTable.value.status = 'Livre'
-  activeTable.value = null
+  receiptData.value = {
+    type: activeItem.value.type,
+    number: activeItem.value.number,
+    items: [...activeItem.value.items],
+    total: activeItem.value.total,
+    customer_name: activeItem.value.customer_name,
+    customer_phone: activeItem.value.customer_phone,
+    date: new Date().toLocaleString('pt-BR'),
+  }
+  showReceipt.value = true
+}
+
+const printReceipt = () => {
+  window.print()
+}
+
+const finalizePayment = async () => {
+  try {
+    const { error } = await supabase.from('sales').insert([
+      {
+        table_number: receiptData.value.number,
+        total_amount: receiptData.value.total,
+        cashier_name: props.currentUser?.username || 'Desconhecido',
+        customer_name: receiptData.value.customer_name,
+        customer_phone: receiptData.value.customer_phone,
+        items: receiptData.value.items,
+      },
+    ])
+
+    if (error) throw error
+
+    activeItem.value.items = []
+    activeItem.value.total = 0
+    activeItem.value.status = 'Livre'
+    activeItem.value.customer_name = ''
+    activeItem.value.customer_phone = ''
+    activeItem.value = null
+    showReceipt.value = false
+    alert('Venda registrada com sucesso no cofre!')
+  } catch (err) {
+    alert('Erro ao salvar no cofre: ' + err.message)
+  }
 }
 </script>
 
 <template>
-  <div class="table-manager">
-    <div v-if="!activeTable" class="salon-view">
-      <header class="header">
-        <h1 class="title">Salão - Mesas e Comandas</h1>
-      </header>
+  <div class="pdv-container">
+    <div v-if="!activeItem" class="mode-selector no-print">
+      <button :class="{ active: viewMode === 'salon' }" @click="viewMode = 'salon'">
+        ☕ Salão (Mesas)
+      </button>
+      <button :class="{ active: viewMode === 'hospital' }" @click="viewMode = 'hospital'">
+        🏥 Hospital (Quartos)
+      </button>
+    </div>
 
-      <div class="tables-grid">
+    <div v-if="!activeItem" class="grid-view no-print">
+      <div class="cards-grid">
         <div
-          v-for="table in tables"
-          :key="table.id"
-          class="table-card"
-          :class="table.status === 'Livre' ? 'free' : 'occupied'"
-          @click="openTable(table)"
+          v-for="item in viewMode === 'salon' ? tables : rooms"
+          :key="item.id"
+          class="item-card"
+          :class="item.status === 'Livre' ? 'free' : 'occupied'"
+          @click="openItem(item)"
         >
-          <h2>Mesa {{ table.number.toString().padStart(2, '0') }}</h2>
-          <p class="status">{{ table.status }}</p>
-          <p v-if="table.status === 'Ocupada'" class="total">R$ {{ table.total.toFixed(2) }}</p>
-          <button class="btn-action">
-            {{ table.status === 'Livre' ? 'Abrir Mesa' : 'Ver Comanda' }}
-          </button>
+          <h3>{{ viewMode === 'salon' ? 'Mesa' : 'Quarto' }} {{ item.number }}</h3>
+          <p class="status">{{ item.status }}</p>
+          <p v-if="item.customer_name" class="customer-info">👤 {{ item.customer_name }}</p>
+          <p v-if="item.status === 'Ocupada'" class="total-tag">R$ {{ item.total.toFixed(2) }}</p>
         </div>
       </div>
     </div>
 
-    <div v-else class="command-view">
-      <header class="header command-header">
-        <div>
-          <button @click="closeTable" class="btn-back">← Voltar pro Salão</button>
-          <h1 class="title">Comanda: Mesa {{ activeTable.number.toString().padStart(2, '0') }}</h1>
-        </div>
-        <div class="command-total-display">Total: R$ {{ activeTable.total.toFixed(2) }}</div>
+    <div v-else class="command-view no-print">
+      <header class="command-header">
+        <button @click="closeItem" class="btn-back">← Voltar</button>
+        <h2>{{ activeItem.type === 'table' ? 'Mesa' : 'Quarto' }} {{ activeItem.number }}</h2>
+        <div class="total-badge">R$ {{ activeItem.total.toFixed(2) }}</div>
       </header>
 
-      <div class="command-layout">
-        <section class="add-item-panel">
-          <h2>Adicionar Pedido</h2>
-          <div class="form-group">
-            <label>Selecione o Produto</label>
-            <select v-model="selectedProduct">
-              <option value="" disabled>Escolha um produto...</option>
-              <option v-for="product in availableProducts" :key="product.id" :value="product">
-                {{ product.name }} - R$ {{ product.unit_price.toFixed(2) }}
-              </option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Quantidade</label>
-            <input type="number" v-model="selectedQuantity" min="1" />
-          </div>
-          <button @click="addItem" class="btn-add">Adicionar à Comanda</button>
-        </section>
+      <div v-if="activeItem.type === 'room'" class="glass-panel hospital-fields">
+        <div class="form-group">
+          <label>Nome do Paciente/Acompanhante</label>
+          <input type="text" v-model="activeItem.customer_name" placeholder="Ex: Maria Souza" />
+        </div>
+        <div class="form-group">
+          <label>Telefone/Ramal</label>
+          <input type="text" v-model="activeItem.customer_phone" placeholder="(11) 99999-9999" />
+        </div>
+      </div>
 
-        <section class="items-list-panel">
-          <h2>Itens na Mesa</h2>
-          <div v-if="activeTable.items.length === 0" class="empty-state">
-            Nenhum produto adicionado ainda.
-          </div>
-          <table v-else class="data-table">
-            <thead>
-              <tr>
-                <th>Qtd</th>
-                <th>Produto</th>
-                <th>Total</th>
-                <th>Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in activeTable.items" :key="item.id">
-                <td>{{ item.quantity }}x</td>
-                <td>{{ item.name }}</td>
-                <td class="item-value">R$ {{ item.total.toFixed(2) }}</td>
-                <td><button @click="removeItem(item.id)" class="btn-remove">X</button></td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="glass-panel add-item-panel">
+        <div class="form-group">
+          <label>Produto</label>
+          <select v-model="selectedProduct" class="big-select">
+            <option value="" disabled>Selecione um produto...</option>
+            <option v-for="p in availableProducts" :key="p.id" :value="p">
+              {{ p.name }} - R$ {{ p.unit_price.toFixed(2) }}
+            </option>
+          </select>
+        </div>
 
-          <button v-if="activeTable.items.length > 0" @click="payCommand" class="btn-pay">
-            Encerrar e Pagar
-          </button>
-        </section>
+        <div class="form-group quantity-group">
+          <label>Quantidade</label>
+          <div class="qty-controls">
+            <button @click="changeQuantity(-1)" class="btn-qty">-</button>
+            <span class="qty-display">{{ selectedQuantity }}</span>
+            <button @click="changeQuantity(1)" class="btn-qty">+</button>
+          </div>
+        </div>
+
+        <button @click="addItem" class="btn-add">Adicionar Pedido</button>
+      </div>
+
+      <div class="glass-panel items-list-panel">
+        <h3>Itens Adicionados</h3>
+        <p v-if="activeItem.items.length === 0" class="empty-state">Comanda vazia.</p>
+
+        <div v-else class="mobile-items-list">
+          <div v-for="item in activeItem.items" :key="item.id" class="mobile-item">
+            <div class="item-details">
+              <span class="item-name">{{ item.quantity }}x {{ item.name }}</span>
+              <span class="item-price">R$ {{ item.total.toFixed(2) }}</span>
+            </div>
+            <button @click="removeItem(item.id)" class="btn-remove">🗑️</button>
+          </div>
+        </div>
+
+        <button
+          v-if="activeItem.items.length > 0 && props.currentUser?.role !== 'garcom'"
+          @click="payCommand"
+          class="btn-pay"
+        >
+          Encerrar e Pagar
+        </button>
+        <p v-if="props.currentUser?.role === 'garcom'" class="garcom-aviso">
+          Apenas o Caixa pode fechar e receber o pagamento.
+        </p>
+      </div>
+    </div>
+
+    <div v-if="showReceipt" class="receipt-modal-overlay no-print">
+      <div class="receipt-modal-content">
+        <h2>Pagamento Pronto!</h2>
+        <div class="modal-actions">
+          <button @click="printReceipt" class="btn-print">🖨️ Imprimir Recibo</button>
+          <button @click="finalizePayment" class="btn-close-receipt">Confirmar no Sistema</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showReceipt" class="printable-receipt">
+      <div class="receipt-header">
+        <h2>☕ DR. CAFÉ</h2>
+        <p>Atendimento Hospitalar</p>
+        <hr />
+        <p><strong>CUPOM NÃO FISCAL</strong></p>
+        <p>{{ activeItem.type === 'table' ? 'Mesa' : 'Quarto' }}: {{ receiptData.number }}</p>
+        <p v-if="receiptData.customer_name">Cliente: {{ receiptData.customer_name }}</p>
+        <p>Data: {{ receiptData.date }}</p>
+        <hr />
+      </div>
+      <table class="receipt-table">
+        <tr>
+          <th>Qtd</th>
+          <th>Item</th>
+          <th>Total</th>
+        </tr>
+        <tr v-for="item in receiptData.items" :key="item.id">
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.name }}</td>
+          <td>{{ item.total.toFixed(2) }}</td>
+        </tr>
+      </table>
+      <div class="receipt-footer">
+        <hr />
+        <h3>TOTAL: R$ {{ receiptData.total.toFixed(2) }}</h3>
+        <hr />
+        <p>Obrigado e melhoras!</p>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.table-manager {
-  color: #3e2723;
-  background-color: #fafafa;
-  padding: 20px;
-  min-height: 100vh;
-}
-.header {
-  border-bottom: 2px solid #5d4037;
+/* --- ESTILOS GERAIS E CARTÕES --- */
+.mode-selector {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
   margin-bottom: 30px;
-  padding-bottom: 15px;
+  flex-wrap: wrap;
 }
-.title {
-  font-size: 2em;
-  font-weight: 300;
-  margin: 0;
-  color: #3e2723;
+.mode-selector button {
+  padding: 12px 25px;
+  border-radius: 30px;
+  border: 2px solid var(--coffee-dark);
+  font-weight: bold;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--coffee-dark);
+  transition: 0.3s;
+}
+.mode-selector button.active {
+  background: var(--coffee-dark);
+  color: white;
 }
 
-/* Salão */
-.tables-grid {
+.cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 15px;
 }
-.table-card {
-  border: 2px solid #d7ccc8;
-  border-radius: 8px;
+.item-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(5px);
   padding: 20px;
+  border-radius: 15px;
   text-align: center;
-  background-color: white;
   cursor: pointer;
-  transition: transform 0.2s;
+  border-bottom: 5px solid var(--coffee-light);
+  transition: 0.2s;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
-.table-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+.item-card.occupied {
+  border-bottom-color: var(--accent);
+  background: #efe8dd;
 }
-.table-card h2 {
+.item-card h3 {
   margin: 0 0 10px 0;
-  color: #3e2723;
-  font-size: 1.8em;
+  font-size: 1.5em;
 }
 .status {
   font-weight: bold;
-  margin-bottom: 10px;
-  font-size: 1.1em;
-}
-
-.free {
-  border-top: 8px solid #81c784;
-}
-.free .status {
-  color: #388e3c;
-}
-
-.occupied {
-  border-top: 8px solid #e57373;
+  margin-bottom: 5px;
 }
 .occupied .status {
   color: #d32f2f;
 }
-.occupied .total {
-  font-size: 1.3em;
-  color: #5d4037;
-  margin-bottom: 15px;
+.customer-info {
+  font-size: 0.85em;
+  color: var(--coffee-medium);
+  margin: 5px 0;
   font-weight: bold;
 }
-
-.btn-action {
-  background-color: #5d4037;
-  color: white;
-  border: none;
-  padding: 10px;
-  width: 100%;
-  border-radius: 4px;
+.total-tag {
+  font-size: 1.2em;
+  color: var(--accent);
   font-weight: bold;
-  pointer-events: none;
+  margin-top: 10px;
 }
 
-/* Dentro da Comanda */
+/* --- COMANDA OTIMIZADA PARA MOBILE --- */
 .command-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 .btn-back {
-  background: none;
+  background: var(--coffee-medium);
+  color: white;
   border: none;
-  color: #795548;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-weight: bold;
   cursor: pointer;
-  font-weight: bold;
-  font-size: 1em;
-  padding: 0;
-  margin-bottom: 5px;
 }
-.btn-back:hover {
-  color: #3e2723;
-  text-decoration: underline;
-}
-.command-total-display {
-  background-color: #eefeeb;
-  color: #2e7d32;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 1.5em;
+.total-badge {
+  background: #2e7d32;
+  color: white;
+  padding: 8px 15px;
+  border-radius: 20px;
   font-weight: bold;
-  border: 1px solid #c8e6c9;
+  font-size: 1.2em;
 }
 
-.command-layout {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 20px;
-}
-@media (max-width: 768px) {
-  .command-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.add-item-panel,
-.items-list-panel {
-  background: #fff;
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
   padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-}
-.add-item-panel h2,
-.items-list-panel h2 {
-  color: #5d4037;
-  border-bottom: 1px solid #d7ccc8;
-  padding-bottom: 10px;
-  margin-top: 0;
+  border-radius: 15px;
   margin-bottom: 20px;
-  font-weight: 400;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
+/* Campos de Formulário Grandes */
+.hospital-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+}
 .form-group {
   margin-bottom: 15px;
 }
 .form-group label {
   display: block;
   font-weight: bold;
-  margin-bottom: 5px;
-  color: #3e2723;
+  color: var(--coffee-dark);
+  margin-bottom: 8px;
 }
-.form-group select,
-.form-group input {
+input,
+.big-select {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #d7ccc8;
-  border-radius: 4px;
-  box-sizing: border-box;
-  font-size: 1em;
+  padding: 15px;
+  border: 1px solid var(--coffee-light);
+  border-radius: 8px;
+  font-size: 1.1em;
+  background: white;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Controles de Quantidade Mobile */
+.quantity-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: white;
+  border: 1px solid var(--coffee-light);
+  border-radius: 30px;
+  padding: 5px;
+}
+.btn-qty {
+  background: var(--coffee-light);
+  border: none;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  font-size: 1.5em;
+  font-weight: bold;
+  color: var(--coffee-dark);
+  cursor: pointer;
+  transition: 0.2s;
+}
+.btn-qty:active {
+  background: var(--accent);
+  color: white;
+}
+.qty-display {
+  font-size: 1.5em;
+  font-weight: bold;
+  width: 40px;
+  text-align: center;
 }
 
 .btn-add {
-  background-color: #5d4037;
+  background: var(--coffee-dark);
   color: white;
   border: none;
-  padding: 12px;
   width: 100%;
-  border-radius: 4px;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 1.2em;
   font-weight: bold;
   cursor: pointer;
-  font-size: 1em;
   margin-top: 10px;
 }
-.btn-add:hover {
-  background-color: #3e2723;
-}
 
-.empty-state {
-  text-align: center;
-  color: #795548;
-  font-style: italic;
-  padding: 20px;
+/* Lista de Itens Estilo App */
+.mobile-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
+.mobile-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid var(--accent);
 }
-.data-table th,
-.data-table td {
-  padding: 10px;
-  text-align: left;
-  border-bottom: 1px solid #d7ccc8;
-  color: #3e2723;
+.item-details {
+  display: flex;
+  flex-direction: column;
 }
-.data-table th {
-  background-color: #f5f5f5;
-  color: #5d4037;
-}
-.item-value {
+.item-name {
   font-weight: bold;
-  color: #3e2723;
+  font-size: 1.1em;
 }
-
+.item-price {
+  color: #2e7d32;
+  font-size: 0.9em;
+  margin-top: 5px;
+}
 .btn-remove {
-  background-color: #ffebee;
+  background: #ffebee;
+  border: none;
   color: #c62828;
-  border: 1px solid #ffcdd2;
-  border-radius: 4px;
-  padding: 5px 10px;
+  padding: 10px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
-}
-.btn-remove:hover {
-  background-color: #ffcdd2;
+  font-size: 1.2em;
 }
 
 .btn-pay {
-  background-color: #388e3c;
+  background: #2e7d32;
+  color: white;
+  width: 100%;
+  padding: 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.3em;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+  box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3);
+}
+.garcom-aviso {
+  text-align: center;
+  color: #d32f2f;
+  font-weight: bold;
+  background: #ffebee;
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+/* MODAL E IMPRESSÃO (Mantido igual) */
+.receipt-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.receipt-modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+}
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+.btn-print {
+  background: var(--coffee-dark);
   color: white;
   border: none;
   padding: 15px;
-  width: 100%;
-  border-radius: 4px;
+  border-radius: 8px;
+  font-size: 1.1em;
+  cursor: pointer;
+}
+.btn-close-receipt {
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  padding: 15px;
+  border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
-  font-size: 1.2em;
-  margin-top: 20px;
 }
-.btn-pay:hover {
-  background-color: #2e7d32;
+
+@media print {
+  @page {
+    margin: 0;
+    size: 80mm auto;
+  }
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body,
+  .pdv-container {
+    height: auto !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white;
+  }
+  .printable-receipt {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 5px;
+    width: 80mm !important;
+    margin: 0;
+  }
+  .receipt-header,
+  .receipt-footer {
+    text-align: center;
+  }
+  .receipt-table {
+    width: 100%;
+    text-align: left;
+    border-collapse: collapse;
+    margin: 10px 0;
+  }
+  .receipt-table th {
+    border-bottom: 1px dashed black;
+  }
+  hr {
+    border-top: 1px dashed black;
+  }
 }
 </style>

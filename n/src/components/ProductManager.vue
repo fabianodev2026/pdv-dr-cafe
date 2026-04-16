@@ -1,53 +1,104 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { supabase } from '../supabase'
+import { supabase } from '../supabase' // Conexão com o banco
 
 const products = ref([])
-const newProduct = ref({ name: '', unit_price: 0, description: '' })
-const loading = ref(false)
-const error = ref(null)
 
+// Variável que guarda os dados do formulário
+const newProduct = ref({ name: '', price: '', description: '' })
+
+// MÁGICA NOVA: Essa variável descobre se estamos CRIANDO ou EDITANDO um produto
+const editingId = ref(null)
+
+// 1. Busca os produtos na nuvem
 const fetchProducts = async () => {
-  loading.value = true
-  error.value = null
   try {
-    const { data, fetchError } = await supabase
-      .from('products')
-      .select('*')
-      .order('name', { ascending: true })
-    if (fetchError) throw fetchError
+    const { data, error } = await supabase.from('products').select('*').order('name')
+    if (error) throw error
     if (data) products.value = data
   } catch (err) {
-    error.value = err.message
-  } finally {
-    loading.value = false
+    console.error('Erro ao buscar produtos:', err.message)
   }
 }
 
-const addProduct = async () => {
-  loading.value = true
-  error.value = null
+// 2. Salva (ou Atualiza) o produto
+const saveProduct = async () => {
+  if (!newProduct.value.name || !newProduct.value.price) {
+    alert('Preencha o nome e o preço!')
+    return
+  }
+
   try {
-    const { data, addError } = await supabase
-      .from('products')
-      .insert([
+    if (editingId.value) {
+      // MODO EDIÇÃO: Atualiza o produto existente
+      const { error } = await supabase
+        .from('products')
+        .update({
+          name: newProduct.value.name,
+          unit_price: parseFloat(newProduct.value.price),
+          description: newProduct.value.description,
+        })
+        .eq('id', editingId.value) // Atualiza APENAS o produto com este ID
+
+      if (error) throw error
+      alert('Produto atualizado com sucesso!')
+    } else {
+      // MODO CRIAÇÃO: Insere um produto novo
+      const { error } = await supabase.from('products').insert([
         {
           name: newProduct.value.name,
-          unit_price: parseFloat(newProduct.value.unit_price),
+          unit_price: parseFloat(newProduct.value.price),
           description: newProduct.value.description,
         },
       ])
-      .select()
-    if (addError) throw addError
-    if (data) products.value = [...products.value, data[0]]
-    newProduct.value = { name: '', unit_price: 0, description: '' }
+
+      if (error) throw error
+    }
+
+    // Limpa o formulário e busca a lista atualizada
+    cancelEdit()
+    fetchProducts()
   } catch (err) {
-    error.value = err.message
-  } finally {
-    loading.value = false
+    console.error('Erro ao salvar produto:', err.message)
   }
 }
 
+// 3. Prepara o formulário para edição (Botão de Lápis)
+const editProduct = (product) => {
+  editingId.value = product.id
+  newProduct.value = {
+    name: product.name,
+    price: product.unit_price,
+    description: product.description || '',
+  }
+  // Rola a tela para o topo suavemente para a pessoa ver o formulário
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// 4. Cancela a edição e limpa o formulário
+const cancelEdit = () => {
+  editingId.value = null
+  newProduct.value = { name: '', price: '', description: '' }
+}
+
+// 5. Apaga o produto do banco (Botão de Lixeira)
+const deleteProduct = async (id, name) => {
+  // Pede uma confirmação antes de apagar para evitar acidentes
+  const confirmDelete = confirm(`Tem certeza que deseja apagar o produto "${name}"?`)
+  if (!confirmDelete) return
+
+  try {
+    const { error } = await supabase.from('products').delete().eq('id', id)
+
+    if (error) throw error
+    fetchProducts() // Atualiza a lista na tela
+  } catch (err) {
+    console.error('Erro ao apagar produto:', err.message)
+    alert('Erro ao apagar. Pode ser que esse produto já esteja em uma comanda!')
+  }
+}
+
+// Quando a tela carregar, busca os produtos
 onMounted(() => {
   fetchProducts()
 })
@@ -56,61 +107,75 @@ onMounted(() => {
 <template>
   <div class="product-manager">
     <header class="header">
-      <h1 class="title">Gestão de Produtos - Dr. Café</h1>
+      <h1 class="title">Gestão de Produtos</h1>
     </header>
 
-    <div v-if="loading" class="status loading">Carregando...</div>
-    <div v-if="error" class="status error">
-      Erro de conexão com o banco de dados. Verifique suas chaves no .env
-    </div>
+    <section class="form-section">
+      <h2 class="section-title">
+        {{ editingId ? '✏️ Editando Produto' : '➕ Adicionar Novo Produto' }}
+      </h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nome do Produto</label>
+          <input type="text" v-model="newProduct.name" placeholder="Ex: Café Expresso" />
+        </div>
+        <div class="form-group">
+          <label>Preço (R$)</label>
+          <input type="number" step="0.01" v-model="newProduct.price" placeholder="Ex: 5.50" />
+        </div>
+        <div class="form-group full-width">
+          <label>Descrição Opcional</label>
+          <input
+            type="text"
+            v-model="newProduct.description"
+            placeholder="Ex: 50ml de café arábica"
+          />
+        </div>
+      </div>
 
-    <section class="add-product-form">
-      <h2>Novo Produto</h2>
-      <div class="form-group">
-        <label for="product-name">Nome do Produto</label>
-        <input
-          type="text"
-          id="product-name"
-          v-model="newProduct.name"
-          placeholder="Ex: Café Expresso"
-          required
-        />
+      <div class="form-actions">
+        <button v-if="editingId" @click="cancelEdit" class="btn-cancel">Cancelar</button>
+        <button @click="saveProduct" class="btn-submit">
+          {{ editingId ? 'Salvar Alterações' : 'Adicionar Produto' }}
+        </button>
       </div>
-      <div class="form-group">
-        <label for="product-price">Preço Unitário (R$)</label>
-        <input
-          type="number"
-          id="product-price"
-          v-model="newProduct.unit_price"
-          placeholder="Ex: 5.50"
-          step="0.01"
-          required
-        />
-      </div>
-      <div class="form-group">
-        <label for="product-desc">Descrição</label>
-        <textarea
-          id="product-desc"
-          v-model="newProduct.description"
-          placeholder="Ex: Café em grãos moído na hora."
-          rows="3"
-        ></textarea>
-      </div>
-      <button @click="addProduct" :disabled="loading" class="btn-primary">Adicionar Produto</button>
     </section>
 
-    <section class="product-list">
-      <h2>Lista de Produtos</h2>
-      <div v-if="products.length === 0" class="no-products">Nenhum produto cadastrado.</div>
-      <div v-else class="products-grid">
-        <div v-for="product in products" :key="product.id" class="product-card">
-          <div class="product-info">
-            <h3 class="product-name">{{ product.name }}</h3>
-            <p class="product-price">R$ {{ product.unit_price.toFixed(2) }}</p>
-            <p class="product-description">{{ product.description }}</p>
-          </div>
-          <div class="product-photo-placeholder">Sem Foto</div>
-        </div>
+    <section class="list-section">
+      <h2 class="section-title">📦 Produtos Cadastrados</h2>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Descrição</th>
+              <th>Preço Unitário</th>
+              <th class="actions-column">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="product in products" :key="product.id">
+              <td class="product-name">{{ product.name }}</td>
+              <td class="product-desc">{{ product.description || '-' }}</td>
+              <td class="product-price">R$ {{ product.unit_price.toFixed(2) }}</td>
+              <td class="actions-column">
+                <button @click="editProduct(product)" class="btn-icon edit" title="Editar">
+                  ✏️
+                </button>
+                <button
+                  @click="deleteProduct(product.id, product.name)"
+                  class="btn-icon delete"
+                  title="Excluir"
+                >
+                  🗑️
+                </button>
+              </td>
+            </tr>
+            <tr v-if="products.length === 0">
+              <td colspan="4" class="empty-state">Nenhum produto cadastrado ainda.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
   </div>
@@ -118,150 +183,164 @@ onMounted(() => {
 
 <style scoped>
 .product-manager {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: #3e2723;
   background-color: #fafafa;
   padding: 20px;
   min-height: 100vh;
 }
-
 .header {
   border-bottom: 2px solid #5d4037;
   margin-bottom: 30px;
   padding-bottom: 15px;
 }
-
 .title {
   font-size: 2em;
   font-weight: 300;
-  text-align: center;
+  margin: 0;
 }
 
-.status {
-  text-align: center;
-  padding: 10px;
+.section-title {
+  color: #5d4037;
+  border-bottom: 1px solid #d7ccc8;
+  padding-bottom: 10px;
+  margin-top: 0;
   margin-bottom: 20px;
-  border-radius: 5px;
+  font-weight: 400;
 }
-
-.loading {
-  background-color: #f1f8e9;
-  color: #558b2f;
-}
-.error {
-  background-color: #ffebee;
-  color: #c62828;
-}
-
-.add-product-form,
-.product-list {
+.form-section,
+.list-section {
   background: #fff;
-  padding: 20px;
+  padding: 25px;
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   margin-bottom: 30px;
 }
 
-.add-product-form h2,
-.product-list h2 {
-  font-weight: 400;
-  color: #5d4037;
-  border-bottom: 1px solid #d7ccc8;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
+/* Formulário */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
 }
-
-.form-group {
-  margin-bottom: 15px;
+.full-width {
+  grid-column: 1 / -1;
 }
 .form-group label {
   display: block;
   font-weight: bold;
   margin-bottom: 5px;
+  color: #4e342e;
 }
-.form-group input,
-.form-group textarea {
+.form-group input {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid #d7ccc8;
   border-radius: 4px;
   box-sizing: border-box;
-  color: #3e2723;
+  font-size: 1em;
+  transition: border-color 0.2s;
+}
+.form-group input:focus {
+  border-color: #5d4037;
+  outline: none;
 }
 
-.btn-primary {
-  background-color: #5d4037;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.3s ease;
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 20px;
 }
-.btn-primary:hover {
+.btn-submit {
+  background-color: #5d4037;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.2s;
+}
+.btn-submit:hover {
   background-color: #3e2723;
 }
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.no-products {
-  text-align: center;
-  font-style: italic;
-  color: #795548;
-}
-
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.product-card {
+.btn-cancel {
+  background-color: #f5f5f5;
+  color: #5d4037;
   border: 1px solid #d7ccc8;
-  border-radius: 6px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  padding: 12px 25px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.2s;
 }
-.product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+.btn-cancel:hover {
+  background-color: #e0e0e0;
 }
 
-.product-info {
+/* Tabela */
+.table-container {
+  overflow-x: auto;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table th,
+.data-table td {
   padding: 15px;
-  flex-grow: 1;
+  text-align: left;
+  border-bottom: 1px solid #d7ccc8;
+}
+.data-table th {
+  background-color: #f5f5f5;
+  color: #5d4037;
+  font-weight: bold;
 }
 .product-name {
-  font-size: 1.3em;
-  margin-top: 0;
-  margin-bottom: 5px;
-  font-weight: 400;
+  font-weight: bold;
+  color: #3e2723;
+}
+.product-desc {
+  color: #795548;
+  font-size: 0.9em;
 }
 .product-price {
-  font-size: 1.1em;
   font-weight: bold;
-  color: #5d4037;
-  margin-bottom: 10px;
+  color: #2e7d32;
 }
-.product-description {
-  font-size: 0.9em;
+
+/* Botões de Ação na Tabela */
+.actions-column {
+  text-align: right;
+  white-space: nowrap;
+}
+.btn-icon {
+  background: none;
+  border: none;
+  font-size: 1.2em;
+  cursor: pointer;
+  padding: 5px;
+  margin-left: 10px;
+  transition: transform 0.2s;
+  border-radius: 4px;
+}
+.btn-icon:hover {
+  transform: scale(1.2);
+}
+.btn-icon.edit:hover {
+  background-color: #e3f2fd;
+}
+.btn-icon.delete:hover {
+  background-color: #ffebee;
+}
+
+.empty-state {
+  text-align: center;
   color: #795548;
-}
-.product-photo-placeholder {
-  background-color: #d7ccc8;
-  color: #5d4037;
-  height: 150px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1em;
-  font-weight: bold;
+  font-style: italic;
+  padding: 30px;
 }
 </style>
