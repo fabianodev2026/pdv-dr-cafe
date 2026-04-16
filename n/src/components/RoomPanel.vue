@@ -1,41 +1,56 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { supabase } from '../supabase'
 
 const roomOrders = ref([])
 const isLoading = ref(true)
 
-// Busca as vendas no banco de dados
 const fetchRoomOrders = async () => {
   isLoading.value = true
   try {
-    // Puxa as últimas 50 vendas do dia
     const { data, error } = await supabase
       .from('sales')
       .select('*')
+      // Busca só os que NÃO foram entregues (delivered é falso ou nulo)
+      .is('delivered', false)
       .order('created_at', { ascending: false })
-      .limit(50)
 
     if (error) throw error
 
-    // O TRUQUE: Filtra a lista para mostrar APENAS vendas que têm o "customer_name" preenchido (Quartos)
     if (data) {
       roomOrders.value = data.filter(
         (sale) => sale.customer_name && sale.customer_name.trim() !== '',
       )
     }
   } catch (err) {
-    console.error('Erro ao buscar pedidos dos quartos:', err.message)
+    console.error('Erro ao buscar pedidos:', err.message)
   } finally {
     isLoading.value = false
   }
 }
 
-// Atualiza o painel a cada 30 segundos automaticamente!
+// NOVA FUNÇÃO: Marcar como Entregue
+const markAsDelivered = async (orderId) => {
+  try {
+    const { error } = await supabase.from('sales').update({ delivered: true }).eq('id', orderId)
+
+    if (error) throw error
+
+    // Atualiza a tela para o cartão sumir imediatamente
+    fetchRoomOrders()
+  } catch (err) {
+    alert('Erro ao atualizar entrega: ' + err.message)
+  }
+}
+
 let interval
 onMounted(() => {
   fetchRoomOrders()
-  interval = setInterval(fetchRoomOrders, 30000)
+  interval = setInterval(fetchRoomOrders, 10000) // Atualiza a cada 10 seg
+})
+
+onUnmounted(() => {
+  clearInterval(interval)
 })
 </script>
 
@@ -46,10 +61,12 @@ onMounted(() => {
       <button @click="fetchRoomOrders" class="btn-refresh">🔄 Atualizar Agora</button>
     </header>
 
-    <div v-if="isLoading && roomOrders.length === 0" class="loading">Buscando pedidos...</div>
+    <div v-if="isLoading && roomOrders.length === 0" class="loading">
+      Buscando pedidos pendentes...
+    </div>
 
     <div v-else-if="roomOrders.length === 0" class="empty-state">
-      Nenhum pedido de quarto registrado recentemente.
+      Ufa! Nenhum pedido pendente para entrega no momento. ✅
     </div>
 
     <div v-else class="orders-grid">
@@ -66,9 +83,7 @@ onMounted(() => {
 
         <div class="patient-info">
           <p><strong>👤 Paciente:</strong> {{ order.customer_name }}</p>
-          <p v-if="order.customer_phone">
-            <strong>📞 Tel/Ramal:</strong> {{ order.customer_phone }}
-          </p>
+          <p v-if="order.customer_phone"><strong>📞 Ramal:</strong> {{ order.customer_phone }}</p>
         </div>
 
         <hr class="divider" />
@@ -78,12 +93,17 @@ onMounted(() => {
             <span class="qty">{{ item.quantity }}x</span> {{ item.name }}
           </li>
         </ul>
+
+        <button @click="markAsDelivered(order.id)" class="btn-deliver">
+          ✅ Marcar como Entregue
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+/* ... (MESMO ESTILO ANTERIOR, APENAS ADICIONANDO O BOTÃO ABAIXO) ... */
 .room-panel-container {
   color: var(--coffee-dark);
   padding: 20px;
@@ -115,13 +135,11 @@ onMounted(() => {
   background: var(--coffee-dark);
   color: white;
 }
-
 .orders-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
 }
-
 .glass-panel {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
@@ -130,8 +148,9 @@ onMounted(() => {
   border: 1px solid rgba(107, 76, 58, 0.2);
   box-shadow: 0 8px 32px rgba(58, 38, 24, 0.1);
   border-top: 5px solid var(--accent);
+  display: flex;
+  flex-direction: column;
 }
-
 .order-header {
   display: flex;
   justify-content: space-between;
@@ -151,23 +170,22 @@ onMounted(() => {
   font-weight: bold;
   font-size: 0.9em;
 }
-
 .patient-info p {
   margin: 5px 0;
   font-size: 0.95em;
   color: var(--coffee-medium);
 }
-
 .divider {
   border: none;
   border-top: 1px dashed var(--coffee-light);
   margin: 15px 0;
 }
-
 .items-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  flex-grow: 1;
+  margin-bottom: 20px;
 }
 .items-list li {
   margin-bottom: 8px;
@@ -185,7 +203,6 @@ onMounted(() => {
   border-radius: 6px;
   font-size: 0.9em;
 }
-
 .empty-state,
 .loading {
   text-align: center;
@@ -193,5 +210,24 @@ onMounted(() => {
   color: var(--coffee-medium);
   margin-top: 50px;
   font-style: italic;
+}
+
+/* ESTILO DO BOTÃO ENTREGUE */
+.btn-deliver {
+  background: #2e7d32;
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.3s;
+  box-shadow: 0 4px 10px rgba(46, 125, 50, 0.2);
+}
+.btn-deliver:hover {
+  background: #1b5e20;
+  transform: translateY(-2px);
 }
 </style>

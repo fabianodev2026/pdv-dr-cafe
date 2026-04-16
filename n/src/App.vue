@@ -33,15 +33,18 @@ const handleLogout = () => {
       </RouterLink>
 
       <nav class="main-nav">
-        <RouterLink to="/" class="nav-link">☕ Mesas e Quartos</RouterLink>
-        <RouterLink to="/painel-quartos" class="nav-link">📋 Painel de Expedição</RouterLink>
-
-        <RouterLink v-if="currentUser.role !== 'garcom'" to="/produtos" class="nav-link"
-          >📦 Produtos</RouterLink
-        >
-        <RouterLink v-if="currentUser.role === 'admin'" to="/configuracoes" class="nav-link"
-          >⚙️ Configurações</RouterLink
-        >
+        <RouterLink to="/" class="nav-link">
+          <span class="material-symbols-outlined">table_restaurant</span> Mesas
+        </RouterLink>
+        <RouterLink to="/painel-quartos" class="nav-link">
+          <span class="material-symbols-outlined">clinical_notes</span> Painel
+        </RouterLink>
+        <RouterLink v-if="currentUser.role !== 'garcom'" to="/produtos" class="nav-link">
+          <span class="material-symbols-outlined">inventory_2</span> Produtos
+        </RouterLink>
+        <RouterLink v-if="currentUser.role === 'admin'" to="/configuracoes" class="nav-link">
+          <span class="material-symbols-outlined">settings</span> Configs
+        </RouterLink>
       </nav>
 
       <div class="user-badge">
