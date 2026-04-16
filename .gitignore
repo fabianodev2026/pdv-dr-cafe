@@ -1,0 +1,13 @@
+n/src/.env
+# Dependências
+node_modules
+node_modules/
+
+# Cofre
+.env
+.env.*
+
+# Build
+dist
+dist-ssr
+*.local
