@@ -2,19 +2,19 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ['main'] # Certifique-se de que sua branch principal se chama main
+    branches: ['main']
 
 permissions:
   contents: write
 
+# Força o ambiente global a aceitar o Node moderno e ignorar avisos
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
-    # Força o uso do Node 24 para evitar avisos de obsolescência em 2026
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,16 +22,16 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: 'npm' # Otimiza o tempo de instalação
+          node-version: '24'
 
-      - name: Install and Build
-        run: |
-          npm install
-          npm run build
+      - name: Install Dependencies
+        run: npm install
 
-      - name: Deploy
+      - name: Build Project
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist # Pasta que o Vite gera após o build
-          branch: gh-pages # Branch onde o site final será hospedado
+          folder: dist
+          branch: gh-pages
