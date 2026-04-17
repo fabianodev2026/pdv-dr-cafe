@@ -1,12 +1,17 @@
 {
-  "name": "n",
-  "version": "0.0.0",
+  "description": "Sistema PDV para cafeteria",
+  "author": "Fabiano",
+  "name": "pdv-dr-cafe",
+  "version": "1.0.0",
   "private": true,
-  "type": "module",
+  "type": "commonjs",
+  "main": "main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "electron:start": "electron .",
+    "dist": "electron-builder",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
@@ -21,6 +26,8 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@vitejs/plugin-vue": "^6.0.5",
+    "electron": "^41.2.1",
+    "electron-builder": "^24.13.3",
     "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-oxlint": "~1.57.0",
@@ -34,5 +41,15 @@
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
+  },
+  "build": {
+    "appId": "com.drcafe.pdv",
+    "productName": "Dr. Cafe PDV",
+    "win": {
+      "target": "portable"
+    },
+    "directories": {
+      "output": "dist_electron"
+    }
   }
 }
