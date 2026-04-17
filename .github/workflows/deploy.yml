@@ -7,11 +7,6 @@ on:
 permissions:
   contents: write
 
-# Força o ambiente global a aceitar o Node moderno e ignorar avisos
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -22,7 +17,8 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: 24 # Aqui definimos a versão 24 diretamente
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm install
