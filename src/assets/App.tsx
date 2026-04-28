@@ -1,11 +1,7 @@
-import AdminPanel from './components/AdminPanel'
+import AppRouter from '../router'
 
 function App() {
-  return (
-    <div className="App">
-      <AdminPanel />
-    </div>
-  )
+  return <AppRouter />
 }
 
 export default App

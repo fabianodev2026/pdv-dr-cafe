@@ -1,0 +1,478 @@
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabaseClient'
+import './TableManager.css'
+
+interface Product {
+  id: number
+  name: string
+  unit_price: number
+  image_url?: string
+}
+
+interface OrderItem {
+  id: number
+  name: string
+  price: number
+  quantity: number
+  total: number
+}
+
+interface TableItem {
+  id: number
+  number: number
+  type: 'table' | 'room'
+  status: 'Livre' | 'Ocupada'
+  total: number
+  items: OrderItem[]
+  customer_name: string
+  customer_phone: string
+}
+
+interface ReceiptData {
+  type: 'table' | 'room'
+  number: number
+  items: OrderItem[]
+  total: number
+  customer_name: string
+  customer_phone: string
+  date: string
+}
+
+interface CurrentUser {
+  username: string
+  role: string
+}
+
+interface TableManagerProps {
+  currentUser?: CurrentUser
+}
+
+const initialTables: TableItem[] = [
+  {
+    id: 1,
+    number: 1,
+    type: 'table',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+  {
+    id: 2,
+    number: 2,
+    type: 'table',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+  {
+    id: 3,
+    number: 3,
+    type: 'table',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+  {
+    id: 4,
+    number: 4,
+    type: 'table',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+]
+
+const initialRooms: TableItem[] = [
+  {
+    id: 101,
+    number: 101,
+    type: 'room',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+  {
+    id: 102,
+    number: 102,
+    type: 'room',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+  {
+    id: 201,
+    number: 201,
+    type: 'room',
+    status: 'Livre',
+    total: 0,
+    items: [],
+    customer_name: '',
+    customer_phone: '',
+  },
+]
+
+export default function TableManager({ currentUser }: TableManagerProps) {
+  const [viewMode, setViewMode] = useState<'salon' | 'hospital'>('salon')
+  const [tables, setTables] = useState<TableItem[]>(initialTables)
+  const [rooms, setRooms] = useState<TableItem[]>(initialRooms)
+  const [activeItem, setActiveItem] = useState<TableItem | null>(null)
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([])
+  const [showReceipt, setShowReceipt] = useState(false)
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
+
+  const fetchProducts = async () => {
+    const { data } = await supabase.from('products').select('*').order('name')
+    if (data) setAvailableProducts(data)
+  }
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
+  const openItem = (item: TableItem) => {
+    const updatedItem = { ...item }
+    if (updatedItem.status === 'Livre') {
+      updatedItem.status = 'Ocupada'
+    }
+    setActiveItem(updatedItem)
+  }
+
+  const closeItem = () => {
+    setActiveItem(null)
+  }
+
+  const addProductToTable = (product: Product) => {
+    if (!activeItem) return
+
+    const newItem: OrderItem = {
+      id: Date.now(),
+      name: product.name,
+      price: product.unit_price,
+      quantity: 1,
+      total: product.unit_price,
+    }
+
+    const updatedItem = {
+      ...activeItem,
+      items: [...activeItem.items, newItem],
+    }
+
+    updatedItem.total = updatedItem.items.reduce((sum, i) => sum + i.total, 0)
+    setActiveItem(updatedItem)
+  }
+
+  const removeItem = (itemId: number) => {
+    if (!activeItem) return
+
+    const updatedItem = {
+      ...activeItem,
+      items: activeItem.items.filter((item) => item.id !== itemId),
+    }
+
+    updatedItem.total = updatedItem.items.reduce((sum, i) => sum + i.total, 0)
+    setActiveItem(updatedItem)
+  }
+
+  const payCommand = () => {
+    if (!activeItem) return
+
+    const receipt: ReceiptData = {
+      type: activeItem.type,
+      number: activeItem.number,
+      items: [...activeItem.items],
+      total: activeItem.total,
+      customer_name: activeItem.customer_name,
+      customer_phone: activeItem.customer_phone,
+      date: new Date().toLocaleString('pt-BR'),
+    }
+
+    setReceiptData(receipt)
+    setShowReceipt(true)
+  }
+
+  const printReceipt = () => {
+    window.print()
+  }
+
+  const finalizePayment = async () => {
+    if (!receiptData || !activeItem) return
+
+    try {
+      const { error } = await supabase.from('sales').insert([
+        {
+          table_number: receiptData.number,
+          total_amount: receiptData.total,
+          cashier_name: currentUser?.username || 'Desconhecido',
+          customer_name: receiptData.customer_name,
+          customer_phone: receiptData.customer_phone,
+          items: receiptData.items,
+        },
+      ])
+
+      if (error) throw error
+
+      // Atualizar o estado da mesa/quarto
+      if (activeItem.type === 'table') {
+        const updatedTables = tables.map((t) =>
+          t.id === activeItem.id
+            ? {
+                ...t,
+                items: [],
+                total: 0,
+                status: 'Livre' as const,
+                customer_name: '',
+                customer_phone: '',
+              }
+            : t
+        )
+        setTables(updatedTables)
+      } else {
+        const updatedRooms = rooms.map((r) =>
+          r.id === activeItem.id
+            ? {
+                ...r,
+                items: [],
+                total: 0,
+                status: 'Livre' as const,
+                customer_name: '',
+                customer_phone: '',
+              }
+            : r
+        )
+        setRooms(updatedRooms)
+      }
+
+      setActiveItem(null)
+      setShowReceipt(false)
+      alert('Venda registrada com sucesso no cofre!')
+    } catch (err) {
+      alert('Erro ao salvar no cofre: ' + (err as Error).message)
+    }
+  }
+
+  const updateActiveItemField = (field: string, value: string) => {
+    if (!activeItem) return
+    setActiveItem({ ...activeItem, [field]: value })
+  }
+
+  const currentList = viewMode === 'salon' ? tables : rooms
+
+  return (
+    <div className="pdv-container">
+      {!activeItem && (
+        <>
+          <div className="mode-selector no-print">
+            <button
+              className={`mode-btn ${viewMode === 'salon' ? 'active' : ''}`}
+              onClick={() => setViewMode('salon')}
+            >
+              ☕ Salão (Mesas)
+            </button>
+            <button
+              className={`mode-btn ${viewMode === 'hospital' ? 'active' : ''}`}
+              onClick={() => setViewMode('hospital')}
+            >
+              🏥 Hospital (Quartos)
+            </button>
+          </div>
+
+          <div className="grid-view no-print">
+            <div className="cards-grid">
+              {currentList.map((item) => (
+                <div
+                  key={item.id}
+                  className={`item-card ${item.status === 'Livre' ? 'free' : 'occupied'}`}
+                  onClick={() => openItem(item)}
+                >
+                  <h3>
+                    {viewMode === 'salon' ? 'Mesa' : 'Quarto'} {item.number}
+                  </h3>
+                  <p className="status">{item.status}</p>
+                  {item.customer_name && (
+                    <p className="customer-info">👤 {item.customer_name}</p>
+                  )}
+                  {item.status === 'Ocupada' && (
+                    <p className="total-tag">R$ {item.total.toFixed(2)}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {activeItem && (
+        <div className="command-view no-print">
+          <header className="command-header">
+            <button onClick={closeItem} className="btn-back">
+              ⬅ Voltar
+            </button>
+            <h2>
+              {activeItem.type === 'table' ? 'Mesa' : 'Quarto'} {activeItem.number}
+            </h2>
+            <div className="total-badge">R$ {activeItem.total.toFixed(2)}</div>
+          </header>
+
+          <div className="split-layout">
+            <div className="products-showcase glass-panel">
+              <h3>📦 Toque para Adicionar</h3>
+              <div className="visual-menu">
+                {availableProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="product-item-card"
+                    onClick={() => addProductToTable(product)}
+                  >
+                    <div className="img-wrapper">
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={product.name} />
+                      ) : (
+                        <div className="no-img-placeholder">☕</div>
+                      )}
+                    </div>
+                    <div className="product-info-mini">
+                      <span className="p-name">{product.name}</span>
+                      <span className="p-price">
+                        R$ {product.unit_price.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="active-command-panel">
+              {activeItem.type === 'room' && (
+                <div className="glass-panel hospital-fields">
+                  <input
+                    type="text"
+                    value={activeItem.customer_name}
+                    onChange={(e) =>
+                      updateActiveItemField('customer_name', e.target.value)
+                    }
+                    placeholder="👤 Nome do Paciente/Acompanhante"
+                  />
+                  <input
+                    type="text"
+                    value={activeItem.customer_phone}
+                    onChange={(e) =>
+                      updateActiveItemField('customer_phone', e.target.value)
+                    }
+                    placeholder="📞 Ramal ou Telefone"
+                  />
+                </div>
+              )}
+
+              <div className="glass-panel items-list-panel">
+                <h3>📝 Itens na Comanda</h3>
+                {activeItem.items.length === 0 ? (
+                  <p className="empty-state">
+                    Toque em um produto ao lado para adicionar.
+                  </p>
+                ) : (
+                  <div className="mobile-items-list">
+                    {activeItem.items.map((item) => (
+                      <div key={item.id} className="mobile-item">
+                        <div className="item-details">
+                          <span className="item-name">{item.name}</span>
+                          <span className="item-price">
+                            R$ {item.price.toFixed(2)}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => removeItem(item.id)}
+                          className="btn-remove-item"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {activeItem.items.length > 0 &&
+                currentUser?.role !== 'garcom' ? (
+                  <button onClick={payCommand} className="btn-pay">
+                    💳 Encerrar e Pagar
+                  </button>
+                ) : (
+                  activeItem.items.length > 0 && (
+                    <p className="garcom-aviso">
+                      Apenas o Caixa pode finalizar o pagamento.
+                    </p>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReceipt && (
+        <>
+          <div className="receipt-modal-overlay no-print">
+            <div className="receipt-modal-content">
+              <h2>Pagamento Pronto!</h2>
+              <div className="modal-actions">
+                <button onClick={printReceipt} className="btn-print">
+                  🖨️ Imprimir Recibo
+                </button>
+                <button onClick={finalizePayment} className="btn-close-receipt">
+                  Confirmar no Sistema
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="printable-receipt">
+            <div className="receipt-header">
+              <h2>☕ DR. CAFÉ</h2>
+              <p>
+                <strong>CUPOM NÃO FISCAL</strong>
+              </p>
+              <p>
+                {receiptData?.type === 'table' ? 'Mesa' : 'Quarto'}:{' '}
+                {receiptData?.number}
+              </p>
+              <hr />
+            </div>
+            <table className="receipt-table">
+              <thead>
+                <tr>
+                  <th>Qtd</th>
+                  <th>Item</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {receiptData?.items.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.quantity}</td>
+                    <td>{item.name}</td>
+                    <td>R$ {item.total.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="receipt-footer">
+              <hr />
+              <h3>TOTAL: R$ {receiptData?.total.toFixed(2)}</h3>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}

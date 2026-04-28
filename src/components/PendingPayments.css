@@ -1,0 +1,167 @@
+.pending-payments {
+  padding: 20px;
+  background-color: #fafafa;
+  min-height: 100vh;
+}
+
+.header {
+  border-bottom: 2px solid #5d4037;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+}
+
+.title {
+  font-size: 2em;
+  font-weight: 300;
+  text-align: center;
+  color: #3e2723;
+}
+
+.add-form {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.add-form h2 {
+  color: #5d4037;
+  margin-bottom: 20px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #5d4037;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+
+.form-group input,
+.form-group select {
+  padding: 10px;
+  border: 1px solid #bcaaa4;
+  border-radius: 6px;
+  font-size: 1em;
+  background-color: white;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #8d6e63;
+  box-shadow: 0 0 0 3px rgba(141, 110, 99, 0.1);
+}
+
+.total-display .calculated-value {
+  padding: 10px;
+  background: #f5e6d3;
+  border-radius: 6px;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #6d4c41;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 12px;
+  background: #8d6e63;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-primary:hover {
+  background: #6d4c41;
+}
+
+.list-section {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.list-section h2 {
+  color: #5d4037;
+  margin-bottom: 20px;
+}
+
+.pending-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.pending-card {
+  border: 1px solid #bcaaa4;
+  border-radius: 8px;
+  padding: 15px;
+  background: #fafafa;
+  transition: all 0.3s;
+}
+
+.pending-card:hover {
+  box-shadow: 0 4px 12px rgba(93, 64, 55, 0.15);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e0d7d3;
+}
+
+.card-header h3 {
+  margin: 0;
+  color: #5d4037;
+}
+
+.status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.status.pendente {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.pending-card p {
+  margin: 10px 0;
+  color: #3e2723;
+  font-size: 0.95em;
+}
+
+.amount {
+  font-weight: 700;
+  color: #6d4c41;
+}
+
+.dates {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid #e0d7d3;
+  font-size: 0.85em;
+  color: #666;
+}
