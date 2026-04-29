@@ -22,6 +22,8 @@ on public.pdv_users (username);
 alter table public.pdv_users enable row level security;
 
 drop function if exists public.login_pdv_user(text, text);
+drop function if exists public.list_pdv_users();
+drop function if exists public.create_pdv_user(text, text, text);
 
 create or replace function public.login_pdv_user(
   p_username text,
@@ -46,6 +48,50 @@ revoke all on function public.login_pdv_user(text, text) from public;
 grant execute on function public.login_pdv_user(text, text) to anon;
 grant execute on function public.login_pdv_user(text, text) to authenticated;
 
+create or replace function public.list_pdv_users()
+returns table (
+  username text,
+  role text
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select u.username, u.role
+  from public.pdv_users as u
+  where u.username is not null
+  order by u.username;
+$$;
+
+revoke all on function public.list_pdv_users() from public;
+grant execute on function public.list_pdv_users() to anon;
+grant execute on function public.list_pdv_users() to authenticated;
+
+create or replace function public.create_pdv_user(
+  p_username text,
+  p_password text,
+  p_role text
+)
+returns table (
+  username text,
+  role text
+)
+language sql
+security definer
+set search_path = public
+as $$
+  insert into public.pdv_users (username, password, role)
+  values (trim(p_username), p_password, p_role)
+  on conflict (username) do update
+  set password = excluded.password,
+      role = excluded.role
+  returning pdv_users.username, pdv_users.role;
+$$;
+
+revoke all on function public.create_pdv_user(text, text, text) from public;
+grant execute on function public.create_pdv_user(text, text, text) to anon;
+grant execute on function public.create_pdv_user(text, text, text) to authenticated;
+
 -- Cria ou reseta o primeiro admin.
 -- Troque a senha abaixo antes de executar, se quiser.
 insert into public.pdv_users (username, password, role)
@@ -56,3 +102,4 @@ set password = excluded.password,
 
 -- Teste esperado: deve retornar uma linha com username = admin e role = admin.
 select * from public.login_pdv_user('admin', 'admin123');
+select * from public.list_pdv_users();

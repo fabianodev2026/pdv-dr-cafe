@@ -50,6 +50,11 @@ export default function ProductManager() {
       return
     }
 
+    if (newProduct.description.length > 25) {
+      alert('A descrição deve ter no máximo 25 caracteres.')
+      return
+    }
+
     try {
       const productData = {
         name: newProduct.name,
@@ -104,8 +109,12 @@ export default function ProductManager() {
 
   return (
     <div className="product-manager">
-      <header className="header">
-        <h1 className="title">📦 Gestão de Produtos</h1>
+      <header className="product-heading">
+        <img src="/logo.jpeg" alt="Dr. Cafe" />
+        <div>
+          <h1>Produtos</h1>
+          <p>Cadastre itens do cardapio com descricao curta para venda rapida.</p>
+        </div>
       </header>
 
       <section className="form-section glass-panel">
@@ -149,7 +158,7 @@ export default function ProductManager() {
             />
           </div>
           <div className="form-group full-width">
-            <label>Descrição</label>
+            <label>Descrição do produto ({newProduct.description.length}/25)</label>
             <textarea
               value={newProduct.description}
               onChange={(e) =>
@@ -157,6 +166,7 @@ export default function ProductManager() {
               }
               placeholder="Descreva o produto..."
               rows={3}
+              maxLength={25}
             />
           </div>
         </div>

@@ -66,6 +66,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   return (
     <div className="login-wrapper">
       <form className="login-glass-box" onSubmit={handleLogin}>
+        <img src="/logo.jpeg" alt="Dr. Cafe" className="login-logo" />
         <h2>Acesso ao Sistema</h2>
 
         <div className="form-group">

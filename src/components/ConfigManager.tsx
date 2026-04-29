@@ -1,202 +1,175 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import './ConfigManager.css'
 
-interface User {
-  id?: number
+type Role = 'admin' | 'gerente' | 'caixa' | 'garcom'
+
+interface CurrentUser {
   username: string
-  password: string
   role: string
 }
 
-interface Sale {
-  id: number
-  created_at: string
-  table_number: number
-  cashier_name: string
-  total_amount: number
+interface ConfigManagerProps {
+  currentUser: CurrentUser
 }
 
-export default function ConfigManager() {
-  const [activeTab, setActiveTab] = useState<'financeiro' | 'usuarios'>('usuarios')
+interface User {
+  username: string
+  role: Role
+}
+
+interface NewUser {
+  username: string
+  password: string
+  role: Role
+}
+
+const roleLabels: Record<Role, string> = {
+  admin: 'Administrador',
+  gerente: 'Gerente',
+  caixa: 'Caixa',
+  garcom: 'Garcom',
+}
+
+const permissions: Record<Role, string> = {
+  admin: 'Acesso total, produtos, usuarios, configuracoes e fechamento.',
+  gerente: 'Produtos, usuarios operacionais, configuracoes e fechamento.',
+  caixa: 'PDV, comandas, pagamentos e fechamento de vendas.',
+  garcom: 'Lancamento de itens em mesas/quartos, sem finalizar pagamento.',
+}
+
+export default function ConfigManager({ currentUser }: ConfigManagerProps) {
+  const currentRole = currentUser.role as Role
   const [users, setUsers] = useState<User[]>([])
-  const [allSales, setAllSales] = useState<Sale[]>([])
-  const [isLoadingSales, setIsLoadingSales] = useState(false)
-  const [newUser, setNewUser] = useState<User>({ username: '', password: '', role: 'caixa' })
+  const [message, setMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [newUser, setNewUser] = useState<NewUser>({
+    username: '',
+    password: '',
+    role: currentRole === 'admin' ? 'gerente' : 'caixa',
+  })
+
+  const allowedRoles = useMemo<Role[]>(() => {
+    if (currentRole === 'admin') return ['gerente', 'caixa', 'garcom']
+    if (currentRole === 'gerente') return ['caixa', 'garcom']
+    return []
+  }, [currentRole])
 
   const fetchUsers = async () => {
-    const { data } = await supabase.from('pdv_users').select('*').order('username')
-    if (data) setUsers(data)
-  }
+    setIsLoading(true)
+    const { data, error } = await supabase.rpc('list_pdv_users')
 
-  const fetchFinanceData = async () => {
-    setIsLoadingSales(true)
-    try {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setAllSales(data || [])
-    } catch (err) {
-      console.error('Erro ao buscar financeiro:', (err as Error).message)
-    } finally {
-      setIsLoadingSales(false)
+    if (error) {
+      console.error('Erro ao buscar usuarios:', error)
+      setMessage('Execute o SQL atualizado para liberar a listagem de usuarios.')
+    } else {
+      setUsers((data ?? []) as User[])
     }
+
+    setIsLoading(false)
   }
 
   useEffect(() => {
     fetchUsers()
-    fetchFinanceData()
   }, [])
 
-  const balance = useMemo(() => {
-    const now = new Date()
-    const todayStr = now.toLocaleDateString('pt-BR')
-    const currentMonth = now.getMonth()
-    const currentYear = now.getFullYear()
+  const saveUser = async () => {
+    if (!newUser.username.trim() || !newUser.password) {
+      setMessage('Preencha usuario e senha.')
+      return
+    }
 
-    let totalDay = 0
-    let totalMonth = 0
-    let totalYear = 0
+    if (!allowedRoles.includes(newUser.role)) {
+      setMessage('Seu perfil nao pode criar usuarios com esse privilegio.')
+      return
+    }
 
-    allSales.forEach((sale) => {
-      const saleDate = new Date(sale.created_at)
-      const amount = sale.total_amount
-
-      if (saleDate.toLocaleDateString('pt-BR') === todayStr) {
-        totalDay += amount
-      }
-
-      if (
-        saleDate.getMonth() === currentMonth &&
-        saleDate.getFullYear() === currentYear
-      ) {
-        totalMonth += amount
-      }
-
-      if (saleDate.getFullYear() === currentYear) {
-        totalYear += amount
-      }
+    const { error } = await supabase.rpc('create_pdv_user', {
+      p_username: newUser.username.trim(),
+      p_password: newUser.password,
+      p_role: newUser.role,
     })
 
-    return { totalDay, totalMonth, totalYear }
-  }, [allSales])
+    if (error) {
+      console.error('Erro ao criar usuario:', error)
+      setMessage('Nao foi possivel criar o usuario. Execute o SQL atualizado.')
+      return
+    }
 
-  const saveUser = async () => {
-    if (!newUser.username || !newUser.password) return
-    await supabase.from('pdv_users').insert([newUser])
-    setNewUser({ username: '', password: '', role: 'caixa' })
+    setMessage('Usuario salvo com sucesso.')
+    setNewUser({
+      username: '',
+      password: '',
+      role: currentRole === 'admin' ? 'gerente' : 'caixa',
+    })
     fetchUsers()
   }
 
   return (
     <div className="config-manager">
-      <header className="header">
-        <h1 className="title">⚙️ Painel de Controle Dr. Café</h1>
+      <header className="page-heading">
+        <img src="/logo.jpeg" alt="Dr. Cafe" />
+        <div>
+          <h1>Usuarios</h1>
+          <p>Controle quem pode alterar cadastros e operar o PDV.</p>
+        </div>
       </header>
 
-      <div className="tabs">
-        <button
-          className={`tab-btn ${activeTab === 'financeiro' ? 'active' : ''}`}
-          onClick={() => setActiveTab('financeiro')}
-        >
-          📊 Balanço Financeiro
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'usuarios' ? 'active' : ''}`}
-          onClick={() => setActiveTab('usuarios')}
-        >
-          👤 Usuários
-        </button>
-      </div>
+      {message && <div className="config-alert">{message}</div>}
 
-      {activeTab === 'financeiro' && (
-        <section className="glass-panel">
-          <div className="finance-grid">
-            <div className="balance-card">
-              <span className="card-label">Vendas de Hoje</span>
-              <h2 className="card-value">R$ {balance.totalDay.toFixed(2)}</h2>
-            </div>
-            <div className="balance-card highlighted">
-              <span className="card-label">Total do Mês</span>
-              <h2 className="card-value">R$ {balance.totalMonth.toFixed(2)}</h2>
-            </div>
-            <div className="balance-card">
-              <span className="card-label">Faturamento Anual</span>
-              <h2 className="card-value">R$ {balance.totalYear.toFixed(2)}</h2>
-            </div>
-          </div>
-
-          <div className="history-section">
-            <h3>📜 Últimos Recebimentos</h3>
-            {isLoadingSales && <p>Carregando...</p>}
-            {allSales.length > 0 ? (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Data/Hora</th>
-                    <th>Mesa</th>
-                    <th>Caixa</th>
-                    <th>Valor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allSales.slice(0, 10).map((sale) => (
-                    <tr key={sale.id}>
-                      <td>{new Date(sale.created_at).toLocaleString('pt-BR')}</td>
-                      <td>Mesa {sale.table_number}</td>
-                      <td>{sale.cashier_name}</td>
-                      <td className="price-text">R$ {sale.total_amount.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p>Nenhuma venda registrada ainda.</p>
-            )}
-          </div>
-        </section>
-      )}
-
-      {activeTab === 'usuarios' && (
-        <section className="glass-panel">
-          <h2>Gestão de Equipe</h2>
-          <div className="user-form">
-            <input
-              type="text"
-              placeholder="Usuário"
-              value={newUser.username}
-              onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-            />
-            <input
-              type="password"
-              placeholder="Senha"
-              value={newUser.password}
-              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-            />
-            <select
-              value={newUser.role}
-              onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-            >
-              <option value="caixa">Caixa</option>
-              <option value="gerente">Gerente</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button onClick={saveUser}>Adicionar Usuário</button>
-          </div>
-
-          <h3>Usuários Existentes</h3>
-          <ul className="user-list">
-            {users.map((user) => (
-              <li key={user.id}>
-                <strong>{user.username}</strong> - {user.role}
-              </li>
+      <section className="glass-panel">
+        <h2>Criar usuario</h2>
+        <div className="user-form">
+          <input
+            type="text"
+            placeholder="Usuario"
+            value={newUser.username}
+            maxLength={15}
+            onChange={(e) =>
+              setNewUser({ ...newUser, username: e.target.value })
+            }
+          />
+          <input
+            type="password"
+            placeholder="Senha"
+            value={newUser.password}
+            maxLength={15}
+            onChange={(e) =>
+              setNewUser({ ...newUser, password: e.target.value })
+            }
+          />
+          <select
+            value={newUser.role}
+            onChange={(e) =>
+              setNewUser({ ...newUser, role: e.target.value as Role })
+            }
+          >
+            {allowedRoles.map((role) => (
+              <option key={role} value={role}>
+                {roleLabels[role]}
+              </option>
             ))}
-          </ul>
-        </section>
-      )}
+          </select>
+          <button onClick={saveUser}>Adicionar</button>
+        </div>
+      </section>
+
+      <section className="glass-panel">
+        <h2>Usuarios existentes</h2>
+        {isLoading ? (
+          <p>Carregando...</p>
+        ) : (
+          <div className="user-cards">
+            {users.map((user) => (
+              <article key={user.username} className="user-card">
+                <strong>{user.username}</strong>
+                <span>{roleLabels[user.role] ?? user.role}</span>
+                <p>{permissions[user.role] ?? 'Permissao personalizada.'}</p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }

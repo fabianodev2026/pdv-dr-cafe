@@ -1,146 +1,185 @@
 .settings-manager {
-  padding: 20px;
-  background-color: #fafafa;
   min-height: 100vh;
+  padding: 24px;
+  background: #f3e4d2;
+  color: #2b160d;
 }
 
-.header {
-  border-bottom: 2px solid #5d4037;
-  margin-bottom: 30px;
-  padding-bottom: 15px;
+.settings-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
 }
 
-.title {
-  font-size: 2em;
-  font-weight: 300;
-  text-align: center;
-  color: #3e2723;
-}
-
-.alert {
-  padding: 15px 20px;
-  margin-bottom: 30px;
+.settings-heading img {
+  width: 88px;
+  height: 88px;
   border-radius: 8px;
-  font-weight: 600;
+  object-fit: cover;
 }
 
-.alert.success {
-  background: #c8e6c9;
-  color: #2e7d32;
-  border-left: 4px solid #2e7d32;
+.settings-heading h1 {
+  margin: 0 0 6px;
+  font-size: 2rem;
 }
 
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 30px;
-  margin-bottom: 30px;
+.settings-heading p {
+  margin: 0;
+  color: #7b4a27;
+}
+
+.settings-alert {
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border: 1px solid #d8a66b;
+  border-radius: 8px;
+  background: #fff7ec;
+  font-weight: 700;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.settings-tabs button,
+.settings-save,
+.inline-field button {
+  border: 0;
+  border-radius: 8px;
+  background: #2b160d;
+  color: #f8dfbf;
+  padding: 11px 14px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.settings-tabs button {
+  background: #fff8ef;
+  color: #5a2f17;
+  border: 1px solid #d8a66b;
+}
+
+.settings-tabs button.active {
+  background: #2b160d;
+  color: #f8dfbf;
 }
 
 .settings-panel {
-  background: white;
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 248, 239, 0.88);
+  border: 1px solid rgba(107, 76, 58, 0.18);
+  border-radius: 8px;
+  padding: 22px;
+  box-shadow: 0 8px 22px rgba(43, 22, 13, 0.08);
 }
 
 .settings-panel h2 {
-  color: #5d4037;
-  margin-bottom: 20px;
-  font-size: 1.2em;
+  margin-top: 0;
 }
 
-.form-group {
-  margin-bottom: 20px;
+.settings-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.settings-form label {
   display: flex;
   flex-direction: column;
+  gap: 7px;
+  color: #5a2f17;
+  font-weight: 800;
 }
 
-.form-group label {
-  font-weight: 600;
-  color: #5d4037;
-  margin-bottom: 8px;
-  font-size: 0.95em;
+.settings-form input,
+.settings-form select {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #b98554;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #2b160d;
 }
 
-.form-group input,
-.form-group select {
-  padding: 10px;
-  border: 1px solid #bcaaa4;
-  border-radius: 6px;
-  font-size: 1em;
-  background-color: white;
-  color: #3e2723;
-  font-family: inherit;
+.wide {
+  grid-column: 1 / -1;
 }
 
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #8d6e63;
-  box-shadow: 0 0 0 3px rgba(141, 110, 99, 0.1);
+.inline-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
 }
 
-.form-group.checkbox-group {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
+.check-field {
+  justify-content: end;
 }
 
-.form-group.checkbox-group input {
+.check-field input {
   width: 18px;
   height: 18px;
-  margin: 0;
-  cursor: pointer;
 }
 
-.form-group.checkbox-group label {
-  margin: 0;
+.settings-save {
+  margin-top: 18px;
 }
 
-.file-upload {
-  gap: 10px;
+.settings-note {
+  margin: 16px 0 0;
+  color: #7b4a27;
 }
 
-.file-upload input[type='file'] {
-  padding: 8px;
+.balance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
 }
 
-.file-upload small {
-  color: #999;
-  font-size: 0.85em;
-  display: block;
-  margin-top: 5px;
-}
-
-.btn-save {
-  display: block;
-  width: 100%;
-  max-width: 400px;
-  margin: 0 auto;
-  padding: 15px;
-  background: linear-gradient(135deg, #8d6e63 0%, #6d4c41 100%);
-  color: white;
-  border: none;
+.balance-grid article {
+  padding: 18px;
   border-radius: 8px;
-  font-size: 1.1em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
+  background: #fffaf5;
+  border-left: 4px solid #7b4a27;
 }
 
-.btn-save:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(109, 76, 65, 0.3);
+.balance-grid span,
+.balance-grid strong {
+  display: block;
 }
 
-.btn-save:active {
-  transform: translateY(0);
+.balance-grid strong {
+  margin-top: 8px;
+  font-size: 1.5rem;
 }
 
-@media (max-width: 768px) {
-  .settings-grid {
+.history-section {
+  margin-top: 22px;
+  overflow-x: auto;
+}
+
+.history-section table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  background: #fffaf5;
+}
+
+.history-section th,
+.history-section td {
+  padding: 11px;
+  border-bottom: 1px solid #ead4b9;
+  text-align: left;
+}
+
+.history-section th {
+  color: #5a2f17;
+}
+
+@media (max-width: 620px) {
+  .inline-field {
     grid-template-columns: 1fr;
   }
 }

@@ -15,3 +15,4 @@ from public.pdv_users
 order by username;
 
 select * from public.login_pdv_user('admin', 'admin123');
+select * from public.list_pdv_users();

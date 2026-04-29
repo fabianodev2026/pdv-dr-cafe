@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useState } from 'react'
+import AppShell from '../components/AppShell'
 import LoginScreen from '../components/LoginScreen'
 import ConfigManager from '../components/ConfigManager'
 import CustomerMenu from '../components/CustomerMenu'
@@ -22,6 +23,10 @@ export default function AppRouter() {
     setCurrentUser(userData)
   }
 
+  const handleLogout = () => {
+    setCurrentUser(null)
+  }
+
   return (
     <Router>
       <Routes>
@@ -35,7 +40,11 @@ export default function AppRouter() {
             element={<LoginScreen onLoginSuccess={handleLoginSuccess} />}
           />
         ) : (
-          <>
+          <Route
+            element={
+              <AppShell currentUser={currentUser} onLogout={handleLogout} />
+            }
+          >
             {/* Redirecionamento para principal */}
             <Route path="/" element={<Navigate to="/mesas" replace />} />
 
@@ -45,10 +54,16 @@ export default function AppRouter() {
               element={<TableManager currentUser={currentUser} />}
             />
             <Route path="/produtos" element={<ProductManager />} />
-            <Route path="/configuracoes" element={<ConfigManager />} />
+            <Route
+              path="/configuracoes"
+              element={<ConfigManager currentUser={currentUser} />}
+            />
             <Route path="/painel-quartos" element={<RoomPanel />} />
             <Route path="/financeiro" element={<FinanceManager />} />
-            <Route path="/relatorios" element={<ConfigManager />} />
+            <Route
+              path="/relatorios"
+              element={<Navigate to="/configuracoes-sistema" replace />}
+            />
             <Route path="/pendencias" element={<FinanceManager />} />
             <Route
               path="/configuracoes-sistema"
@@ -57,7 +72,7 @@ export default function AppRouter() {
 
             {/* 404 */}
             <Route path="*" element={<Navigate to="/mesas" replace />} />
-          </>
+          </Route>
         )}
       </Routes>
     </Router>

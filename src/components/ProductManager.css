@@ -1,27 +1,39 @@
 .product-manager {
   padding: 20px;
-  background-color: #fafafa;
+  background-color: #f3e4d2;
   min-height: 100vh;
 }
 
-.header {
-  border-bottom: 2px solid #5d4037;
-  margin-bottom: 30px;
-  padding-bottom: 15px;
+.product-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-.title {
-  font-size: 2em;
-  font-weight: 300;
-  text-align: center;
-  color: #3e2723;
+.product-heading img {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.product-heading h1 {
+  margin: 0 0 6px;
+  color: #2b160d;
+  font-size: 2rem;
+}
+
+.product-heading p {
+  margin: 0;
+  color: #7b4a27;
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 248, 239, 0.86);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(107, 76, 58, 0.1);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 25px;
   margin-bottom: 30px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
@@ -91,14 +103,14 @@
 }
 
 .btn-primary {
-  background: #8d6e63;
+  background: #2b160d;
   color: white;
   flex: 1;
   min-width: 150px;
 }
 
 .btn-primary:hover {
-  background: #6d4c41;
+  background: #7b4a27;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(109, 76, 65, 0.3);
 }
@@ -115,8 +127,8 @@
 }
 
 .products-section {
-  background: white;
-  border-radius: 12px;
+  background: #fff8ef;
+  border-radius: 8px;
   padding: 25px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
