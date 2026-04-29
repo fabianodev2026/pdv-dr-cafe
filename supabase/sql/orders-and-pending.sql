@@ -8,7 +8,8 @@ create table if not exists public.room_orders (
   phone text not null,
   items jsonb not null default '[]'::jsonb,
   total_amount numeric(10,2) not null default 0,
-  status text not null default 'novo'
+  status text not null default 'novo',
+  customer_message text default 'Pedido enviado para o PDV.'
 );
 
 alter table public.room_orders enable row level security;
@@ -42,6 +43,7 @@ create table if not exists public.pending_payments (
   phone text not null,
   position text,
   description text,
+  items_detail text,
   total_amount numeric(10,2) not null default 0,
   purchase_date date not null default current_date,
   due_date date not null,

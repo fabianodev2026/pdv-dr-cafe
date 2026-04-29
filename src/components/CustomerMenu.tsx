@@ -32,6 +32,8 @@ export default function CustomerMenu() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [message, setMessage] = useState('')
+  const [lastOrderId, setLastOrderId] = useState<number | null>(null)
+  const [orderStatusMessage, setOrderStatusMessage] = useState('')
 
   const roomNumber = useMemo(() => {
     const room = searchParams.get('room')?.trim()
@@ -67,6 +69,27 @@ export default function CustomerMenu() {
 
     fetchProducts()
   }, [])
+
+  useEffect(() => {
+    if (!lastOrderId) return
+
+    async function fetchOrderStatus() {
+      const { data } = await supabase
+        .from('room_orders')
+        .select('status, customer_message')
+        .eq('id', lastOrderId)
+        .single()
+
+      if (data?.customer_message) {
+        setOrderStatusMessage(data.customer_message)
+      }
+    }
+
+    fetchOrderStatus()
+    const interval = window.setInterval(fetchOrderStatus, 10000)
+
+    return () => window.clearInterval(interval)
+  }, [lastOrderId])
 
   const addToCart = (product: Product) => {
     setCart((items) => {
@@ -111,16 +134,21 @@ export default function CustomerMenu() {
     }
 
     setIsSending(true)
-    const { error } = await supabase.from('room_orders').insert([
-      {
-        room_number: roomNumber,
-        patient_name: patientName.trim(),
-        phone: phone.trim(),
-        items: cart,
-        total_amount: total,
-        status: 'novo',
-      },
-    ])
+    const { data, error } = await supabase
+      .from('room_orders')
+      .insert([
+        {
+          room_number: roomNumber,
+          patient_name: patientName.trim(),
+          phone: phone.trim(),
+          items: cart,
+          total_amount: total,
+          status: 'novo',
+          customer_message: 'Pedido enviado para o PDV.',
+        },
+      ])
+      .select('id')
+      .single()
 
     if (error) {
       console.error('Erro ao enviar pedido:', error)
@@ -129,6 +157,8 @@ export default function CustomerMenu() {
       setCart([])
       setPatientName('')
       setPhone('')
+      setLastOrderId(data?.id ?? null)
+      setOrderStatusMessage('Pedido enviado para o PDV.')
       setMessage('Pedido enviado para o PDV.')
     }
 
@@ -164,6 +194,11 @@ export default function CustomerMenu() {
 
       {isLoading && <p className="customer-menu__state">Carregando cardapio...</p>}
       {message && <p className="customer-menu__state">{message}</p>}
+      {orderStatusMessage && (
+        <p className="customer-menu__state customer-menu__status-alert">
+          {orderStatusMessage}
+        </p>
+      )}
 
       <section className="customer-menu__layout">
         <div className="customer-menu__grid" aria-label="Produtos">

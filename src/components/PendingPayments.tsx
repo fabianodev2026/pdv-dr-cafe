@@ -8,6 +8,7 @@ interface PendingPayment {
   phone: string
   position: string
   description: string
+  items_detail: string
   total_amount: number
   purchase_date: string
   due_date: string
@@ -19,6 +20,7 @@ interface NewPending {
   phone: string
   position: string
   description: string
+  items_detail: string
   total_amount: string
   purchase_date: string
   due_date: string
@@ -29,6 +31,7 @@ const initialPending: NewPending = {
   phone: '',
   position: '',
   description: '',
+  items_detail: '',
   total_amount: '',
   purchase_date: new Date().toISOString().slice(0, 10),
   due_date: '',
@@ -155,13 +158,23 @@ export default function PendingPayments() {
             />
           </label>
           <label className="wide">
-            Descricao
+            Itens consumidos
+            <input
+              value={newPending.items_detail}
+              onChange={(e) =>
+                setNewPending({ ...newPending, items_detail: e.target.value })
+              }
+              placeholder="Ex: 1 Cafe expresso, 2 Paes de queijo"
+            />
+          </label>
+          <label className="wide">
+            Observacao
             <input
               value={newPending.description}
               onChange={(e) =>
                 setNewPending({ ...newPending, description: e.target.value })
               }
-              placeholder="Produtos/observacao"
+              placeholder="Observacao"
             />
           </label>
           <label>
@@ -193,7 +206,8 @@ export default function PendingPayments() {
               </div>
               <p><strong>Telefone:</strong> {pending.phone}</p>
               <p><strong>Cargo:</strong> {pending.position || '-'}</p>
-              <p><strong>Descricao:</strong> {pending.description || '-'}</p>
+              <p><strong>Consumiu:</strong> {pending.items_detail || '-'}</p>
+              <p><strong>Observacao:</strong> {pending.description || '-'}</p>
               <p><strong>Valor:</strong> R$ {Number(pending.total_amount).toFixed(2)}</p>
               <p><strong>Pagamento:</strong> {pending.due_date}</p>
               <p className="payment-only">Somente Pix ou dinheiro</p>

@@ -52,6 +52,15 @@
   color: #ffb3a7;
 }
 
+.customer-menu__status-alert {
+  padding: 12px 14px;
+  border: 1px solid rgba(245, 190, 125, 0.35);
+  border-radius: 8px;
+  background: rgba(245, 190, 125, 0.12);
+  color: #f5be7d;
+  font-weight: 800;
+}
+
 .customer-menu__patient {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

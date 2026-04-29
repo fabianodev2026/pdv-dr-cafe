@@ -5,6 +5,7 @@ import LoginScreen from '../components/LoginScreen'
 import ConfigManager from '../components/ConfigManager'
 import CustomerMenu from '../components/CustomerMenu'
 import FinanceManager from '../components/FinanceManager'
+import OrdersManager from '../components/OrdersManager'
 import PendingPayments from '../components/PendingPayments'
 import ProductManager from '../components/ProductManager'
 import RoomPanel from '../components/RoomPanel'
@@ -54,6 +55,7 @@ export default function AppRouter() {
               path="/mesas"
               element={<TableManager currentUser={currentUser} />}
             />
+            <Route path="/pedidos" element={<OrdersManager />} />
             <Route path="/produtos" element={<ProductManager />} />
             <Route
               path="/configuracoes"

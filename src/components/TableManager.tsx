@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import './TableManager.css'
 
@@ -36,7 +36,10 @@ interface ReceiptData {
   customer_name: string
   customer_phone: string
   date: string
+  payment_method: PaymentMethod
 }
+
+type PaymentMethod = 'pix' | 'credito' | 'debito' | 'dinheiro'
 
 interface CurrentUser {
   username: string
@@ -74,6 +77,9 @@ export default function TableManager({ currentUser }: TableManagerProps) {
   const [availableProducts, setAvailableProducts] = useState<Product[]>([])
   const [showReceipt, setShowReceipt] = useState(false)
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix')
+  const [selectedFloor, setSelectedFloor] = useState('todos')
+  const [roomSearch, setRoomSearch] = useState('')
 
   const fetchProducts = async () => {
     const { data } = await supabase.from('products').select('*').order('name')
@@ -139,6 +145,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
       customer_name: activeItem.customer_name,
       customer_phone: activeItem.customer_phone,
       date: new Date().toLocaleString('pt-BR'),
+      payment_method: paymentMethod,
     }
 
     setReceiptData(receipt)
@@ -161,6 +168,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
           customer_name: receiptData.customer_name,
           customer_phone: receiptData.customer_phone,
           items: receiptData.items,
+          payment_method: receiptData.payment_method,
         },
       ])
 
@@ -210,7 +218,23 @@ export default function TableManager({ currentUser }: TableManagerProps) {
     setActiveItem({ ...activeItem, [field]: value })
   }
 
-  const currentList = viewMode === 'salon' ? tables : rooms
+  const roomFloors = useMemo(() => {
+    return Array.from(new Set(rooms.map((room) => Math.floor(room.number / 100))))
+  }, [rooms])
+
+  const currentList = useMemo(() => {
+    if (viewMode === 'salon') return tables
+
+    return rooms.filter((room) => {
+      const matchesFloor =
+        selectedFloor === 'todos' ||
+        Math.floor(room.number / 100).toString() === selectedFloor
+      const matchesSearch =
+        !roomSearch.trim() || room.number.toString().includes(roomSearch.trim())
+
+      return matchesFloor && matchesSearch
+    })
+  }, [rooms, roomSearch, selectedFloor, tables, viewMode])
 
   return (
     <div className="pdv-container">
@@ -232,6 +256,26 @@ export default function TableManager({ currentUser }: TableManagerProps) {
           </div>
 
           <div className="grid-view no-print">
+            {viewMode === 'hospital' && (
+              <div className="room-filters">
+                <select
+                  value={selectedFloor}
+                  onChange={(e) => setSelectedFloor(e.target.value)}
+                >
+                  <option value="todos">Todos os andares</option>
+                  {roomFloors.map((floor) => (
+                    <option key={floor} value={floor}>
+                      Andar {floor}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={roomSearch}
+                  onChange={(e) => setRoomSearch(e.target.value)}
+                  placeholder="Buscar quarto"
+                />
+              </div>
+            )}
             <div className="cards-grid">
               {currentList.map((item) => (
                 <div
@@ -347,9 +391,25 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
                 {activeItem.items.length > 0 &&
                 currentUser?.role !== 'garcom' ? (
-                  <button onClick={payCommand} className="btn-pay">
-                    💳 Encerrar e Pagar
-                  </button>
+                  <>
+                    <div className="payment-methods">
+                      <label>Forma de pagamento</label>
+                      <select
+                        value={paymentMethod}
+                        onChange={(e) =>
+                          setPaymentMethod(e.target.value as PaymentMethod)
+                        }
+                      >
+                        <option value="pix">Pix</option>
+                        <option value="credito">Cartao de credito</option>
+                        <option value="debito">Cartao de debito</option>
+                        <option value="dinheiro">Dinheiro</option>
+                      </select>
+                    </div>
+                    <button onClick={payCommand} className="btn-pay">
+                      Encerrar e Pagar
+                    </button>
+                  </>
                 ) : (
                   activeItem.items.length > 0 && (
                     <p className="garcom-aviso">
@@ -385,6 +445,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
               <p>
                 <strong>CUPOM NÃO FISCAL</strong>
               </p>
+              <p>Pagamento: {receiptData?.payment_method}</p>
               <p>
                 {receiptData?.type === 'table' ? 'Mesa' : 'Quarto'}:{' '}
                 {receiptData?.number}

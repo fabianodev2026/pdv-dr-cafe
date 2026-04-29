@@ -42,6 +42,24 @@
   gap: 15px;
 }
 
+.room-filters {
+  display: grid;
+  grid-template-columns: 220px minmax(160px, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.room-filters select,
+.room-filters input,
+.payment-methods select {
+  padding: 11px;
+  border: 1px solid #8d6e63;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #3e2723;
+  font: inherit;
+}
+
 .item-card {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(5px);
@@ -343,6 +361,17 @@
 .btn-pay:hover {
   background: #1b5e20;
   transform: translateY(-2px);
+}
+
+.payment-methods {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.payment-methods label {
+  color: #5d4037;
+  font-weight: 700;
 }
 
 .garcom-aviso {
