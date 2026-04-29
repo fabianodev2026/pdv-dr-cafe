@@ -81,6 +81,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
   const [payLaterDueDate, setPayLaterDueDate] = useState('')
   const [selectedFloor, setSelectedFloor] = useState('todos')
   const [roomSearch, setRoomSearch] = useState('')
+  const [orderMessage, setOrderMessage] = useState('')
 
   const fetchProducts = async () => {
     const { data } = await supabase.from('products').select('*').order('name')
@@ -98,6 +99,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
     }
     setPaymentMethod('pix')
     setPayLaterDueDate('')
+    setOrderMessage('')
     setActiveItem(updatedItem)
   }
 
@@ -123,6 +125,37 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
     updatedItem.total = updatedItem.items.reduce((sum, i) => sum + i.total, 0)
     setActiveItem(updatedItem)
+  }
+
+  const sendToPreparation = async () => {
+    if (!activeItem || activeItem.items.length === 0) return
+
+    const { error } = await supabase.from('service_orders').insert([
+      {
+        source_type: activeItem.type === 'table' ? 'mesa' : 'quarto',
+        service_number: activeItem.number,
+        customer_name: activeItem.customer_name,
+        customer_phone: activeItem.customer_phone,
+        items: activeItem.items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          unit_price: item.price,
+        })),
+        total_amount: activeItem.total,
+        status: 'recebido',
+        customer_message: 'Pedido recebido pelo PDV.',
+      },
+    ])
+
+    if (error) {
+      console.error('Erro ao enviar pedido:', error)
+      setOrderMessage(
+        'Nao foi possivel enviar para Pedidos feitos. Execute o SQL atualizado.',
+      )
+      return
+    }
+
+    setOrderMessage('Pedido enviado para a aba Pedidos feitos.')
   }
 
   const removeItem = (itemId: number) => {
@@ -421,6 +454,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
               <div className="glass-panel items-list-panel">
                 <h3>📝 Itens na Comanda</h3>
+                {orderMessage && <p className="order-message">{orderMessage}</p>}
                 {activeItem.items.length === 0 ? (
                   <p className="empty-state">
                     Toque em um produto ao lado para adicionar.
@@ -449,6 +483,9 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                 {activeItem.items.length > 0 &&
                 currentUser?.role !== 'garcom' ? (
                   <>
+                    <button onClick={sendToPreparation} className="btn-send-order">
+                      Enviar para preparo
+                    </button>
                     <div className="payment-methods">
                       <label>Forma de pagamento</label>
                       <select

@@ -364,6 +364,26 @@
   transform: translateY(-2px);
 }
 
+.btn-send-order {
+  width: 100%;
+  margin-top: 16px;
+  padding: 13px;
+  border: 0;
+  border-radius: 10px;
+  background: #6d4c41;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.order-message {
+  padding: 10px;
+  border-radius: 8px;
+  background: #fff8ef;
+  color: #6d4c41;
+  font-weight: 700;
+}
+
 .payment-methods {
   display: grid;
   gap: 8px;

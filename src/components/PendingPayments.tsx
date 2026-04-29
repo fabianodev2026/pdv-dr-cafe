@@ -40,6 +40,8 @@ const initialPending: NewPending = {
 export default function PendingPayments() {
   const [pendingList, setPendingList] = useState<PendingPayment[]>([])
   const [newPending, setNewPending] = useState<NewPending>(initialPending)
+  const [pendingItem, setPendingItem] = useState('')
+  const [pendingItems, setPendingItems] = useState<string[]>([])
   const [message, setMessage] = useState('')
 
   const totalPending = useMemo(
@@ -85,6 +87,7 @@ export default function PendingPayments() {
     const { error } = await supabase.from('pending_payments').insert([
       {
         ...newPending,
+        items_detail: pendingItems.join('\n'),
         total_amount: Number(newPending.total_amount || 0),
         status: 'pendente',
       },
@@ -98,7 +101,17 @@ export default function PendingPayments() {
 
     setMessage('Pendencia registrada. Pagamento somente por Pix ou dinheiro.')
     setNewPending(initialPending)
+    setPendingItem('')
+    setPendingItems([])
     fetchPending()
+  }
+
+  const addPendingItem = () => {
+    const item = pendingItem.trim()
+    if (!item) return
+
+    setPendingItems((items) => [...items, item])
+    setPendingItem('')
   }
 
   const markAsPaid = async (id: number) => {
@@ -133,6 +146,7 @@ export default function PendingPayments() {
                 setNewPending({ ...newPending, customer_name: e.target.value })
               }
               placeholder="Nome do cliente"
+              maxLength={25}
             />
           </label>
           <label>
@@ -143,6 +157,7 @@ export default function PendingPayments() {
                 setNewPending({ ...newPending, phone: e.target.value })
               }
               placeholder="Telefone"
+              maxLength={25}
             />
           </label>
           <label>
@@ -153,6 +168,7 @@ export default function PendingPayments() {
                 setNewPending({ ...newPending, position: e.target.value })
               }
               placeholder="Cargo que ocupa"
+              maxLength={25}
             />
           </label>
           <label>
@@ -167,13 +183,32 @@ export default function PendingPayments() {
           </label>
           <label className="wide">
             Itens consumidos
-            <input
-              value={newPending.items_detail}
-              onChange={(e) =>
-                setNewPending({ ...newPending, items_detail: e.target.value })
-              }
-              placeholder="Ex: 1 Cafe expresso, 2 Paes de queijo"
-            />
+            <div className="consumed-item-entry">
+              <input
+                value={pendingItem}
+                onChange={(e) => setPendingItem(e.target.value)}
+                placeholder="Ex: Cafe expresso"
+                maxLength={25}
+              />
+              <button type="button" onClick={addPendingItem}>Adicionar</button>
+            </div>
+            <div className="consumed-items-list">
+              {pendingItems.map((item, index) => (
+                <span key={`${item}-${index}`}>
+                  {item}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPendingItems((items) =>
+                        items.filter((_, itemIndex) => itemIndex !== index),
+                      )
+                    }
+                  >
+                    Remover
+                  </button>
+                </span>
+              ))}
+            </div>
           </label>
           <label className="wide">
             Observacao
@@ -183,6 +218,7 @@ export default function PendingPayments() {
                 setNewPending({ ...newPending, description: e.target.value })
               }
               placeholder="Observacao"
+              maxLength={25}
             />
           </label>
           <label>
@@ -230,7 +266,12 @@ export default function PendingPayments() {
                       </div>
                       <p><strong>Compra:</strong> {pending.purchase_date}</p>
                       <p><strong>Pagamento:</strong> {pending.due_date}</p>
-                      <p><strong>Consumiu:</strong> {pending.items_detail || '-'}</p>
+                      <div className="consumed-history">
+                        <strong>Consumiu:</strong>
+                        {(pending.items_detail || '-').split('\n').map((item, index) => (
+                          <span key={`${pending.id}-${index}`}>{item}</span>
+                        ))}
+                      </div>
                       <p><strong>Observacao:</strong> {pending.description || '-'}</p>
                       <p className="payment-only">Somente Pix ou dinheiro</p>
                       {pending.status === 'pendente' && (

@@ -64,13 +64,15 @@ export default function ProductManager() {
       }
 
       if (editingId) {
-        await supabase
+        const { error } = await supabase
           .from('products')
           .update(productData)
           .eq('id', editingId)
+        if (error) throw error
         alert('Produto atualizado!')
       } else {
-        await supabase.from('products').insert([productData])
+        const { error } = await supabase.from('products').insert([productData])
+        if (error) throw error
         alert('Produto adicionado!')
       }
 
@@ -100,10 +102,14 @@ export default function ProductManager() {
   const deleteProduct = async (id: number, name: string) => {
     if (!confirm(`Apagar o produto "${name}"?`)) return
     try {
-      await supabase.from('products').delete().eq('id', id)
+      const { error } = await supabase.from('products').delete().eq('id', id)
+      if (error) throw error
+      setProducts((currentProducts) =>
+        currentProducts.filter((product) => product.id !== id),
+      )
       fetchProducts()
     } catch (err) {
-      alert('Erro ao apagar. Pode estar em uso!')
+      alert('Erro ao apagar produto: ' + (err as Error).message)
     }
   }
 
