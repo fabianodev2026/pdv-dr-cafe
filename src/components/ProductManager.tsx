@@ -122,6 +122,7 @@ export default function ProductManager() {
                 setNewProduct({ ...newProduct, name: e.target.value })
               }
               placeholder="Ex: Capuccino"
+              maxLength={25}
             />
           </div>
           <div className="form-group">

@@ -2,8 +2,13 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import './LoginScreen.css'
 
+interface PdvUser {
+  username: string
+  role: string
+}
+
 interface LoginScreenProps {
-  onLoginSuccess: (userData: any) => void
+  onLoginSuccess: (userData: PdvUser) => void
 }
 
 export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
@@ -15,8 +20,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!username || !password) {
-      setErrorMessage('Preencha usuário e senha.')
+    if (!username.trim() || !password) {
+      setErrorMessage('Preencha usuario e senha.')
       return
     }
 
@@ -24,20 +29,32 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     setErrorMessage('')
 
     try {
-      const { data, error } = await supabase
-        .from('pdv_users')
-        .select('*')
-        .eq('username', username)
-        .eq('password', password)
-        .single()
+      const { data, error } = await supabase.rpc('login_pdv_user', {
+        p_username: username.trim(),
+        p_password: password,
+      })
 
-      if (error || !data) {
-        setErrorMessage('Usuário ou senha incorretos!')
-        setIsLoading(false)
+      if (error) {
+        console.error('Erro no login:', error)
+        setErrorMessage(
+          error.code === '42883'
+            ? 'Login nao configurado no Supabase. Execute o SQL da funcao login_pdv_user.'
+            : 'Erro ao validar login no Supabase.',
+        )
         return
       }
 
-      onLoginSuccess(data)
+      const user = Array.isArray(data) ? data[0] : data
+
+      if (!user) {
+        setErrorMessage('Usuario ou senha incorretos!')
+        return
+      }
+
+      onLoginSuccess({
+        username: user.username ?? user['nome de usuário'] ?? user.nome_usuario,
+        role: user.role ?? user.papel ?? user.funcao ?? user['função'],
+      })
     } catch (err) {
       setErrorMessage('Erro ao conectar com o servidor.')
       console.error(err)
@@ -48,18 +65,18 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
   return (
     <div className="login-wrapper">
-      <div className="login-glass-box">
+      <form className="login-glass-box" onSubmit={handleLogin}>
         <h2>Acesso ao Sistema</h2>
 
         <div className="form-group">
-          <label>Usuário</label>
+          <label>Usuario</label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleLogin(e as any)}
             placeholder="Digite seu login"
-            autoComplete="off"
+            autoComplete="username"
+            maxLength={15}
           />
         </div>
 
@@ -69,21 +86,18 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleLogin(e as any)}
             placeholder="******"
+            autoComplete="current-password"
+            maxLength={15}
           />
         </div>
 
         {errorMessage && <p className="error-msg">{errorMessage}</p>}
 
-        <button
-          onClick={(e) => handleLogin(e as any)}
-          className="btn-login"
-          disabled={isLoading}
-        >
+        <button type="submit" className="btn-login" disabled={isLoading}>
           {isLoading ? 'Verificando...' : 'Entrar no PDV'}
         </button>
-      </div>
+      </form>
     </div>
   )
 }

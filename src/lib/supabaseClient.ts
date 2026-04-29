@@ -1,7 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Use as chaves 'anon' e a 'URL' do seu projeto
-const supabaseUrl = 'https://ydgiskcczqvihzrunejd.supabase.co'
-const supabaseAnonKey = 'sb_publishable_6CiaWnKO5H9yUjjapr5gtw_mbt9cqrq'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Supabase nao configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.',
+  )
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)

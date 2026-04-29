@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useState } from 'react'
 import LoginScreen from '../components/LoginScreen'
-import AdminPanel from '../components/AdminPanel'
 import ConfigManager from '../components/ConfigManager'
+import CustomerMenu from '../components/CustomerMenu'
 import FinanceManager from '../components/FinanceManager'
 import ProductManager from '../components/ProductManager'
 import RoomPanel from '../components/RoomPanel'
@@ -22,28 +22,43 @@ export default function AppRouter() {
     setCurrentUser(userData)
   }
 
-  if (!currentUser) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />
-  }
-
   return (
     <Router>
       <Routes>
-        {/* Redirecionamento para principal */}
-        <Route path="/" element={<Navigate to="/mesas" replace />} />
+        {/* Cardapio publico via QR Code */}
+        <Route path="/cardapio" element={<CustomerMenu />} />
+        <Route path="/menu" element={<CustomerMenu />} />
 
-        {/* Rotas principais */}
-        <Route path="/mesas" element={<TableManager currentUser={currentUser} />} />
-        <Route path="/produtos" element={<ProductManager />} />
-        <Route path="/configuracoes" element={<ConfigManager />} />
-        <Route path="/painel-quartos" element={<RoomPanel />} />
-        <Route path="/financeiro" element={<FinanceManager />} />
-        <Route path="/relatorios" element={<ConfigManager />} />
-        <Route path="/pendencias" element={<FinanceManager />} />
-        <Route path="/configuracoes-sistema" element={<SettingsManager />} />
+        {!currentUser ? (
+          <Route
+            path="*"
+            element={<LoginScreen onLoginSuccess={handleLoginSuccess} />}
+          />
+        ) : (
+          <>
+            {/* Redirecionamento para principal */}
+            <Route path="/" element={<Navigate to="/mesas" replace />} />
 
-        {/* 404 */}
-        <Route path="*" element={<Navigate to="/mesas" replace />} />
+            {/* Rotas principais */}
+            <Route
+              path="/mesas"
+              element={<TableManager currentUser={currentUser} />}
+            />
+            <Route path="/produtos" element={<ProductManager />} />
+            <Route path="/configuracoes" element={<ConfigManager />} />
+            <Route path="/painel-quartos" element={<RoomPanel />} />
+            <Route path="/financeiro" element={<FinanceManager />} />
+            <Route path="/relatorios" element={<ConfigManager />} />
+            <Route path="/pendencias" element={<FinanceManager />} />
+            <Route
+              path="/configuracoes-sistema"
+              element={<SettingsManager />}
+            />
+
+            {/* 404 */}
+            <Route path="*" element={<Navigate to="/mesas" replace />} />
+          </>
+        )}
       </Routes>
     </Router>
   )
