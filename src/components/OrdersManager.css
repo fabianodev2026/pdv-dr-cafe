@@ -29,6 +29,17 @@
   font-weight: 800;
 }
 
+.orders-refresh {
+  margin-left: auto;
+  border: 0;
+  border-radius: 8px;
+  background: #2b160d;
+  color: #f8dfbf;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .orders-alert {
   padding: 12px 14px;
   margin-bottom: 16px;
@@ -42,6 +53,15 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 14px;
+}
+
+.orders-empty {
+  padding: 18px;
+  border-radius: 8px;
+  background: #fffaf5;
+  border: 1px solid #ead4b9;
+  color: #7b4a27;
+  font-weight: 800;
 }
 
 .order-card {

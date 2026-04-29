@@ -42,16 +42,21 @@ export default function OrdersManager() {
   )
 
   const fetchOrders = async () => {
-    const [roomResult, serviceResult] = await Promise.all([
-      supabase.from('room_orders').select('*').order('created_at', { ascending: false }),
-      supabase.from('service_orders').select('*').order('created_at', { ascending: false }),
-    ])
+    const roomResult = await supabase
+      .from('room_orders')
+      .select('*')
+      .order('created_at', { ascending: false })
 
     if (roomResult.error) {
       console.error('Erro ao buscar pedidos de quartos:', roomResult.error)
-      setMessage('Execute o SQL atualizado para criar e liberar os pedidos.')
+      setMessage(`Erro ao buscar pedidos de quartos: ${roomResult.error.message}`)
       return
     }
+
+    const serviceResult = await supabase
+      .from('service_orders')
+      .select('*')
+      .order('created_at', { ascending: false })
 
     if (serviceResult.error) {
       console.error('Erro ao buscar pedidos internos:', serviceResult.error)
@@ -129,11 +134,17 @@ export default function OrdersManager() {
           <h1>Pedidos feitos</h1>
           <p>{pendingCount} pedido(s) em aberto.</p>
         </div>
+        <button onClick={fetchOrders} className="orders-refresh">
+          Atualizar
+        </button>
       </header>
 
       {message && <div className="orders-alert">{message}</div>}
 
       <section className="orders-grid">
+        {orders.length === 0 && (
+          <p className="orders-empty">Nenhum pedido encontrado ainda.</p>
+        )}
         {orders.map((order) => (
           <article
             key={`${order.tableName}-${order.id}`}

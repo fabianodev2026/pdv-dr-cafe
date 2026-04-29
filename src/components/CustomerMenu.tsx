@@ -134,30 +134,35 @@ export default function CustomerMenu() {
     }
 
     setIsSending(true)
-    const { data, error } = await supabase
-      .from('room_orders')
-      .insert([
-        {
-          room_number: roomNumber,
-          patient_name: patientName.trim(),
-          phone: phone.trim(),
-          items: cart,
-          total_amount: total,
-          status: 'novo',
-          customer_message: 'Pedido enviado para o PDV.',
-        },
-      ])
-      .select('id')
-      .single()
+    const orderPayload = {
+      room_number: roomNumber,
+      patient_name: patientName.trim(),
+      phone: phone.trim(),
+      items: cart,
+      total_amount: total,
+      status: 'novo',
+      customer_message: 'Pedido enviado para o PDV.',
+    }
+
+    const { error } = await supabase.from('room_orders').insert([orderPayload])
 
     if (error) {
       console.error('Erro ao enviar pedido:', error)
-      setMessage('Nao foi possivel enviar o pedido. Chame a recepcao.')
+      setMessage(`Nao foi possivel enviar o pedido: ${error.message}`)
     } else {
+      const { data: latestOrder } = await supabase
+        .from('room_orders')
+        .select('id')
+        .eq('room_number', roomNumber)
+        .eq('phone', orderPayload.phone)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
       setCart([])
       setPatientName('')
       setPhone('')
-      setLastOrderId(data?.id ?? null)
+      setLastOrderId(latestOrder?.id ?? null)
       setOrderStatusMessage('Pedido enviado para o PDV.')
       setMessage('Pedido enviado para o PDV.')
     }
