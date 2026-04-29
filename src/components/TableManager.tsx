@@ -65,8 +65,14 @@ const initialTables: TableItem[] = Array.from({ length: 6 }, (_, index) =>
   createServiceItem(index + 1, 'table'),
 )
 
-const initialRooms: TableItem[] = Array.from({ length: 215 }, (_, index) =>
-  createServiceItem(index + 101, 'room'),
+const roomNumbers = [
+  ...Array.from({ length: 7 }, (_, index) => 101 + index),
+  ...Array.from({ length: 11 }, (_, index) => 201 + index),
+  ...Array.from({ length: 15 }, (_, index) => 301 + index),
+]
+
+const initialRooms: TableItem[] = roomNumbers.map((number) =>
+  createServiceItem(number, 'room'),
 )
 
 export default function TableManager({ currentUser }: TableManagerProps) {
