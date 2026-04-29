@@ -8,6 +8,7 @@ interface Product {
   unit_price: number
   description?: string
   image_url?: string
+  category?: 'comida' | 'bebida'
 }
 
 interface NewProduct {
@@ -15,6 +16,7 @@ interface NewProduct {
   price: string
   description: string
   image_url: string
+  category: 'comida' | 'bebida'
 }
 
 export default function ProductManager() {
@@ -24,6 +26,7 @@ export default function ProductManager() {
     price: '',
     description: '',
     image_url: '',
+    category: 'comida',
   })
   const [editingId, setEditingId] = useState<number | null>(null)
 
@@ -61,6 +64,7 @@ export default function ProductManager() {
         unit_price: parseFloat(newProduct.price),
         description: newProduct.description,
         image_url: newProduct.image_url,
+        category: newProduct.category,
       }
 
       if (editingId) {
@@ -90,13 +94,20 @@ export default function ProductManager() {
       price: product.unit_price.toString(),
       description: product.description || '',
       image_url: product.image_url || '',
+      category: product.category || 'comida',
     })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const cancelEdit = () => {
     setEditingId(null)
-    setNewProduct({ name: '', price: '', description: '', image_url: '' })
+    setNewProduct({
+      name: '',
+      price: '',
+      description: '',
+      image_url: '',
+      category: 'comida',
+    })
   }
 
   const deleteProduct = async (id: number, name: string) => {
@@ -163,6 +174,21 @@ export default function ProductManager() {
               placeholder="https://..."
             />
           </div>
+          <div className="form-group">
+            <label>Categoria</label>
+            <select
+              value={newProduct.category}
+              onChange={(e) =>
+                setNewProduct({
+                  ...newProduct,
+                  category: e.target.value as 'comida' | 'bebida',
+                })
+              }
+            >
+              <option value="comida">Produtos do cafe</option>
+              <option value="bebida">Bebidas</option>
+            </select>
+          </div>
           <div className="form-group full-width">
             <label>Descrição do produto ({newProduct.description.length}/25)</label>
             <textarea
@@ -211,6 +237,9 @@ export default function ProductManager() {
                 <div className="product-info">
                   <h3>{product.name}</h3>
                   <p className="price">R$ {product.unit_price.toFixed(2)}</p>
+                  <span className="category-pill">
+                    {product.category === 'bebida' ? 'Bebida' : 'Produto'}
+                  </span>
                   {product.description && (
                     <p className="description">{product.description}</p>
                   )}

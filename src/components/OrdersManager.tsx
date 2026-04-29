@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import './OrdersManager.css'
 
 type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'entregue'
-type OrderSource = 'mesa' | 'quarto'
+type OrderSource = 'mesa' | 'quarto' | 'app'
 
 interface OrderItem {
   name: string
@@ -13,7 +13,7 @@ interface OrderItem {
 
 interface OrderTicket {
   id: number
-  tableName: 'room_orders' | 'service_orders'
+  tableName: 'room_orders' | 'service_orders' | 'app_orders'
   created_at: string
   source_type: OrderSource
   service_number: number
@@ -59,9 +59,15 @@ export default function OrdersManager() {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (serviceResult.error) {
+    const appResult = await supabase
+      .from('app_orders')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (serviceResult.error || appResult.error) {
       console.error('Erro ao buscar pedidos internos:', serviceResult.error)
-      setMessage('Execute o SQL orders-products-fixes para pedidos de mesa.')
+      console.error('Erro ao buscar pedidos do app:', appResult.error)
+      setMessage('Execute o SQL atualizado para pedidos de mesa e app.')
     } else {
       setMessage('')
     }
@@ -94,8 +100,22 @@ export default function OrdersManager() {
       customer_message: order.customer_message,
     }))
 
+    const appOrders: OrderTicket[] = (appResult.data ?? []).map((order) => ({
+      id: order.id,
+      tableName: 'app_orders',
+      created_at: order.created_at,
+      source_type: 'app',
+      service_number: 0,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      items: order.items ?? [],
+      total_amount: order.total_amount,
+      status: order.status,
+      customer_message: order.customer_message,
+    }))
+
     setOrders(
-      [...roomOrders, ...serviceOrders].filter((order) => order.status !== 'entregue').sort(
+      [...roomOrders, ...serviceOrders, ...appOrders].filter((order) => order.status !== 'entregue').sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       ),
@@ -154,8 +174,9 @@ export default function OrdersManager() {
             <div className="order-card__top">
               <div>
                 <h2>
-                  {order.source_type === 'mesa' ? 'Mesa' : 'Quarto'}{' '}
-                  {order.service_number}
+                  {order.source_type === 'app'
+                    ? 'App cliente'
+                    : `${order.source_type === 'mesa' ? 'Mesa' : 'Quarto'} ${order.service_number}`}
                 </h2>
                 <span>{new Date(order.created_at).toLocaleString('pt-BR')}</span>
               </div>

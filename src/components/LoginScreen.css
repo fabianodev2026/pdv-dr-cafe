@@ -4,15 +4,20 @@
   justify-content: center;
   align-items: center;
   background-color: #ead4b9;
-  background-image: radial-gradient(circle at center, rgba(255, 248, 239, 0.7) 0%, rgba(43, 22, 13, 0.12) 100%);
-  padding: 20px;
+  background-image:
+    linear-gradient(rgba(43, 22, 13, 0.35), rgba(123, 74, 39, 0.35)),
+    url('/fundo.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 10px;
 }
 
 .login-glass-box {
   background: rgba(255, 247, 236, 0.88);
   backdrop-filter: blur(15px);
   border: 1px solid rgba(87, 45, 23, 0.22);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 30px;
   width: 100%;
   max-width: 380px;
@@ -25,7 +30,7 @@
   max-width: 65%;
   display: block;
   margin: 0 auto 18px;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .login-glass-box h2 {
@@ -51,7 +56,7 @@
   width: 100%;
   padding: 12px;
   border: 1px solid #bcaaa4;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1em;
   background-color: rgba(255, 255, 255, 0.9);
   color: #3e2723;
@@ -79,11 +84,13 @@
   background: linear-gradient(135deg, #2b160d 0%, #7b4a27 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1em;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   margin-top: 20px;
 }
 

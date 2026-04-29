@@ -1,9 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useState } from 'react'
 import AppShell from '../components/AppShell'
+import AppCustomersManager from '../components/AppCustomersManager'
 import LoginScreen from '../components/LoginScreen'
 import ConfigManager from '../components/ConfigManager'
+import CustomerApp from '../components/CustomerApp'
 import CustomerMenu from '../components/CustomerMenu'
+import DailyLunchManager from '../components/DailyLunchManager'
 import FinanceManager from '../components/FinanceManager'
 import OrdersManager from '../components/OrdersManager'
 import PendingPayments from '../components/PendingPayments'
@@ -35,6 +38,7 @@ export default function AppRouter() {
         {/* Cardapio publico via QR Code */}
         <Route path="/cardapio" element={<CustomerMenu />} />
         <Route path="/menu" element={<CustomerMenu />} />
+        <Route path="/app" element={<CustomerApp />} />
 
         {!currentUser ? (
           <Route
@@ -57,6 +61,8 @@ export default function AppRouter() {
             />
             <Route path="/pedidos" element={<OrdersManager />} />
             <Route path="/produtos" element={<ProductManager />} />
+            <Route path="/almoco-do-dia" element={<DailyLunchManager />} />
+            <Route path="/clientes-app" element={<AppCustomersManager />} />
             <Route
               path="/configuracoes"
               element={<ConfigManager currentUser={currentUser} />}

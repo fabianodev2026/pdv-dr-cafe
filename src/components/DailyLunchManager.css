@@ -1,0 +1,138 @@
+.daily-lunch-manager {
+  min-height: 100vh;
+  padding: 22px;
+  background: #f3e4d2;
+  color: #2b160d;
+}
+
+.daily-lunch-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.daily-lunch-heading img {
+  width: 86px;
+  height: 86px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.daily-lunch-heading h1 {
+  margin: 0 0 6px;
+}
+
+.daily-lunch-heading p {
+  margin: 0;
+  color: #7b4a27;
+  font-weight: 700;
+}
+
+.daily-lunch-alert {
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: #fff8ef;
+  border: 1px solid #d8a66b;
+  padding: 12px;
+  font-weight: 800;
+}
+
+.daily-lunch-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+  border-radius: 16px;
+  background: #fff8ef;
+  padding: 18px;
+}
+
+.daily-lunch-form label {
+  display: grid;
+  gap: 7px;
+  font-weight: 800;
+}
+
+.daily-lunch-form input,
+.daily-lunch-form textarea {
+  border: 1px solid #bcaaa4;
+  border-radius: 10px;
+  padding: 11px;
+  font: inherit;
+}
+
+.daily-lunch-form__full {
+  grid-column: 1 / -1;
+}
+
+.daily-lunch-check {
+  align-content: center;
+  grid-template-columns: auto 1fr;
+}
+
+.daily-lunch-form button,
+.daily-lunch-actions button {
+  border: 0;
+  border-radius: 10px;
+  background: #2b160d;
+  color: #f8dfbf;
+  padding: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.daily-lunch-list {
+  display: grid;
+  gap: 12px;
+}
+
+.daily-lunch-card {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  border-radius: 14px;
+  background: #fffaf5;
+  padding: 12px;
+  border: 1px solid #ead4b9;
+}
+
+.daily-lunch-card img {
+  width: 96px;
+  height: 80px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.daily-lunch-card strong,
+.daily-lunch-card span,
+.daily-lunch-card small {
+  display: block;
+}
+
+.daily-lunch-card p {
+  margin: 6px 0;
+  color: #2f7d42;
+  font-weight: 900;
+}
+
+.daily-lunch-actions {
+  display: grid;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .daily-lunch-manager {
+    padding: 14px;
+  }
+
+  .daily-lunch-card {
+    grid-template-columns: 1fr;
+  }
+
+  .daily-lunch-card img {
+    width: 100%;
+    height: 150px;
+  }
+}

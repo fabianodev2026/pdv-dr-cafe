@@ -69,7 +69,8 @@
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-group select {
   padding: 10px;
   border: 1px solid #bcaaa4;
   border-radius: 6px;
@@ -79,7 +80,8 @@
 }
 
 .form-group input:focus,
-.form-group textarea:focus {
+.form-group textarea:focus,
+.form-group select:focus {
   outline: none;
   border-color: #8d6e63;
   box-shadow: 0 0 0 3px rgba(141, 110, 99, 0.1);
@@ -196,6 +198,17 @@
   font-weight: 700;
   font-size: 1.2em;
   margin: 5px 0;
+}
+
+.category-pill {
+  display: inline-flex;
+  margin: 4px 0 8px;
+  border-radius: 999px;
+  background: #f4d4a7;
+  color: #2b160d;
+  padding: 4px 9px;
+  font-size: 0.78em;
+  font-weight: 800;
 }
 
 .product-info .description {

@@ -1,0 +1,94 @@
+.app-customers-manager {
+  min-height: 100vh;
+  padding: 22px;
+  background: #f3e4d2;
+  color: #2b160d;
+}
+
+.app-customers-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.app-customers-heading img {
+  width: 86px;
+  height: 86px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.app-customers-heading h1 {
+  margin: 0 0 6px;
+}
+
+.app-customers-heading p {
+  margin: 0;
+  color: #7b4a27;
+  font-weight: 700;
+}
+
+.app-customers-alert,
+.app-customers-empty {
+  border-radius: 10px;
+  background: #fff8ef;
+  border: 1px solid #d8a66b;
+  padding: 12px;
+  font-weight: 800;
+}
+
+.app-customers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.app-customer-card {
+  display: grid;
+  gap: 10px;
+  border-radius: 14px;
+  background: #fffaf5;
+  border-left: 6px solid #b98554;
+  padding: 16px;
+  box-shadow: 0 8px 22px rgba(43, 22, 13, 0.08);
+}
+
+.app-customer-card.ativo {
+  border-left-color: #2f7d42;
+}
+
+.app-customer-card.bloqueado {
+  border-left-color: #c62828;
+}
+
+.app-customer-card h2,
+.app-customer-card p {
+  margin: 0;
+}
+
+.app-customer-card span,
+.app-customer-card small {
+  display: block;
+  color: #7b4a27;
+}
+
+.app-customer-card strong {
+  text-transform: uppercase;
+}
+
+.app-customer-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.app-customer-actions button {
+  border: 0;
+  border-radius: 10px;
+  background: #2b160d;
+  color: #f8dfbf;
+  padding: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
