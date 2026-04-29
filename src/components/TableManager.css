@@ -51,7 +51,8 @@
 
 .room-filters select,
 .room-filters input,
-.payment-methods select {
+.payment-methods select,
+.payment-methods input {
   padding: 11px;
   border: 1px solid #8d6e63;
   border-radius: 8px;
@@ -374,6 +375,11 @@
   font-weight: 700;
 }
 
+.payment-methods small {
+  color: #7b4a27;
+  font-weight: 700;
+}
+
 .garcom-aviso {
   text-align: center;
   color: #d32f2f;
@@ -490,6 +496,17 @@
   border-collapse: collapse;
   margin: 20px 0;
   font-size: 0.9em;
+}
+
+.receipt-section {
+  margin: 14px 0;
+  padding: 10px 0;
+  border-bottom: 1px dashed #999;
+}
+
+.receipt-section h3,
+.receipt-section p {
+  margin: 4px 0;
 }
 
 .receipt-table th {

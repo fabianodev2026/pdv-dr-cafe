@@ -50,6 +50,14 @@ export default function PendingPayments() {
     [pendingList],
   )
 
+  const groupedPending = useMemo(() => {
+    return pendingList.reduce<Record<string, PendingPayment[]>>((groups, payment) => {
+      const key = `${payment.customer_name}__${payment.phone}`
+      groups[key] = [...(groups[key] ?? []), payment]
+      return groups
+    }, {})
+  }, [pendingList])
+
   const fetchPending = async () => {
     const { data, error } = await supabase
       .from('pending_payments')
@@ -197,25 +205,43 @@ export default function PendingPayments() {
 
       <section className="list-section">
         <h2>Contas pendentes - R$ {totalPending.toFixed(2)}</h2>
-        <div className="pending-grid">
-          {pendingList.map((pending) => (
-            <article key={pending.id} className={`pending-card ${pending.status}`}>
-              <div className="card-header">
-                <h3>{pending.customer_name}</h3>
-                <span>{pending.status}</span>
-              </div>
-              <p><strong>Telefone:</strong> {pending.phone}</p>
-              <p><strong>Cargo:</strong> {pending.position || '-'}</p>
-              <p><strong>Consumiu:</strong> {pending.items_detail || '-'}</p>
-              <p><strong>Observacao:</strong> {pending.description || '-'}</p>
-              <p><strong>Valor:</strong> R$ {Number(pending.total_amount).toFixed(2)}</p>
-              <p><strong>Pagamento:</strong> {pending.due_date}</p>
-              <p className="payment-only">Somente Pix ou dinheiro</p>
-              {pending.status === 'pendente' && (
-                <button onClick={() => markAsPaid(pending.id)}>Marcar como pago</button>
-              )}
-            </article>
-          ))}
+        <div className="pending-groups">
+          {Object.entries(groupedPending).map(([key, entries]) => {
+            const first = entries[0]
+            const personTotal = entries
+              .filter((entry) => entry.status === 'pendente')
+              .reduce((sum, entry) => sum + Number(entry.total_amount), 0)
+
+            return (
+              <section key={key} className="pending-person">
+                <div className="person-header">
+                  <div>
+                    <h3>{first.customer_name}</h3>
+                    <p>{first.phone} · {first.position || 'Sem cargo'}</p>
+                  </div>
+                  <strong>Aberto: R$ {personTotal.toFixed(2)}</strong>
+                </div>
+                <div className="pending-grid">
+                  {entries.map((pending) => (
+                    <article key={pending.id} className={`pending-card ${pending.status}`}>
+                      <div className="card-header">
+                        <h3>{pending.status}</h3>
+                        <span>R$ {Number(pending.total_amount).toFixed(2)}</span>
+                      </div>
+                      <p><strong>Compra:</strong> {pending.purchase_date}</p>
+                      <p><strong>Pagamento:</strong> {pending.due_date}</p>
+                      <p><strong>Consumiu:</strong> {pending.items_detail || '-'}</p>
+                      <p><strong>Observacao:</strong> {pending.description || '-'}</p>
+                      <p className="payment-only">Somente Pix ou dinheiro</p>
+                      {pending.status === 'pendente' && (
+                        <button onClick={() => markAsPaid(pending.id)}>Marcar como pago</button>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )
+          })}
         </div>
       </section>
     </div>

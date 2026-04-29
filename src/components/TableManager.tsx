@@ -39,7 +39,7 @@ interface ReceiptData {
   payment_method: PaymentMethod
 }
 
-type PaymentMethod = 'pix' | 'credito' | 'debito' | 'dinheiro'
+type PaymentMethod = 'pix' | 'credito' | 'debito' | 'dinheiro' | 'pagar_depois'
 
 interface CurrentUser {
   username: string
@@ -78,6 +78,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
   const [showReceipt, setShowReceipt] = useState(false)
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix')
+  const [payLaterDueDate, setPayLaterDueDate] = useState('')
   const [selectedFloor, setSelectedFloor] = useState('todos')
   const [roomSearch, setRoomSearch] = useState('')
 
@@ -95,6 +96,8 @@ export default function TableManager({ currentUser }: TableManagerProps) {
     if (updatedItem.status === 'Livre') {
       updatedItem.status = 'Ocupada'
     }
+    setPaymentMethod('pix')
+    setPayLaterDueDate('')
     setActiveItem(updatedItem)
   }
 
@@ -137,6 +140,11 @@ export default function TableManager({ currentUser }: TableManagerProps) {
   const payCommand = () => {
     if (!activeItem) return
 
+    if (paymentMethod === 'pagar_depois' && !canPayLater) {
+      alert('Preencha nome e telefone para usar pagar depois.')
+      return
+    }
+
     const receipt: ReceiptData = {
       type: activeItem.type,
       number: activeItem.number,
@@ -173,6 +181,30 @@ export default function TableManager({ currentUser }: TableManagerProps) {
       ])
 
       if (error) throw error
+
+      if (receiptData.payment_method === 'pagar_depois') {
+        const itemsDetail = receiptData.items
+          .map((item) => `${item.quantity}x ${item.name} - R$ ${item.total.toFixed(2)}`)
+          .join('; ')
+
+        const { error: pendingError } = await supabase
+          .from('pending_payments')
+          .insert([
+            {
+              customer_name: receiptData.customer_name,
+              phone: receiptData.customer_phone,
+              position: activeItem.type === 'room' ? `Quarto ${activeItem.number}` : `Mesa ${activeItem.number}`,
+              description: `Venda registrada em ${receiptData.date}`,
+              items_detail: itemsDetail,
+              total_amount: receiptData.total,
+              purchase_date: new Date().toISOString().slice(0, 10),
+              due_date: payLaterDueDate || new Date().toISOString().slice(0, 10),
+              status: 'pendente',
+            },
+          ])
+
+        if (pendingError) throw pendingError
+      }
 
       // Atualizar o estado da mesa/quarto
       if (activeItem.type === 'table') {
@@ -217,6 +249,10 @@ export default function TableManager({ currentUser }: TableManagerProps) {
     if (!activeItem) return
     setActiveItem({ ...activeItem, [field]: value })
   }
+
+  const canPayLater = Boolean(
+    activeItem?.customer_name.trim() && activeItem?.customer_phone.trim(),
+  )
 
   const roomFloors = useMemo(() => {
     return Array.from(new Set(rooms.map((room) => Math.floor(room.number / 100))))
@@ -362,6 +398,27 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                 </div>
               )}
 
+              {activeItem.type === 'table' && (
+                <div className="glass-panel hospital-fields">
+                  <input
+                    type="text"
+                    value={activeItem.customer_name}
+                    onChange={(e) =>
+                      updateActiveItemField('customer_name', e.target.value)
+                    }
+                    placeholder="Nome do cliente"
+                  />
+                  <input
+                    type="text"
+                    value={activeItem.customer_phone}
+                    onChange={(e) =>
+                      updateActiveItemField('customer_phone', e.target.value)
+                    }
+                    placeholder="Telefone"
+                  />
+                </div>
+              )}
+
               <div className="glass-panel items-list-panel">
                 <h3>📝 Itens na Comanda</h3>
                 {activeItem.items.length === 0 ? (
@@ -404,8 +461,25 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                         <option value="credito">Cartao de credito</option>
                         <option value="debito">Cartao de debito</option>
                         <option value="dinheiro">Dinheiro</option>
+                        {canPayLater && (
+                          <option value="pagar_depois">Pagar depois</option>
+                        )}
                       </select>
+                      {!canPayLater && (
+                        <small>Preencha nome e telefone para liberar pagar depois.</small>
+                      )}
                     </div>
+                    {paymentMethod === 'pagar_depois' && (
+                      <div className="payment-methods">
+                        <label>Data combinada para pagamento</label>
+                        <input
+                          type="date"
+                          value={payLaterDueDate}
+                          onChange={(e) => setPayLaterDueDate(e.target.value)}
+                        />
+                        <small>Pagamento somente por Pix ou dinheiro.</small>
+                      </div>
+                    )}
                     <button onClick={payCommand} className="btn-pay">
                       Encerrar e Pagar
                     </button>
@@ -445,12 +519,17 @@ export default function TableManager({ currentUser }: TableManagerProps) {
               <p>
                 <strong>CUPOM NÃO FISCAL</strong>
               </p>
-              <p>Pagamento: {receiptData?.payment_method}</p>
+              <hr />
+            </div>
+            <div className="receipt-section">
+              <h3>Atendimento</h3>
               <p>
                 {receiptData?.type === 'table' ? 'Mesa' : 'Quarto'}:{' '}
                 {receiptData?.number}
               </p>
-              <hr />
+              {receiptData?.customer_name && <p>Cliente: {receiptData.customer_name}</p>}
+              {receiptData?.customer_phone && <p>Telefone: {receiptData.customer_phone}</p>}
+              <p>Data: {receiptData?.date}</p>
             </div>
             <table className="receipt-table">
               <thead>
@@ -472,6 +551,10 @@ export default function TableManager({ currentUser }: TableManagerProps) {
             </table>
             <div className="receipt-footer">
               <hr />
+              <p>Pagamento: {receiptData?.payment_method}</p>
+              {receiptData?.payment_method === 'pagar_depois' && (
+                <p>Pagamento combinado somente por Pix ou dinheiro.</p>
+              )}
               <h3>TOTAL: R$ {receiptData?.total.toFixed(2)}</h3>
             </div>
           </div>
