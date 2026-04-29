@@ -47,81 +47,24 @@ interface TableManagerProps {
   currentUser?: CurrentUser
 }
 
-const initialTables: TableItem[] = [
-  {
-    id: 1,
-    number: 1,
-    type: 'table',
-    status: 'Livre',
-    total: 0,
-    items: [],
-    customer_name: '',
-    customer_phone: '',
-  },
-  {
-    id: 2,
-    number: 2,
-    type: 'table',
-    status: 'Livre',
-    total: 0,
-    items: [],
-    customer_name: '',
-    customer_phone: '',
-  },
-  {
-    id: 3,
-    number: 3,
-    type: 'table',
-    status: 'Livre',
-    total: 0,
-    items: [],
-    customer_name: '',
-    customer_phone: '',
-  },
-  {
-    id: 4,
-    number: 4,
-    type: 'table',
-    status: 'Livre',
-    total: 0,
-    items: [],
-    customer_name: '',
-    customer_phone: '',
-  },
-]
+const createServiceItem = (number: number, type: 'table' | 'room'): TableItem => ({
+  id: type === 'table' ? number : 1000 + number,
+  number,
+  type,
+  status: 'Livre',
+  total: 0,
+  items: [],
+  customer_name: '',
+  customer_phone: '',
+})
 
-const initialRooms: TableItem[] = [
-  {
-    id: 101,
-    number: 101,
-    type: 'room',
-    status: 'Livre',
-    total: 0,
-    items: [],
-    customer_name: '',
-    customer_phone: '',
-  },
-  {
-    id: 102,
-    number: 102,
-    type: 'room',
-    status: 'Livre',
-    total: 0,
-    items: [],
-    customer_name: '',
-    customer_phone: '',
-  },
-  {
-    id: 201,
-    number: 201,
-    type: 'room',
-    status: 'Livre',
-    total: 0,
-    items: [],
-    customer_name: '',
-    customer_phone: '',
-  },
-]
+const initialTables: TableItem[] = Array.from({ length: 6 }, (_, index) =>
+  createServiceItem(index + 1, 'table'),
+)
+
+const initialRooms: TableItem[] = Array.from({ length: 215 }, (_, index) =>
+  createServiceItem(index + 101, 'room'),
+)
 
 export default function TableManager({ currentUser }: TableManagerProps) {
   const [viewMode, setViewMode] = useState<'salon' | 'hospital'>('salon')

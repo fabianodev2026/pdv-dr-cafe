@@ -1,193 +1,206 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 import './PendingPayments.css'
 
 interface PendingPayment {
   id: number
-  customerName: string
-  productName: string
-  quantity: number
-  unitPrice: number
-  totalAmount: number
-  purchaseDate: string
-  dueDate: string
+  customer_name: string
+  phone: string
+  position: string
+  description: string
+  total_amount: number
+  purchase_date: string
+  due_date: string
   status: string
 }
 
 interface NewPending {
-  customerName: string
-  productName: string
-  quantity: number
-  unitPrice: number
-  purchaseDate: string
-  dueDate: string
+  customer_name: string
+  phone: string
+  position: string
+  description: string
+  total_amount: string
+  purchase_date: string
+  due_date: string
+}
+
+const initialPending: NewPending = {
+  customer_name: '',
+  phone: '',
+  position: '',
+  description: '',
+  total_amount: '',
+  purchase_date: new Date().toISOString().slice(0, 10),
+  due_date: '',
 }
 
 export default function PendingPayments() {
-  const [pendingList, setPendingList] = useState<PendingPayment[]>([
-    {
-      id: 1,
-      customerName: 'João Silva',
-      productName: 'Café Expresso + Pão de Queijo',
-      quantity: 1,
-      unitPrice: 12.5,
-      totalAmount: 25.0,
-      purchaseDate: '2026-04-14',
-      dueDate: '2026-04-20',
-      status: 'Pendente',
-    },
-  ])
+  const [pendingList, setPendingList] = useState<PendingPayment[]>([])
+  const [newPending, setNewPending] = useState<NewPending>(initialPending)
+  const [message, setMessage] = useState('')
 
-  const [newPending, setNewPending] = useState<NewPending>({
-    customerName: '',
-    productName: '',
-    quantity: 1,
-    unitPrice: 0,
-    purchaseDate: '',
-    dueDate: '',
-  })
+  const totalPending = useMemo(
+    () =>
+      pendingList
+        .filter((payment) => payment.status === 'pendente')
+        .reduce((sum, payment) => sum + Number(payment.total_amount), 0),
+    [pendingList],
+  )
 
-  const calculatedTotal = useMemo(() => {
-    return newPending.quantity * newPending.unitPrice
-  }, [newPending.quantity, newPending.unitPrice])
+  const fetchPending = async () => {
+    const { data, error } = await supabase
+      .from('pending_payments')
+      .select('*')
+      .order('due_date', { ascending: true })
 
-  const handleAddPending = () => {
-    setPendingList([
-      ...pendingList,
+    if (error) {
+      console.error('Erro ao buscar pendencias:', error)
+      setMessage('Execute o SQL atualizado para criar pending_payments.')
+    } else {
+      setPendingList(data ?? [])
+    }
+  }
+
+  useEffect(() => {
+    fetchPending()
+  }, [])
+
+  const handleAddPending = async () => {
+    if (!newPending.customer_name.trim() || !newPending.phone.trim() || !newPending.due_date) {
+      setMessage('Informe nome, telefone e data de pagamento.')
+      return
+    }
+
+    const { error } = await supabase.from('pending_payments').insert([
       {
-        id: Date.now(),
         ...newPending,
-        totalAmount: calculatedTotal,
-        status: 'Pendente',
+        total_amount: Number(newPending.total_amount || 0),
+        status: 'pendente',
       },
     ])
-    setNewPending({
-      customerName: '',
-      productName: '',
-      quantity: 1,
-      unitPrice: 0,
-      purchaseDate: '',
-      dueDate: '',
-    })
+
+    if (error) {
+      console.error('Erro ao registrar pendencia:', error)
+      setMessage('Nao foi possivel registrar a pendencia.')
+      return
+    }
+
+    setMessage('Pendencia registrada. Pagamento somente por Pix ou dinheiro.')
+    setNewPending(initialPending)
+    fetchPending()
+  }
+
+  const markAsPaid = async (id: number) => {
+    const { error } = await supabase
+      .from('pending_payments')
+      .update({ status: 'pago' })
+      .eq('id', id)
+
+    if (!error) fetchPending()
   }
 
   return (
     <div className="pending-payments">
-      <header className="header">
-        <h1 className="title">Contas a Receber (Vai Pagar)</h1>
+      <header className="pending-heading">
+        <img src="/logo.jpeg" alt="Dr. Cafe" />
+        <div>
+          <h1>Pagar depois</h1>
+          <p>Pagamento somente por Pix ou dinheiro.</p>
+        </div>
       </header>
 
-      <section className="add-form">
-        <h2>Nova Conta</h2>
-        <div className="form-grid">
-          <div className="form-group">
-            <label>Nome do Cliente</label>
-            <input
-              type="text"
-              value={newPending.customerName}
-              onChange={(e) =>
-                setNewPending({ ...newPending, customerName: e.target.value })
-              }
-              placeholder="Ex: Maria"
-            />
-          </div>
-          <div className="form-group">
-            <label>Produto(s)</label>
-            <input
-              type="text"
-              value={newPending.productName}
-              onChange={(e) =>
-                setNewPending({ ...newPending, productName: e.target.value })
-              }
-              placeholder="Ex: Cappuccino"
-            />
-          </div>
-          <div className="form-group">
-            <label>Data da Compra</label>
-            <input
-              type="date"
-              value={newPending.purchaseDate}
-              onChange={(e) =>
-                setNewPending({ ...newPending, purchaseDate: e.target.value })
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label>Data que vai pagar</label>
-            <input
-              type="date"
-              value={newPending.dueDate}
-              onChange={(e) =>
-                setNewPending({ ...newPending, dueDate: e.target.value })
-              }
-            />
-          </div>
+      {message && <div className="payment-note">{message}</div>}
 
-          <div className="form-group">
-            <label>Quantidade</label>
+      <section className="add-form">
+        <h2>Nova pendencia</h2>
+        <div className="form-grid">
+          <label>
+            Nome
             <input
-              type="number"
-              value={newPending.quantity}
+              value={newPending.customer_name}
               onChange={(e) =>
-                setNewPending({
-                  ...newPending,
-                  quantity: parseInt(e.target.value) || 1,
-                })
+                setNewPending({ ...newPending, customer_name: e.target.value })
               }
-              min="1"
+              placeholder="Nome do cliente"
             />
-          </div>
-          <div className="form-group">
-            <label>Valor Unitário (R$)</label>
+          </label>
+          <label>
+            Telefone
+            <input
+              value={newPending.phone}
+              onChange={(e) =>
+                setNewPending({ ...newPending, phone: e.target.value })
+              }
+              placeholder="Telefone"
+            />
+          </label>
+          <label>
+            Cargo
+            <input
+              value={newPending.position}
+              onChange={(e) =>
+                setNewPending({ ...newPending, position: e.target.value })
+              }
+              placeholder="Cargo que ocupa"
+            />
+          </label>
+          <label>
+            Data de pagamento
+            <input
+              type="date"
+              value={newPending.due_date}
+              onChange={(e) =>
+                setNewPending({ ...newPending, due_date: e.target.value })
+              }
+            />
+          </label>
+          <label className="wide">
+            Descricao
+            <input
+              value={newPending.description}
+              onChange={(e) =>
+                setNewPending({ ...newPending, description: e.target.value })
+              }
+              placeholder="Produtos/observacao"
+            />
+          </label>
+          <label>
+            Valor
             <input
               type="number"
-              value={newPending.unitPrice}
-              onChange={(e) =>
-                setNewPending({
-                  ...newPending,
-                  unitPrice: parseFloat(e.target.value) || 0,
-                })
-              }
               step="0.01"
+              value={newPending.total_amount}
+              onChange={(e) =>
+                setNewPending({ ...newPending, total_amount: e.target.value })
+              }
+              placeholder="0,00"
             />
-          </div>
-          <div className="form-group total-display">
-            <label>Valor Total</label>
-            <div className="calculated-value">R$ {calculatedTotal.toFixed(2)}</div>
-          </div>
+          </label>
         </div>
         <button onClick={handleAddPending} className="btn-primary">
-          Registrar Conta
+          Registrar pendencia
         </button>
       </section>
 
       <section className="list-section">
-        <h2>Contas Pendentes</h2>
+        <h2>Contas pendentes - R$ {totalPending.toFixed(2)}</h2>
         <div className="pending-grid">
           {pendingList.map((pending) => (
-            <div key={pending.id} className="pending-card">
+            <article key={pending.id} className={`pending-card ${pending.status}`}>
               <div className="card-header">
-                <h3>{pending.customerName}</h3>
-                <span className={`status ${pending.status.toLowerCase()}`}>
-                  {pending.status}
-                </span>
+                <h3>{pending.customer_name}</h3>
+                <span>{pending.status}</span>
               </div>
-              <p>
-                <strong>Produto:</strong> {pending.productName}
-              </p>
-              <p>
-                <strong>Quantidade:</strong> {pending.quantity}x
-              </p>
-              <p>
-                <strong>Valor Unitário:</strong> R$ {pending.unitPrice.toFixed(2)}
-              </p>
-              <p>
-                <strong>Total:</strong> <span className="amount">R$ {pending.totalAmount.toFixed(2)}</span>
-              </p>
-              <p className="dates">
-                <strong>Compra:</strong> {pending.purchaseDate} <br />
-                <strong>Vencimento:</strong> {pending.dueDate}
-              </p>
-            </div>
+              <p><strong>Telefone:</strong> {pending.phone}</p>
+              <p><strong>Cargo:</strong> {pending.position || '-'}</p>
+              <p><strong>Descricao:</strong> {pending.description || '-'}</p>
+              <p><strong>Valor:</strong> R$ {Number(pending.total_amount).toFixed(2)}</p>
+              <p><strong>Pagamento:</strong> {pending.due_date}</p>
+              <p className="payment-only">Somente Pix ou dinheiro</p>
+              {pending.status === 'pendente' && (
+                <button onClick={() => markAsPaid(pending.id)}>Marcar como pago</button>
+              )}
+            </article>
           ))}
         </div>
       </section>

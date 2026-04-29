@@ -27,6 +27,7 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
 
         <nav className="app-tabs" aria-label="Abas do PDV">
           <NavLink to="/mesas">PDV</NavLink>
+          <NavLink to="/pendencias">Pagar depois</NavLink>
           {canManage(currentUser.role) && <NavLink to="/produtos">Produtos</NavLink>}
           {canManage(currentUser.role) && <NavLink to="/configuracoes">Usuarios</NavLink>}
           {canManage(currentUser.role) && (

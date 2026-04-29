@@ -5,6 +5,7 @@ import LoginScreen from '../components/LoginScreen'
 import ConfigManager from '../components/ConfigManager'
 import CustomerMenu from '../components/CustomerMenu'
 import FinanceManager from '../components/FinanceManager'
+import PendingPayments from '../components/PendingPayments'
 import ProductManager from '../components/ProductManager'
 import RoomPanel from '../components/RoomPanel'
 import SettingsManager from '../components/SettingsManager'
@@ -64,7 +65,7 @@ export default function AppRouter() {
               path="/relatorios"
               element={<Navigate to="/configuracoes-sistema" replace />}
             />
-            <Route path="/pendencias" element={<FinanceManager />} />
+            <Route path="/pendencias" element={<PendingPayments />} />
             <Route
               path="/configuracoes-sistema"
               element={<SettingsManager />}

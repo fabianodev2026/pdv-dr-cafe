@@ -11,6 +11,13 @@ interface Product {
   image_url?: string | null
 }
 
+interface CartItem {
+  id: number
+  name: string
+  unit_price: number
+  quantity: number
+}
+
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
@@ -19,24 +26,30 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 export default function CustomerMenu() {
   const [searchParams] = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
+  const [cart, setCart] = useState<CartItem[]>([])
+  const [patientName, setPatientName] = useState('')
+  const [phone, setPhone] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [message, setMessage] = useState('')
 
-  const roomLabel = useMemo(() => {
+  const roomNumber = useMemo(() => {
     const room = searchParams.get('room')?.trim()
-    const roomNumber = Number(room)
-
-    if (!room || !Number.isInteger(roomNumber) || roomNumber < 101 || roomNumber > 315) {
-      return 'Quarto nao informado'
-    }
-
-    return `Quarto ${roomNumber}`
+    const parsed = Number(room)
+    return Number.isInteger(parsed) && parsed >= 101 && parsed <= 315
+      ? parsed
+      : null
   }, [searchParams])
+
+  const total = useMemo(
+    () => cart.reduce((sum, item) => sum + item.unit_price * item.quantity, 0),
+    [cart],
+  )
 
   useEffect(() => {
     async function fetchProducts() {
       setIsLoading(true)
-      setErrorMessage('')
+      setMessage('')
 
       const { data, error } = await supabase
         .from('products')
@@ -44,17 +57,83 @@ export default function CustomerMenu() {
         .order('name')
 
       if (error) {
-        setErrorMessage('Nao foi possivel carregar o cardapio.')
-        setIsLoading(false)
-        return
+        setMessage('Nao foi possivel carregar o cardapio.')
+      } else {
+        setProducts(data ?? [])
       }
 
-      setProducts(data ?? [])
       setIsLoading(false)
     }
 
     fetchProducts()
   }, [])
+
+  const addToCart = (product: Product) => {
+    setCart((items) => {
+      const existing = items.find((item) => item.id === product.id)
+
+      if (existing) {
+        return items.map((item) =>
+          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item,
+        )
+      }
+
+      return [
+        ...items,
+        {
+          id: product.id,
+          name: product.name,
+          unit_price: product.unit_price,
+          quantity: 1,
+        },
+      ]
+    })
+  }
+
+  const removeFromCart = (productId: number) => {
+    setCart((items) => items.filter((item) => item.id !== productId))
+  }
+
+  const sendOrder = async () => {
+    if (!roomNumber) {
+      setMessage('Abra o cardapio pelo QR Code do quarto.')
+      return
+    }
+
+    if (!patientName.trim() || !phone.trim()) {
+      setMessage('Informe nome do paciente e telefone.')
+      return
+    }
+
+    if (cart.length === 0) {
+      setMessage('Adicione pelo menos um produto ao pedido.')
+      return
+    }
+
+    setIsSending(true)
+    const { error } = await supabase.from('room_orders').insert([
+      {
+        room_number: roomNumber,
+        patient_name: patientName.trim(),
+        phone: phone.trim(),
+        items: cart,
+        total_amount: total,
+        status: 'novo',
+      },
+    ])
+
+    if (error) {
+      console.error('Erro ao enviar pedido:', error)
+      setMessage('Nao foi possivel enviar o pedido. Chame a recepcao.')
+    } else {
+      setCart([])
+      setPatientName('')
+      setPhone('')
+      setMessage('Pedido enviado para o PDV.')
+    }
+
+    setIsSending(false)
+  }
 
   return (
     <main className="customer-menu">
@@ -63,36 +142,69 @@ export default function CustomerMenu() {
           <p className="customer-menu__eyebrow">Dr. Cafe</p>
           <h1>Cardapio</h1>
         </div>
-        <span className="customer-menu__room">{roomLabel}</span>
+        <span className="customer-menu__room">
+          {roomNumber ? `Quarto ${roomNumber}` : 'Quarto nao informado'}
+        </span>
       </header>
 
+      <section className="customer-menu__patient">
+        <input
+          value={patientName}
+          onChange={(e) => setPatientName(e.target.value)}
+          placeholder="Nome do paciente"
+          maxLength={40}
+        />
+        <input
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Telefone"
+          maxLength={20}
+        />
+      </section>
+
       {isLoading && <p className="customer-menu__state">Carregando cardapio...</p>}
+      {message && <p className="customer-menu__state">{message}</p>}
 
-      {errorMessage && <p className="customer-menu__state customer-menu__state--error">{errorMessage}</p>}
-
-      {!isLoading && !errorMessage && products.length === 0 && (
-        <p className="customer-menu__state">Nenhum produto disponivel no momento.</p>
-      )}
-
-      <section className="customer-menu__grid" aria-label="Produtos">
-        {products.map((product) => (
-          <article className="customer-menu__item" key={product.id}>
-            {product.image_url ? (
-              <img src={product.image_url} alt={product.name} />
-            ) : (
-              <div className="customer-menu__image-fallback" aria-hidden="true">
-                Dr.
+      <section className="customer-menu__layout">
+        <div className="customer-menu__grid" aria-label="Produtos">
+          {products.map((product) => (
+            <article className="customer-menu__item" key={product.id}>
+              {product.image_url ? (
+                <img src={product.image_url} alt={product.name} />
+              ) : (
+                <div className="customer-menu__image-fallback" aria-hidden="true">
+                  Dr.
+                </div>
+              )}
+              <div className="customer-menu__info">
+                <div className="customer-menu__line">
+                  <h2>{product.name.slice(0, 25)}</h2>
+                  <strong>{currencyFormatter.format(product.unit_price)}</strong>
+                </div>
+                {product.description && <p>{product.description.slice(0, 25)}</p>}
+                <button onClick={() => addToCart(product)}>Adicionar</button>
               </div>
-            )}
-            <div className="customer-menu__info">
-              <div className="customer-menu__line">
-                <h2>{product.name.slice(0, 25)}</h2>
-                <strong>{currencyFormatter.format(product.unit_price)}</strong>
+            </article>
+          ))}
+        </div>
+
+        <aside className="customer-menu__cart">
+          <h2>Pedido</h2>
+          {cart.length === 0 ? (
+            <p>Nenhum item adicionado.</p>
+          ) : (
+            cart.map((item) => (
+              <div className="customer-menu__cart-item" key={item.id}>
+                <span>{item.quantity}x {item.name}</span>
+                <button onClick={() => removeFromCart(item.id)}>Remover</button>
               </div>
-              {product.description && <p>{product.description}</p>}
-            </div>
-          </article>
-        ))}
+            ))
+          )}
+          <strong>Total: {currencyFormatter.format(total)}</strong>
+          <button onClick={sendOrder} disabled={isSending}>
+            {isSending ? 'Enviando...' : 'Enviar pedido'}
+          </button>
+        </aside>
       </section>
     </main>
   )

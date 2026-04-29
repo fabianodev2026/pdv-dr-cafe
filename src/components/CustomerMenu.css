@@ -52,12 +52,35 @@
   color: #ffb3a7;
 }
 
+.customer-menu__patient {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 1040px;
+  margin: 0 auto 18px;
+}
+
+.customer-menu__patient input {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(245, 190, 125, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fffaf5;
+}
+
+.customer-menu__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
 .customer-menu__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
-  max-width: 1040px;
-  margin: 0 auto;
 }
 
 .customer-menu__item {
@@ -118,6 +141,57 @@
   line-height: 1.35;
 }
 
+.customer-menu__info button,
+.customer-menu__cart button {
+  margin-top: 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #f5be7d;
+  color: #24140d;
+  padding: 10px 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.customer-menu__cart {
+  align-self: start;
+  position: sticky;
+  top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(245, 190, 125, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.customer-menu__cart h2 {
+  margin: 0 0 12px;
+}
+
+.customer-menu__cart-item {
+  display: grid;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.customer-menu__cart-item button {
+  justify-self: start;
+  background: transparent;
+  border: 1px solid rgba(245, 190, 125, 0.35);
+  color: #f5be7d;
+  padding: 6px 9px;
+}
+
+.customer-menu__cart > strong {
+  display: block;
+  margin-top: 14px;
+  color: #f5be7d;
+}
+
+.customer-menu__cart > button {
+  width: 100%;
+}
+
 @media (max-width: 560px) {
   .customer-menu {
     padding: 18px;
@@ -126,6 +200,15 @@
   .customer-menu__header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .customer-menu__patient,
+  .customer-menu__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-menu__cart {
+    position: static;
   }
 
   .customer-menu__item {
