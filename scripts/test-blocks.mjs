@@ -113,6 +113,17 @@ block('Cardapio do cliente', () => {
   requireIncludes(customerMenu, 'phone', 'telefone')
 })
 
+block('App do cliente sem mensagem tecnica', () => {
+  const customerApp = readText('src/components/CustomerApp.tsx')
+  const blockedWords = ['Execute o SQL', 'SQL atualizado', 'tabela daily_lunches']
+
+  for (const word of blockedWords) {
+    if (customerApp.includes(word)) {
+      throw new Error(`Mensagem tecnica encontrada no app do cliente: ${word}`)
+    }
+  }
+})
+
 block('TypeScript', () => {
   const configPath = ts.findConfigFile(root, ts.sys.fileExists, 'tsconfig.json')
 

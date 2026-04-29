@@ -69,6 +69,7 @@ export default function CustomerApp() {
   const [customer, setCustomer] = useState<AppCustomer | null>(null)
   const [phoneLogin, setPhoneLogin] = useState('')
   const [message, setMessage] = useState('')
+  const [menuMessage, setMenuMessage] = useState('')
   const [products, setProducts] = useState<Product[]>([])
   const [dailyLunch, setDailyLunch] = useState<DailyLunch | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -98,6 +99,9 @@ export default function CustomerApp() {
 
     if (!productsResult.error) {
       setProducts(productsResult.data ?? [])
+    } else {
+      console.error('Erro ao carregar produtos do app:', productsResult.error)
+      setMenuMessage('Cardapio temporariamente indisponivel.')
     }
 
     const lunchResult = await supabase
@@ -111,15 +115,25 @@ export default function CustomerApp() {
 
     if (!lunchResult.error && lunchResult.data) {
       setDailyLunch(lunchResult.data)
+    } else if (lunchResult.error) {
+      console.error('Erro ao carregar almoco do dia:', lunchResult.error)
     }
   }
 
   const loadPending = async (phone: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('pending_payments')
       .select('*')
       .eq('phone', phone)
       .eq('status', 'pendente')
+
+    if (error) {
+      console.error('Erro ao carregar consumo em aberto:', error)
+      setPendingTotal(0)
+      setNextDueDate(getFifthBusinessDay())
+      setIsBlockedByDebt(false)
+      return
+    }
 
     const payments = data ?? []
     const totalDebt = payments.reduce(
@@ -158,6 +172,7 @@ export default function CustomerApp() {
       .maybeSingle()
 
     if (error || !data) {
+      if (error) console.error('Erro ao consultar cadastro do app:', error)
       setMessage('Cadastro nao encontrado. Faca seu cadastro abaixo.')
       return
     }
@@ -189,7 +204,8 @@ export default function CustomerApp() {
     )
 
     if (error) {
-      setMessage(`Erro no cadastro: ${error.message}`)
+      console.error('Erro no cadastro do app:', error)
+      setMessage('Nao foi possivel enviar o cadastro agora. Tente novamente em instantes.')
       return
     }
 
@@ -251,7 +267,8 @@ export default function CustomerApp() {
     ])
 
     if (orderError) {
-      setMessage(`Erro ao enviar pedido: ${orderError.message}`)
+      console.error('Erro ao enviar pedido pelo app:', orderError)
+      setMessage('Nao foi possivel enviar o pedido agora. Tente novamente em instantes.')
       return
     }
 
@@ -274,7 +291,8 @@ export default function CustomerApp() {
     ])
 
     if (pendingError) {
-      setMessage(`Pedido enviado, mas houve erro no pagar depois: ${pendingError.message}`)
+      console.error('Erro ao registrar pagar depois pelo app:', pendingError)
+      setMessage('Pedido enviado. O cafe vai conferir seu consumo no sistema.')
       return
     }
 
@@ -299,6 +317,7 @@ export default function CustomerApp() {
       </header>
 
       {message && <div className="customer-app__alert">{message}</div>}
+      {menuMessage && <div className="customer-app__alert">{menuMessage}</div>}
 
       {!customer && (
         <section className="customer-app__auth">
