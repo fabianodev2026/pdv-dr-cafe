@@ -486,53 +486,54 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                   </div>
                 )}
 
-                {activeItem.items.length > 0 &&
-                currentUser?.role !== 'garcom' ? (
+                {activeItem.items.length > 0 && (
                   <>
                     <button onClick={sendToPreparation} className="btn-send-order">
                       Enviar para preparo
                     </button>
-                    <div className="payment-methods">
-                      <label>Forma de pagamento</label>
-                      <select
-                        value={paymentMethod}
-                        onChange={(e) =>
-                          setPaymentMethod(e.target.value as PaymentMethod)
-                        }
-                      >
-                        <option value="pix">Pix</option>
-                        <option value="credito">Cartao de credito</option>
-                        <option value="debito">Cartao de debito</option>
-                        <option value="dinheiro">Dinheiro</option>
-                        {canPayLater && (
-                          <option value="pagar_depois">Pagar depois</option>
+                    {currentUser?.role !== 'garcom' ? (
+                      <>
+                        <div className="payment-methods">
+                          <label>Forma de pagamento</label>
+                          <select
+                            value={paymentMethod}
+                            onChange={(e) =>
+                              setPaymentMethod(e.target.value as PaymentMethod)
+                            }
+                          >
+                            <option value="pix">Pix</option>
+                            <option value="credito">Cartao de credito</option>
+                            <option value="debito">Cartao de debito</option>
+                            <option value="dinheiro">Dinheiro</option>
+                            {canPayLater && (
+                              <option value="pagar_depois">Pagar depois</option>
+                            )}
+                          </select>
+                          {!canPayLater && (
+                            <small>Preencha nome e telefone para liberar pagar depois.</small>
+                          )}
+                        </div>
+                        {paymentMethod === 'pagar_depois' && (
+                          <div className="payment-methods">
+                            <label>Data combinada para pagamento</label>
+                            <input
+                              type="date"
+                              value={payLaterDueDate}
+                              onChange={(e) => setPayLaterDueDate(e.target.value)}
+                            />
+                            <small>Pagamento somente por Pix ou dinheiro.</small>
+                          </div>
                         )}
-                      </select>
-                      {!canPayLater && (
-                        <small>Preencha nome e telefone para liberar pagar depois.</small>
-                      )}
-                    </div>
-                    {paymentMethod === 'pagar_depois' && (
-                      <div className="payment-methods">
-                        <label>Data combinada para pagamento</label>
-                        <input
-                          type="date"
-                          value={payLaterDueDate}
-                          onChange={(e) => setPayLaterDueDate(e.target.value)}
-                        />
-                        <small>Pagamento somente por Pix ou dinheiro.</small>
-                      </div>
+                        <button onClick={payCommand} className="btn-pay">
+                          Encerrar e Pagar
+                        </button>
+                      </>
+                    ) : (
+                      <p className="garcom-aviso">
+                        Pedido pode ser enviado para preparo. Pagamento fica com o caixa.
+                      </p>
                     )}
-                    <button onClick={payCommand} className="btn-pay">
-                      Encerrar e Pagar
-                    </button>
                   </>
-                ) : (
-                  activeItem.items.length > 0 && (
-                    <p className="garcom-aviso">
-                      Apenas o Caixa pode finalizar o pagamento.
-                    </p>
-                  )
                 )}
               </div>
             </div>

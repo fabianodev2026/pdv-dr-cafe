@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import './OrdersManager.css'
 
-type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto'
+type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'entregue'
 type OrderSource = 'mesa' | 'quarto'
 
 interface OrderItem {
@@ -30,6 +30,7 @@ const statusMessages: Record<OrderStatus, string> = {
   recebido: 'Seu pedido foi recebido.',
   preparo: 'Seu pedido esta em preparo.',
   pronto: 'Seu pedido esta pronto para entrega.',
+  entregue: 'Pedido entregue. Obrigado!',
 }
 
 export default function OrdersManager() {
@@ -37,7 +38,7 @@ export default function OrdersManager() {
   const [message, setMessage] = useState('')
 
   const pendingCount = useMemo(
-    () => orders.filter((order) => order.status !== 'pronto').length,
+    () => orders.filter((order) => order.status !== 'entregue').length,
     [orders],
   )
 
@@ -94,7 +95,7 @@ export default function OrdersManager() {
     }))
 
     setOrders(
-      [...roomOrders, ...serviceOrders].sort(
+      [...roomOrders, ...serviceOrders].filter((order) => order.status !== 'entregue').sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       ),
@@ -185,6 +186,14 @@ export default function OrdersManager() {
               <button onClick={() => updateStatus(order, 'recebido')}>Recebido</button>
               <button onClick={() => updateStatus(order, 'preparo')}>Preparo</button>
               <button onClick={() => updateStatus(order, 'pronto')}>Pronto</button>
+              {order.status === 'pronto' && (
+                <button
+                  onClick={() => updateStatus(order, 'entregue')}
+                  className="btn-delivered"
+                >
+                  Entregue
+                </button>
+              )}
             </div>
           </article>
         ))}

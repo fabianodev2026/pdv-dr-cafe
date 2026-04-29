@@ -367,11 +367,12 @@
 .btn-send-order {
   width: 100%;
   margin-top: 16px;
-  padding: 13px;
+  padding: 16px;
   border: 0;
   border-radius: 10px;
   background: #6d4c41;
   color: white;
+  font-size: 1.05em;
   font-weight: 800;
   cursor: pointer;
 }
@@ -554,15 +555,127 @@
 }
 
 @media (max-width: 768px) {
+  .pdv-container {
+    padding: 12px;
+  }
+
+  .mode-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .mode-btn {
+    border-radius: 10px;
+    min-height: 48px;
+    padding: 10px 8px;
+  }
+
+  .room-filters {
+    grid-template-columns: 1fr;
+  }
+
   .cards-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .item-card {
+    border-radius: 10px;
+    min-height: 96px;
+    padding: 14px 10px;
   }
 
   .item-card h3 {
     font-size: 1.2em;
   }
 
+  .command-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #f5e6d3;
+    border-bottom: 1px solid #d8b98f;
+    margin: -12px -12px 12px;
+    padding: 10px 12px;
+  }
+
+  .command-header h2 {
+    font-size: 1.25em;
+  }
+
+  .btn-back,
+  .total-badge {
+    border-radius: 8px;
+    min-height: 42px;
+  }
+
   .split-layout {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .glass-panel {
+    border-radius: 10px;
+    margin-bottom: 12px;
+    padding: 12px;
+  }
+
+  .products-showcase {
+    order: 2;
+  }
+
+  .active-command-panel {
+    order: 1;
+  }
+
+  .visual-menu {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .product-item-card {
+    border-radius: 10px;
+  }
+
+  .img-wrapper {
+    height: 76px;
+  }
+
+  .product-info-mini {
+    padding: 8px;
+  }
+
+  .p-name,
+  .p-price {
+    font-size: 0.85em;
+  }
+
+  .hospital-fields input,
+  .payment-methods select,
+  .payment-methods input {
+    min-height: 46px;
+    font-size: 16px;
+  }
+
+  .mobile-items-list {
+    max-height: none;
+  }
+
+  .mobile-item {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .btn-remove-item {
+    min-height: 42px;
+    min-width: 42px;
+  }
+
+  .btn-send-order,
+  .btn-pay {
+    min-height: 52px;
+    margin-top: 12px;
   }
 }
