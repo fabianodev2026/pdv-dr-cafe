@@ -92,10 +92,7 @@ export default function CustomerApp() {
   const drinks = products.filter((product) => product.category === 'bebida')
 
   const loadMenu = async () => {
-    const productsResult = await supabase
-      .from('products')
-      .select('*')
-      .order('name')
+    const productsResult = await supabase.from('products').select('*').order('name')
 
     if (!productsResult.error) {
       setProducts(productsResult.data ?? [])
@@ -136,10 +133,7 @@ export default function CustomerApp() {
     }
 
     const payments = data ?? []
-    const totalDebt = payments.reduce(
-      (sum, payment) => sum + Number(payment.total_amount),
-      0,
-    )
+    const totalDebt = payments.reduce((sum, payment) => sum + Number(payment.total_amount), 0)
     const overdue = payments.some((payment) => dateDiffInDays(payment.due_date) < -3)
     const closestDue = payments
       .map((payment) => payment.due_date)
@@ -220,9 +214,7 @@ export default function CustomerApp() {
       const existing = current.find((cartItem) => cartItem.id === item.id)
       if (existing) {
         return current.map((cartItem) =>
-          cartItem.id === item.id
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-            : cartItem,
+          cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem,
         )
       }
 
@@ -273,7 +265,10 @@ export default function CustomerApp() {
     }
 
     const itemsDetail = cart
-      .map((item) => `${item.quantity}x ${item.name} - R$ ${(item.quantity * item.unit_price).toFixed(2)}`)
+      .map(
+        (item) =>
+          `${item.quantity}x ${item.name} - R$ ${(item.quantity * item.unit_price).toFixed(2)}`,
+      )
       .join('; ')
 
     const { error: pendingError } = await supabase.from('pending_payments').insert([
@@ -312,7 +307,7 @@ export default function CustomerApp() {
         <img src="/logo.jpeg" alt="Dr. Cafe" />
         <div>
           <p>App Dr. Cafe</p>
-          <h1>Cardapio e pagar depois</h1>
+          <h1>Faça Seu Pedido</h1>
         </div>
       </header>
 
@@ -356,8 +351,8 @@ export default function CustomerApp() {
             />
             <button onClick={registerCustomer}>Enviar cadastro</button>
             <small>
-              O cafe confirma o cadastro no sistema. Depois disso o app libera os
-              pedidos em pagar depois.
+              O cafe confirma o cadastro no sistema. Depois disso o app libera os pedidos em pagar
+              depois.
             </small>
           </div>
         </section>
@@ -374,7 +369,9 @@ export default function CustomerApp() {
             <div>
               <strong>{currencyFormatter.format(pendingTotal)}</strong>
               <span>em aberto</span>
-              <span>Vencimento: {new Date(`${nextDueDate}T00:00:00`).toLocaleDateString('pt-BR')}</span>
+              <span>
+                Vencimento: {new Date(`${nextDueDate}T00:00:00`).toLocaleDateString('pt-BR')}
+              </span>
             </div>
           </section>
 
@@ -386,8 +383,7 @@ export default function CustomerApp() {
 
           {isBlockedByDebt && (
             <div className="customer-app__blocked">
-              Conta bloqueada por atraso superior a 3 dias. Procure o cafe para
-              regularizar.
+              Conta bloqueada por atraso superior a 3 dias. Procure o cafe para regularizar.
             </div>
           )}
 
@@ -446,20 +442,17 @@ export default function CustomerApp() {
               ) : (
                 cart.map((item) => (
                   <div key={item.id} className="customer-app__cart-item">
-                    <span>{item.quantity}x {item.name}</span>
-                    <strong>
-                      {currencyFormatter.format(item.quantity * item.unit_price)}
-                    </strong>
+                    <span>
+                      {item.quantity}x {item.name}
+                    </span>
+                    <strong>{currencyFormatter.format(item.quantity * item.unit_price)}</strong>
                     <button onClick={() => removeFromCart(item.id)}>Remover</button>
                   </div>
                 ))
               )}
               <strong>Total: {currencyFormatter.format(total)}</strong>
               <p>Pagamento: pagar depois, Pix ou dinheiro no dia combinado.</p>
-              <button
-                onClick={sendOrder}
-                disabled={customer.status !== 'ativo' || isBlockedByDebt}
-              >
+              <button onClick={sendOrder} disabled={customer.status !== 'ativo' || isBlockedByDebt}>
                 Enviar pedido
               </button>
             </aside>
