@@ -351,8 +351,7 @@ export default function CustomerApp() {
             />
             <button onClick={registerCustomer}>Enviar cadastro</button>
             <small>
-              O cafe confirma o cadastro no sistema. Depois disso o app libera os pedidos em pagar
-              depois.
+              O cafe confirma o cadastro no sistema. Depois disso o app libera os pedidos.
             </small>
           </div>
         </section>
