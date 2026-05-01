@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { logAppError } from '../lib/appLogger'
+import { customerFieldLimits } from '../lib/customerLimits'
+import { hashPassword, verifyPassword } from '../lib/passwordSecurity'
 import './CustomerApp.css'
 
 type CustomerStatus = 'pendente' | 'ativo' | 'bloqueado'
@@ -7,9 +10,11 @@ type CustomerStatus = 'pendente' | 'ativo' | 'bloqueado'
 interface AppCustomer {
   id: number
   name: string
+  login: string
   phone: string
   position: string
   email: string
+  password_hash: string
   status: CustomerStatus
   payment_day: number
 }
@@ -65,9 +70,19 @@ const dateDiffInDays = (date: string) => {
   return Math.ceil((target.getTime() - today.getTime()) / 86400000)
 }
 
+const formatPhone = (value: string) => {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 2) return digits ? `(${digits}` : ''
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  }
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
 export default function CustomerApp() {
   const [customer, setCustomer] = useState<AppCustomer | null>(null)
-  const [phoneLogin, setPhoneLogin] = useState('')
+  const [loginForm, setLoginForm] = useState({ login: '', password: '' })
   const [message, setMessage] = useState('')
   const [menuMessage, setMenuMessage] = useState('')
   const [products, setProducts] = useState<Product[]>([])
@@ -78,6 +93,8 @@ export default function CustomerApp() {
   const [isBlockedByDebt, setIsBlockedByDebt] = useState(false)
   const [form, setForm] = useState({
     name: '',
+    login: '',
+    password: '',
     phone: '',
     position: '',
     email: '',
@@ -97,7 +114,12 @@ export default function CustomerApp() {
     if (!productsResult.error) {
       setProducts(productsResult.data ?? [])
     } else {
-      console.error('Erro ao carregar produtos do app:', productsResult.error)
+      logAppError({
+        source: 'CustomerApp',
+        action: 'loadMenu.products',
+        error: productsResult.error,
+        details: { table: 'products' },
+      })
       setMenuMessage('Cardapio temporariamente indisponivel.')
     }
 
@@ -113,7 +135,12 @@ export default function CustomerApp() {
     if (!lunchResult.error && lunchResult.data) {
       setDailyLunch(lunchResult.data)
     } else if (lunchResult.error) {
-      console.error('Erro ao carregar almoco do dia:', lunchResult.error)
+      logAppError({
+        source: 'CustomerApp',
+        action: 'loadMenu.dailyLunch',
+        error: lunchResult.error,
+        details: { table: 'daily_lunches' },
+      })
     }
   }
 
@@ -125,7 +152,12 @@ export default function CustomerApp() {
       .eq('status', 'pendente')
 
     if (error) {
-      console.error('Erro ao carregar consumo em aberto:', error)
+      logAppError({
+        source: 'CustomerApp',
+        action: 'loadPending',
+        error,
+        details: { table: 'pending_payments' },
+      })
       setPendingTotal(0)
       setNextDueDate(getFifthBusinessDay())
       setIsBlockedByDebt(false)
@@ -146,47 +178,121 @@ export default function CustomerApp() {
 
   useEffect(() => {
     loadMenu()
-    const savedPhone = localStorage.getItem('dr-cafe-app-phone')
-    if (savedPhone) {
-      setPhoneLogin(savedPhone)
-      loginByPhone(savedPhone)
+    const savedLogin = localStorage.getItem('dr-cafe-app-login')
+    if (savedLogin) {
+      setLoginForm((current) => ({ ...current, login: savedLogin }))
     }
   }, [])
 
-  const loginByPhone = async (phone = phoneLogin) => {
-    if (!phone.trim()) {
-      setMessage('Digite o telefone cadastrado.')
+  const loginCustomer = async () => {
+    const login = loginForm.login.trim()
+    const password = loginForm.password.trim()
+
+    if (!login || !password) {
+      setMessage('Digite login e senha.')
       return
     }
 
     const { data, error } = await supabase
       .from('app_customers')
       .select('*')
-      .eq('phone', phone.trim())
+      .eq('login', login)
       .maybeSingle()
 
-    if (error || !data) {
-      if (error) console.error('Erro ao consultar cadastro do app:', error)
-      setMessage('Cadastro nao encontrado. Faca seu cadastro abaixo.')
+    if (error) {
+      logAppError({
+        source: 'CustomerApp',
+        action: 'loginCustomer',
+        error,
+        details: {
+          table: 'app_customers',
+          hasLogin: Boolean(login),
+          hasPassword: Boolean(password),
+        },
+      })
+      setMessage('Login ou senha incorretos. Se ainda nao tem acesso, faca seu cadastro.')
+      return
+    }
+
+    if (!data) {
+      setMessage('Login ou senha incorretos. Se ainda nao tem acesso, faca seu cadastro.')
+      return
+    }
+
+    if (!data.password_hash) {
+      logAppError({
+        source: 'CustomerApp',
+        action: 'loginCustomer.missingPasswordHash',
+        error: new Error('Cadastro sem password_hash. Recrie a senha do cliente.'),
+        details: { table: 'app_customers', hasLogin: Boolean(login) },
+      })
+      setMessage('Cadastro antigo sem senha protegida. Faca um novo cadastro.')
+      return
+    }
+
+    const passwordMatches = await verifyPassword(password, data.password_hash)
+
+    if (!passwordMatches) {
+      logAppError({
+        source: 'CustomerApp',
+        action: 'loginCustomer.passwordMismatch',
+        error: new Error('Senha nao confere com o hash bcrypt salvo.'),
+        details: { table: 'app_customers', hasLogin: Boolean(login) },
+      })
+      setMessage('Login ou senha incorretos. Se ainda nao tem acesso, faca seu cadastro.')
+      return
+    }
+
+    if (data.status === 'pendente') {
+      setMessage('Cadastro recebido. Aguarde o cafe liberar seu acesso.')
+      return
+    }
+
+    if (data.status === 'bloqueado') {
+      setMessage('Cadastro bloqueado. Procure o cafe para regularizar.')
       return
     }
 
     setCustomer(data)
-    localStorage.setItem('dr-cafe-app-phone', data.phone)
+    localStorage.setItem('dr-cafe-app-login', data.login)
     setMessage('')
     loadPending(data.phone)
   }
 
   const registerCustomer = async () => {
-    if (!form.name || !form.phone || !form.position || !form.email) {
-      setMessage('Preencha nome, telefone, cargo e email.')
+    if (
+      !form.name ||
+      !form.login ||
+      !form.password ||
+      !form.phone ||
+      !form.position ||
+      !form.email
+    ) {
+      setMessage('Preencha nome, login, senha, telefone, cargo e email.')
       return
     }
+
+    if (
+      form.name.length > customerFieldLimits.name ||
+      form.login.length > customerFieldLimits.login ||
+      form.password.length > customerFieldLimits.password ||
+      form.position.length > customerFieldLimits.position ||
+      form.email.length > customerFieldLimits.email
+    ) {
+      setMessage(
+        `Nome ate ${customerFieldLimits.name}, login ate ${customerFieldLimits.login}, senha ate ${customerFieldLimits.password}, cargo ate ${customerFieldLimits.position} e email ate ${customerFieldLimits.email} caracteres.`,
+      )
+      return
+    }
+
+    const passwordHash = await hashPassword(form.password)
 
     const { error } = await supabase.from('app_customers').upsert(
       [
         {
           name: form.name.trim(),
+          login: form.login.trim(),
+          password_hash: passwordHash,
           phone: form.phone.trim(),
           position: form.position.trim(),
           email: form.email.trim(),
@@ -198,12 +304,27 @@ export default function CustomerApp() {
     )
 
     if (error) {
-      console.error('Erro no cadastro do app:', error)
+      logAppError({
+        source: 'CustomerApp',
+        action: 'registerCustomer',
+        error,
+        details: {
+          table: 'app_customers',
+          formState: {
+            hasName: Boolean(form.name),
+            hasLogin: Boolean(form.login),
+            hasPassword: Boolean(form.password),
+            hasPhone: Boolean(form.phone),
+            hasPosition: Boolean(form.position),
+            hasEmail: Boolean(form.email),
+          },
+        },
+      })
       setMessage('Nao foi possivel enviar o cadastro agora. Tente novamente em instantes.')
       return
     }
 
-    setPhoneLogin(form.phone)
+    setLoginForm({ login: form.login, password: '' })
     setMessage(
       'Cadastro enviado com sucesso. O cafe precisa liberar seu acesso antes do primeiro pedido.',
     )
@@ -259,7 +380,12 @@ export default function CustomerApp() {
     ])
 
     if (orderError) {
-      console.error('Erro ao enviar pedido pelo app:', orderError)
+      logAppError({
+        source: 'CustomerApp',
+        action: 'sendOrder.appOrder',
+        error: orderError,
+        details: { table: 'app_orders', itemCount: cart.length, total },
+      })
       setMessage('Nao foi possivel enviar o pedido agora. Tente novamente em instantes.')
       return
     }
@@ -286,7 +412,12 @@ export default function CustomerApp() {
     ])
 
     if (pendingError) {
-      console.error('Erro ao registrar pagar depois pelo app:', pendingError)
+      logAppError({
+        source: 'CustomerApp',
+        action: 'sendOrder.pendingPayment',
+        error: pendingError,
+        details: { table: 'pending_payments', itemCount: cart.length, total },
+      })
       setMessage('Pedido enviado. O cafe vai conferir seu consumo no sistema.')
       return
     }
@@ -306,7 +437,7 @@ export default function CustomerApp() {
       <header className="customer-app__hero">
         <img src="/logo.jpeg" alt="Dr. Cafe" />
         <div>
-          <p>App Dr. Cafe</p>
+          <p>DR. CAFÉ</p>
           <h1>Faça Seu Pedido</h1>
         </div>
       </header>
@@ -319,35 +450,63 @@ export default function CustomerApp() {
           <div className="customer-app__panel">
             <h2>Entrar</h2>
             <input
-              value={phoneLogin}
-              onChange={(e) => setPhoneLogin(e.target.value)}
-              placeholder="Telefone cadastrado"
+              value={loginForm.login}
+              onChange={(e) =>
+                setLoginForm({ ...loginForm, login: e.target.value.toUpperCase() })
+              }
+              placeholder="Login"
+              maxLength={customerFieldLimits.login}
             />
-            <button onClick={() => loginByPhone()}>Entrar no app</button>
+            <input
+              type="password"
+              value={loginForm.password}
+              onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+              placeholder="Senha"
+              maxLength={customerFieldLimits.password}
+            />
+            <button onClick={loginCustomer}>Entrar no app</button>
           </div>
 
           <div className="customer-app__panel">
-            <h2>Novo cadastro</h2>
+            <h2>NOVO CADASTRO</h2>
             <input
               value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Nome completo"
+              onChange={(e) => setForm({ ...form, name: e.target.value.toUpperCase() })}
+              placeholder="Nome"
+              maxLength={customerFieldLimits.name}
+            />
+            <input
+              value={form.login}
+              onChange={(e) => setForm({ ...form, login: e.target.value.toUpperCase() })}
+              placeholder="Criar login"
+              maxLength={customerFieldLimits.login}
+            />
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              placeholder="Criar senha"
+              maxLength={customerFieldLimits.password}
             />
             <input
               value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
               placeholder="Telefone"
+              inputMode="numeric"
+              maxLength={customerFieldLimits.phone}
             />
             <input
               value={form.position}
-              onChange={(e) => setForm({ ...form, position: e.target.value })}
+              onChange={(e) => setForm({ ...form, position: e.target.value.toUpperCase() })}
               placeholder="Cargo"
+              maxLength={customerFieldLimits.position}
             />
             <input
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="Email"
+              maxLength={customerFieldLimits.email}
             />
             <button onClick={registerCustomer}>Enviar cadastro</button>
             <small>

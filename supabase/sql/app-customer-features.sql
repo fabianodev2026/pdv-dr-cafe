@@ -35,13 +35,35 @@ with check (true);
 create table if not exists public.app_customers (
   id bigserial primary key,
   created_at timestamptz not null default now(),
-  name text not null,
+  name text not null check (char_length(name) <= 25),
+  login text not null unique,
+  password_hash text not null,
   phone text not null unique,
-  position text not null,
-  email text not null,
+  position text not null check (char_length(position) <= 20),
+  email text not null check (char_length(email) <= 30),
   status text not null default 'pendente',
   payment_day int not null default 5
 );
+
+alter table public.app_customers
+  add column if not exists login text,
+  add column if not exists password_hash text;
+
+alter table public.app_customers
+  drop constraint if exists app_customers_name_length,
+  add constraint app_customers_name_length check (char_length(name) <= 25) not valid;
+
+alter table public.app_customers
+  drop constraint if exists app_customers_position_length,
+  add constraint app_customers_position_length check (char_length(position) <= 20) not valid;
+
+alter table public.app_customers
+  drop constraint if exists app_customers_email_length,
+  add constraint app_customers_email_length check (char_length(email) <= 30) not valid;
+
+create unique index if not exists app_customers_login_key
+on public.app_customers (login)
+where login is not null;
 
 alter table public.app_customers enable row level security;
 

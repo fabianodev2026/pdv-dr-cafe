@@ -31,6 +31,7 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
           <NavLink to="/pendencias">Pagar depois</NavLink>
           <NavLink to="/almoco-do-dia">Almoco do dia</NavLink>
           <NavLink to="/clientes-app">Clientes app</NavLink>
+          {canManage(currentUser.role) && <NavLink to="/diagnostico">Diagnostico</NavLink>}
           {canManage(currentUser.role) && <NavLink to="/produtos">Produtos</NavLink>}
           {canManage(currentUser.role) && <NavLink to="/configuracoes">Usuarios</NavLink>}
           {canManage(currentUser.role) && (

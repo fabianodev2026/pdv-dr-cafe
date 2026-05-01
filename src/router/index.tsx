@@ -7,6 +7,7 @@ import ConfigManager from '../components/ConfigManager'
 import CustomerApp from '../components/CustomerApp'
 import CustomerMenu from '../components/CustomerMenu'
 import DailyLunchManager from '../components/DailyLunchManager'
+import DiagnosticsManager from '../components/DiagnosticsManager'
 import FinanceManager from '../components/FinanceManager'
 import OrdersManager from '../components/OrdersManager'
 import PendingPayments from '../components/PendingPayments'
@@ -63,6 +64,7 @@ export default function AppRouter() {
             <Route path="/produtos" element={<ProductManager />} />
             <Route path="/almoco-do-dia" element={<DailyLunchManager />} />
             <Route path="/clientes-app" element={<AppCustomersManager />} />
+            <Route path="/diagnostico" element={<DiagnosticsManager />} />
             <Route
               path="/configuracoes"
               element={<ConfigManager currentUser={currentUser} />}

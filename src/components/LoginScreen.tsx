@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { pdvUserFieldLimits } from '../lib/customerLimits'
 import './LoginScreen.css'
 
 interface PdvUser {
@@ -77,7 +78,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Digite seu login"
             autoComplete="username"
-            maxLength={15}
+            maxLength={pdvUserFieldLimits.username}
           />
         </div>
 
@@ -89,7 +90,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="******"
             autoComplete="current-password"
-            maxLength={15}
+            maxLength={pdvUserFieldLimits.password}
           />
         </div>
 

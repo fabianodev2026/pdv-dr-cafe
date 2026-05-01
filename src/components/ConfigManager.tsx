@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { pdvUserFieldLimits } from '../lib/customerLimits'
 import './ConfigManager.css'
 
 type Role = 'admin' | 'gerente' | 'caixa' | 'garcom'
@@ -124,7 +125,7 @@ export default function ConfigManager({ currentUser }: ConfigManagerProps) {
             type="text"
             placeholder="Usuario"
             value={newUser.username}
-            maxLength={15}
+            maxLength={pdvUserFieldLimits.username}
             onChange={(e) =>
               setNewUser({ ...newUser, username: e.target.value })
             }
@@ -133,7 +134,7 @@ export default function ConfigManager({ currentUser }: ConfigManagerProps) {
             type="password"
             placeholder="Senha"
             value={newUser.password}
-            maxLength={15}
+            maxLength={pdvUserFieldLimits.password}
             onChange={(e) =>
               setNewUser({ ...newUser, password: e.target.value })
             }

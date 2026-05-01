@@ -8,6 +8,7 @@ interface AppCustomer {
   id: number
   created_at: string
   name: string
+  login?: string
   phone: string
   position: string
   email: string
@@ -74,6 +75,7 @@ export default function AppCustomersManager() {
             <div>
               <h2>{customer.name}</h2>
               <p>{customer.position || 'Cargo nao informado'}</p>
+              {customer.login && <span>Login: {customer.login}</span>}
               <span>{customer.phone}</span>
               <span>{customer.email}</span>
             </div>

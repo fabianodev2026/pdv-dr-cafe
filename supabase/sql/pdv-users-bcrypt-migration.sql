@@ -1,6 +1,5 @@
--- Execute somente o SQL abaixo no Supabase SQL Editor.
--- Nao cole o caminho do arquivo no editor.
--- Ele permite login do PDV com bcrypt, sem liberar leitura direta da tabela pdv_users.
+-- Execute no Supabase SQL Editor para trocar o login do sistema interno para bcrypt.
+-- Depois de rodar, a senha padrao do admin fica admin123. Troque pelo painel Usuarios.
 
 create extension if not exists pgcrypto;
 
@@ -13,10 +12,7 @@ create table if not exists public.pdv_users (
 );
 
 alter table public.pdv_users
-  add column if not exists username text,
-  add column if not exists password_hash text,
-  add column if not exists role text default 'caixa',
-  add column if not exists created_at timestamptz default now();
+  add column if not exists password_hash text;
 
 create unique index if not exists pdv_users_username_key
 on public.pdv_users (username);
@@ -95,14 +91,8 @@ revoke all on function public.create_pdv_user(text, text, text) from public;
 grant execute on function public.create_pdv_user(text, text, text) to anon;
 grant execute on function public.create_pdv_user(text, text, text) to authenticated;
 
--- Cria ou reseta o primeiro admin.
--- Troque a senha abaixo antes de executar, se quiser.
 insert into public.pdv_users (username, password_hash, role)
 values ('admin', crypt('admin123', gen_salt('bf', 10)), 'admin')
 on conflict (username) do update
 set password_hash = excluded.password_hash,
     role = excluded.role;
-
--- Teste esperado: deve retornar uma linha com username = admin e role = admin.
-select * from public.login_pdv_user('admin', 'admin123');
-select * from public.list_pdv_users();
