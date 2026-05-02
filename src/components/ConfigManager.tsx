@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { pdvUserFieldLimits } from '../lib/customerLimits'
 import './ConfigManager.css'
 
-type Role = 'admin' | 'gerente' | 'caixa' | 'garcom'
+type Role = 'admin' | 'gerente' | 'caixa' | 'garcom' | 'suporte_tecnico'
 
 interface CurrentUser {
   username: string
@@ -30,6 +30,7 @@ const roleLabels: Record<Role, string> = {
   gerente: 'Gerente',
   caixa: 'Caixa',
   garcom: 'Garcom',
+  suporte_tecnico: 'Suporte tecnico',
 }
 
 const permissions: Record<Role, string> = {
@@ -37,6 +38,7 @@ const permissions: Record<Role, string> = {
   gerente: 'Produtos, usuarios operacionais, configuracoes e fechamento.',
   caixa: 'PDV, comandas, pagamentos e fechamento de vendas.',
   garcom: 'Lancamento de itens em mesas/quartos, sem finalizar pagamento.',
+  suporte_tecnico: 'Acesso restrito para diagnostico tecnico e fila de correcao.',
 }
 
 export default function ConfigManager({ currentUser }: ConfigManagerProps) {
@@ -51,7 +53,7 @@ export default function ConfigManager({ currentUser }: ConfigManagerProps) {
   })
 
   const allowedRoles = useMemo<Role[]>(() => {
-    if (currentRole === 'admin') return ['gerente', 'caixa', 'garcom']
+    if (currentRole === 'admin') return ['gerente', 'caixa', 'garcom', 'suporte_tecnico']
     if (currentRole === 'gerente') return ['caixa', 'garcom']
     return []
   }, [currentRole])

@@ -12,6 +12,7 @@ interface AppShellProps {
 }
 
 const canManage = (role: string) => ['admin', 'gerente'].includes(role)
+const canUseSupportAi = (role: string) => role === 'suporte_tecnico'
 
 export default function AppShell({ currentUser, onLogout }: AppShellProps) {
   return (
@@ -32,6 +33,7 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
           <NavLink to="/almoco-do-dia">Almoco do dia</NavLink>
           <NavLink to="/clientes-app">Clientes app</NavLink>
           {canManage(currentUser.role) && <NavLink to="/diagnostico">Diagnostico</NavLink>}
+          {canUseSupportAi(currentUser.role) && <NavLink to="/suporte-ia">Suporte IA</NavLink>}
           {canManage(currentUser.role) && <NavLink to="/produtos">Produtos</NavLink>}
           {canManage(currentUser.role) && <NavLink to="/configuracoes">Usuarios</NavLink>}
           {canManage(currentUser.role) && (

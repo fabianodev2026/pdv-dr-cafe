@@ -14,6 +14,7 @@ import PendingPayments from '../components/PendingPayments'
 import ProductManager from '../components/ProductManager'
 import RoomPanel from '../components/RoomPanel'
 import SettingsManager from '../components/SettingsManager'
+import SupportAiManager from '../components/SupportAiManager'
 import TableManager from '../components/TableManager'
 
 interface CurrentUser {
@@ -80,6 +81,7 @@ export default function AppRouter() {
               path="/configuracoes-sistema"
               element={<SettingsManager />}
             />
+            <Route path="/suporte-ia" element={<SupportAiManager />} />
 
             {/* 404 */}
             <Route path="*" element={<Navigate to="/mesas" replace />} />

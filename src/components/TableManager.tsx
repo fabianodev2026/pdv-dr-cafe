@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { createFiscalPayload, formatCpf, isCompleteCpf, queueFiscalPayload } from '../lib/fiscalService'
+import { queueOfflineSale } from '../lib/offlineQueue'
 import './TableManager.css'
 
 interface Product {
@@ -37,6 +39,7 @@ interface ReceiptData {
   customer_phone: string
   date: string
   payment_method: PaymentMethod
+  fiscal_cpf: string
 }
 
 type PaymentMethod = 'pix' | 'credito' | 'debito' | 'dinheiro' | 'pagar_depois'
@@ -85,6 +88,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix')
   const [payLaterDueDate, setPayLaterDueDate] = useState('')
+  const [fiscalCpf, setFiscalCpf] = useState('')
   const [selectedFloor, setSelectedFloor] = useState('todos')
   const [roomSearch, setRoomSearch] = useState('')
   const [orderMessage, setOrderMessage] = useState('')
@@ -105,6 +109,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
     }
     setPaymentMethod('pix')
     setPayLaterDueDate('')
+    setFiscalCpf('')
     setOrderMessage('')
     setActiveItem(updatedItem)
   }
@@ -193,6 +198,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
       customer_phone: activeItem.customer_phone,
       date: new Date().toLocaleString('pt-BR'),
       payment_method: paymentMethod,
+      fiscal_cpf: fiscalCpf,
     }
 
     setReceiptData(receipt)
@@ -206,20 +212,37 @@ export default function TableManager({ currentUser }: TableManagerProps) {
   const finalizePayment = async () => {
     if (!receiptData || !activeItem) return
 
+    const salePayload = {
+      table_number: receiptData.number,
+      total_amount: receiptData.total,
+      cashier_name: currentUser?.username || 'Desconhecido',
+      customer_name: receiptData.customer_name,
+      customer_phone: receiptData.customer_phone,
+      fiscal_cpf: receiptData.fiscal_cpf || null,
+      items: receiptData.items,
+      payment_method: receiptData.payment_method,
+    }
+
     try {
-      const { error } = await supabase.from('sales').insert([
-        {
-          table_number: receiptData.number,
-          total_amount: receiptData.total,
-          cashier_name: currentUser?.username || 'Desconhecido',
-          customer_name: receiptData.customer_name,
-          customer_phone: receiptData.customer_phone,
-          items: receiptData.items,
-          payment_method: receiptData.payment_method,
-        },
-      ])
+      const { error } = await supabase.from('sales').insert([salePayload])
 
       if (error) throw error
+
+      if (receiptData.fiscal_cpf && isCompleteCpf(receiptData.fiscal_cpf)) {
+        queueFiscalPayload(
+          createFiscalPayload({
+            customerCpf: receiptData.fiscal_cpf,
+            totalAmount: receiptData.total,
+            paymentMethod: receiptData.payment_method,
+            items: receiptData.items.map((item) => ({
+              name: item.name,
+              quantity: item.quantity,
+              unit_price: item.price,
+              total: item.total,
+            })),
+          }),
+        )
+      }
 
       if (receiptData.payment_method === 'pagar_depois') {
         const itemsDetail = receiptData.items
@@ -280,7 +303,13 @@ export default function TableManager({ currentUser }: TableManagerProps) {
       setShowReceipt(false)
       alert('Venda registrada com sucesso no cofre!')
     } catch (err) {
-      alert('Erro ao salvar no cofre: ' + (err as Error).message)
+      const offlineSale = queueOfflineSale(
+        salePayload,
+        (err as Error).message || 'Falha de conexao ou Supabase indisponivel.',
+      )
+      alert(
+        `Venda salva em modo offline para sincronizar depois. Codigo local: ${offlineSale.id}`,
+      )
     }
   }
 
@@ -524,6 +553,17 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                             <small>Pagamento somente por Pix ou dinheiro.</small>
                           </div>
                         )}
+                        <div className="payment-methods">
+                          <label>CPF para Nota Fiscal Paulista</label>
+                          <input
+                            value={fiscalCpf}
+                            onChange={(e) => setFiscalCpf(formatCpf(e.target.value))}
+                            placeholder="123.456.789-10"
+                            inputMode="numeric"
+                            maxLength={14}
+                          />
+                          <small>Opcional. Use quando o cliente pedir CPF na nota.</small>
+                        </div>
                         <button onClick={payCommand} className="btn-pay">
                           Encerrar e Pagar
                         </button>
@@ -573,6 +613,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
               </p>
               {receiptData?.customer_name && <p>Cliente: {receiptData.customer_name}</p>}
               {receiptData?.customer_phone && <p>Telefone: {receiptData.customer_phone}</p>}
+              {receiptData?.fiscal_cpf && <p>CPF NFP: {receiptData.fiscal_cpf}</p>}
               <p>Data: {receiptData?.date}</p>
             </div>
             <table className="receipt-table">
