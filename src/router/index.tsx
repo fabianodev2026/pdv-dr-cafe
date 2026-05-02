@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useState } from 'react'
+import type { ReactElement } from 'react'
 import AppShell from '../components/AppShell'
 import AppCustomersManager from '../components/AppCustomersManager'
 import LoginScreen from '../components/LoginScreen'
@@ -23,6 +24,13 @@ interface CurrentUser {
   role: string
 }
 
+const MANAGER_ROLES = ['admin', 'gerente']
+const SUPPORT_ROLES = ['suporte_tecnico']
+
+function hasRole(currentUser: CurrentUser, allowedRoles: string[]) {
+  return allowedRoles.includes(currentUser.role)
+}
+
 export default function AppRouter() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
 
@@ -32,6 +40,14 @@ export default function AppRouter() {
 
   const handleLogout = () => {
     setCurrentUser(null)
+  }
+
+  const requireRole = (element: ReactElement, allowedRoles: string[]) => {
+    if (!currentUser || !hasRole(currentUser, allowedRoles)) {
+      return <Navigate to="/mesas" replace />
+    }
+
+    return element
   }
 
   return (
@@ -62,16 +78,34 @@ export default function AppRouter() {
               element={<TableManager currentUser={currentUser} />}
             />
             <Route path="/pedidos" element={<OrdersManager />} />
-            <Route path="/produtos" element={<ProductManager />} />
-            <Route path="/almoco-do-dia" element={<DailyLunchManager />} />
-            <Route path="/clientes-app" element={<AppCustomersManager />} />
-            <Route path="/diagnostico" element={<DiagnosticsManager />} />
+            <Route
+              path="/produtos"
+              element={requireRole(<ProductManager />, MANAGER_ROLES)}
+            />
+            <Route
+              path="/almoco-do-dia"
+              element={requireRole(<DailyLunchManager />, MANAGER_ROLES)}
+            />
+            <Route
+              path="/clientes-app"
+              element={requireRole(<AppCustomersManager />, MANAGER_ROLES)}
+            />
+            <Route
+              path="/diagnostico"
+              element={requireRole(<DiagnosticsManager />, MANAGER_ROLES)}
+            />
             <Route
               path="/configuracoes"
-              element={<ConfigManager currentUser={currentUser} />}
+              element={requireRole(
+                <ConfigManager currentUser={currentUser} />,
+                MANAGER_ROLES,
+              )}
             />
             <Route path="/painel-quartos" element={<RoomPanel />} />
-            <Route path="/financeiro" element={<FinanceManager />} />
+            <Route
+              path="/financeiro"
+              element={requireRole(<FinanceManager />, MANAGER_ROLES)}
+            />
             <Route
               path="/relatorios"
               element={<Navigate to="/configuracoes-sistema" replace />}
@@ -79,9 +113,12 @@ export default function AppRouter() {
             <Route path="/pendencias" element={<PendingPayments />} />
             <Route
               path="/configuracoes-sistema"
-              element={<SettingsManager />}
+              element={requireRole(<SettingsManager />, MANAGER_ROLES)}
             />
-            <Route path="/suporte-ia" element={<SupportAiManager />} />
+            <Route
+              path="/suporte-ia"
+              element={requireRole(<SupportAiManager />, SUPPORT_ROLES)}
+            />
 
             {/* 404 */}
             <Route path="*" element={<Navigate to="/mesas" replace />} />

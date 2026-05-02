@@ -13,6 +13,7 @@ export interface AppLogEntry {
 
 const STORAGE_KEY = 'dr-cafe-diagnostic-logs'
 const MAX_LOGS = 120
+const SENSITIVE_KEY_PATTERN = /password|senha|hash|cpf|phone|telefone|email/i
 
 const safeString = (value: unknown) => {
   if (typeof value === 'string') return value
@@ -37,6 +38,27 @@ export function normalizeError(error: unknown) {
   }
 }
 
+function sanitizeLogValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeLogValue(item))
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, entryValue]) => [
+      key,
+      SENSITIVE_KEY_PATTERN.test(key) ? '[redacted]' : sanitizeLogValue(entryValue),
+    ]),
+  )
+}
+
+function sanitizeLogDetails(details?: Record<string, unknown>) {
+  return sanitizeLogValue(details) as Record<string, unknown> | undefined
+}
+
 export function readAppLogs(): AppLogEntry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -53,6 +75,7 @@ export function clearAppLogs() {
 export function logAppEvent(entry: Omit<AppLogEntry, 'id' | 'timestamp' | 'url'>) {
   const nextEntry: AppLogEntry = {
     ...entry,
+    details: sanitizeLogDetails(entry.details),
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     timestamp: new Date().toISOString(),
     url: window.location.href,
@@ -66,7 +89,7 @@ export function logAppEvent(entry: Omit<AppLogEntry, 'id' | 'timestamp' | 'url'>
   }
 
   const consoleMethod = entry.level === 'error' ? console.error : console.warn
-  consoleMethod(`[${entry.source}] ${entry.action}: ${entry.message}`, entry.details)
+  consoleMethod(`[${entry.source}] ${entry.action}: ${entry.message}`, nextEntry.details)
 }
 
 export function logAppError({
