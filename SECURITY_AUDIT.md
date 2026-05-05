@@ -2,12 +2,20 @@
 
 Data: 2026-05-02
 
+Atualizacao: 2026-05-03
+
 ## Corrigido no app
 
 - Rotas administrativas agora exigem perfil `admin` ou `gerente`, mesmo quando a pessoa tenta abrir a URL direta.
 - A rota `/suporte-ia` agora exige perfil `suporte_tecnico`.
 - O menu lateral foi alinhado com as permissoes, escondendo abas administrativas de usuarios sem permissao.
 - Logs locais continuam disponiveis para diagnostico, mas campos sensiveis sao mascarados antes de salvar: senha, hash, CPF, telefone e email.
+- Fila offline agora separa `sales` e `pending_payments`, evitando duplicar venda quando apenas a pendencia falha.
+- Filas locais agora possuem retencao automatica: offline ate 7 dias e fiscal ate 30 dias.
+- Tela de Suporte IA agora consegue sincronizar filas offline e fiscais com Supabase e remover itens sincronizados deste navegador.
+- Fila fiscal agora tenta usar backend fiscal quando `VITE_FISCAL_API_URL` estiver configurado; sem backend, registra em `fiscal_requests`.
+- Foi criado o SQL `supabase/sql/production-security-hardening.sql` para fechar RLS e permissoes abertas em producao.
+- Foi criado `docs/PRODUCTION_ARCHITECTURE.md` com a divisao profissional entre React, Supabase, backend fiscal e suporte tecnico.
 
 ## Pontos seguros que ja existem
 
@@ -68,10 +76,10 @@ Acao profissional recomendada:
 
 ## Checklist antes de producao
 
-- [ ] Fechar RLS do Supabase por perfil.
-- [ ] Criar backend fiscal para certificado e emissao.
-- [ ] Criar rotina de sincronizacao da fila offline.
-- [ ] Apagar dados pessoais locais depois da sincronizacao.
+- [x] Preparar SQL para fechar RLS do Supabase por perfil.
+- [x] Documentar backend fiscal para certificado e emissao.
+- [x] Criar rotina de sincronizacao da fila offline.
+- [x] Apagar dados pessoais locais depois da sincronizacao.
 - [ ] Revisar todas as tabelas com CPF, email, telefone, vendas e senhas.
 - [ ] Trocar senha padrao `admin123`.
 - [ ] Rodar build e testes antes de publicar.

@@ -59,14 +59,46 @@
   font-size: 1.35rem;
 }
 
-.support-ai-primary {
+.support-ai-summary small {
+  display: block;
+  margin-top: 4px;
+  color: #7a5a42;
+}
+
+.support-ai-retention,
+.support-ai-message {
+  margin-bottom: 12px;
+  border: 1px solid #dec2a4;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff8ef;
+  color: #5a3924;
+}
+
+.support-ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.support-ai-actions button {
   border: 0;
   border-radius: 8px;
   padding: 12px 16px;
-  background: #2b160d;
-  color: #f9ead6;
+  background: #8b542f;
+  color: #fff8ef;
   cursor: pointer;
   font-weight: 800;
+}
+
+.support-ai-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.support-ai-primary {
+  background: #2b160d;
+  color: #f9ead6;
 }
 
 .support-ai-list {

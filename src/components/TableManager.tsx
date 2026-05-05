@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { createFiscalPayload, formatCpf, isCompleteCpf, queueFiscalPayload } from '../lib/fiscalService'
-import { queueOfflineSale } from '../lib/offlineQueue'
+import { logAppError } from '../lib/appLogger'
+import { queueOfflineRecord, queueOfflineSale } from '../lib/offlineQueue'
 import './TableManager.css'
 
 interface Product {
@@ -248,24 +249,35 @@ export default function TableManager({ currentUser }: TableManagerProps) {
         const itemsDetail = receiptData.items
           .map((item) => `${item.quantity}x ${item.name} - R$ ${item.total.toFixed(2)}`)
           .join('; ')
+        const pendingPayload = {
+          customer_name: receiptData.customer_name,
+          phone: receiptData.customer_phone,
+          position: activeItem.type === 'room' ? `Quarto ${activeItem.number}` : `Mesa ${activeItem.number}`,
+          description: `Venda registrada em ${receiptData.date}`,
+          items_detail: itemsDetail,
+          total_amount: receiptData.total,
+          purchase_date: new Date().toISOString().slice(0, 10),
+          due_date: payLaterDueDate || new Date().toISOString().slice(0, 10),
+          status: 'pendente',
+        }
 
         const { error: pendingError } = await supabase
           .from('pending_payments')
-          .insert([
-            {
-              customer_name: receiptData.customer_name,
-              phone: receiptData.customer_phone,
-              position: activeItem.type === 'room' ? `Quarto ${activeItem.number}` : `Mesa ${activeItem.number}`,
-              description: `Venda registrada em ${receiptData.date}`,
-              items_detail: itemsDetail,
-              total_amount: receiptData.total,
-              purchase_date: new Date().toISOString().slice(0, 10),
-              due_date: payLaterDueDate || new Date().toISOString().slice(0, 10),
-              status: 'pendente',
-            },
-          ])
+          .insert([pendingPayload])
 
-        if (pendingError) throw pendingError
+        if (pendingError) {
+          const offlinePending = queueOfflineRecord(
+            'pending_payments',
+            pendingPayload,
+            pendingError.message || 'Falha ao registrar pagar depois.',
+          )
+          logAppError({
+            source: 'TableManager',
+            action: 'finalizePayment.pendingPaymentQueue',
+            error: pendingError,
+            details: { offlineId: offlinePending.id },
+          })
+        }
       }
 
       // Atualizar o estado da mesa/quarto

@@ -17,7 +17,17 @@ export interface FiscalPayload {
   status: 'pendente_certificado' | 'pronto_para_envio' | 'emitida' | 'erro'
 }
 
+export interface AiSupportDraft {
+  id: string
+  createdAt: string
+  status: 'aguardando_suporte_tecnico'
+  title: string
+  summary: string
+  logs: AppLogEntry[]
+}
+
 const FISCAL_QUEUE_KEY = 'dr-cafe-fiscal-queue'
+const FISCAL_RETENTION_DAYS = 30
 
 export function formatCpf(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -33,10 +43,29 @@ export function isCompleteCpf(value: string) {
   return value.replace(/\D/g, '').length === 11
 }
 
+function persistFiscalQueue(queue: FiscalPayload[]) {
+  localStorage.setItem(FISCAL_QUEUE_KEY, JSON.stringify(queue))
+}
+
+function isWithinFiscalRetention(payload: FiscalPayload) {
+  const createdAt = new Date(payload.createdAt).getTime()
+  if (Number.isNaN(createdAt)) return false
+
+  const maxAge = FISCAL_RETENTION_DAYS * 24 * 60 * 60 * 1000
+  return Date.now() - createdAt <= maxAge
+}
+
 export function readFiscalQueue(): FiscalPayload[] {
   try {
     const raw = localStorage.getItem(FISCAL_QUEUE_KEY)
-    return raw ? JSON.parse(raw) : []
+    const queue = raw ? (JSON.parse(raw) as FiscalPayload[]) : []
+    const retained = queue.filter(isWithinFiscalRetention)
+
+    if (retained.length !== queue.length) {
+      persistFiscalQueue(retained)
+    }
+
+    return retained
   } catch {
     return []
   }
@@ -44,7 +73,15 @@ export function readFiscalQueue(): FiscalPayload[] {
 
 export function queueFiscalPayload(payload: FiscalPayload) {
   const queue = [payload, ...readFiscalQueue()].slice(0, 200)
-  localStorage.setItem(FISCAL_QUEUE_KEY, JSON.stringify(queue))
+  persistFiscalQueue(queue)
+}
+
+export function removeFiscalPayload(saleId: string) {
+  persistFiscalQueue(readFiscalQueue().filter((payload) => payload.saleId !== saleId))
+}
+
+export function getFiscalRetentionDays() {
+  return FISCAL_RETENTION_DAYS
 }
 
 export function createFiscalPayload({
@@ -69,7 +106,7 @@ export function createFiscalPayload({
   }
 }
 
-export function createAiSupportDraft(logs: AppLogEntry[]) {
+export function createAiSupportDraft(logs: AppLogEntry[]): AiSupportDraft {
   return {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     createdAt: new Date().toISOString(),

@@ -287,7 +287,7 @@ export default function CustomerApp() {
 
     const passwordHash = await hashPassword(form.password)
 
-    const { error } = await supabase.from('app_customers').upsert(
+    const { error } = await supabase.from('app_customers').insert(
       [
         {
           name: form.name.trim(),
@@ -300,7 +300,6 @@ export default function CustomerApp() {
           payment_day: 5,
         },
       ],
-      { onConflict: 'phone' },
     )
 
     if (error) {
@@ -320,6 +319,16 @@ export default function CustomerApp() {
           },
         },
       })
+      if (error.code === '23505') {
+        setMessage('Este telefone ou login ja tem cadastro. Use outro ou fale com o cafe.')
+        return
+      }
+
+      if (error.code === '42P01' || error.message.includes('schema cache')) {
+        setMessage('Cadastro do app ainda esta sendo configurado. Avise o cafe.')
+        return
+      }
+
       setMessage('Nao foi possivel enviar o cadastro agora. Tente novamente em instantes.')
       return
     }

@@ -1,12 +1,27 @@
 import { useMemo, useState } from 'react'
-import { createAiSupportDraft, readFiscalQueue } from '../lib/fiscalService'
-import { readAppLogs } from '../lib/appLogger'
-import { readOfflineSales } from '../lib/offlineQueue'
+import { supabase } from '../lib/supabaseClient'
+import {
+  type AiSupportDraft,
+  createAiSupportDraft,
+  getFiscalRetentionDays,
+  readFiscalQueue,
+  removeFiscalPayload,
+} from '../lib/fiscalService'
+import {
+  isFiscalBackendConfigured,
+  submitFiscalToBackend,
+} from '../lib/fiscalBackend'
+import { logAppError, logAppEvent, readAppLogs } from '../lib/appLogger'
+import {
+  getOfflineRetentionDays,
+  readOfflineSales,
+  removeOfflineSale,
+} from '../lib/offlineQueue'
 import './SupportAiManager.css'
 
 const SUPPORT_QUEUE_KEY = 'dr-cafe-ai-support-queue'
 
-function readSupportQueue() {
+function readSupportQueue(): AiSupportDraft[] {
   try {
     const raw = localStorage.getItem(SUPPORT_QUEUE_KEY)
     return raw ? JSON.parse(raw) : []
@@ -16,16 +31,137 @@ function readSupportQueue() {
 }
 
 export default function SupportAiManager() {
-  const [supportQueue, setSupportQueue] = useState<any[]>(() => readSupportQueue())
-  const logs = useMemo(() => readAppLogs(), [])
-  const fiscalQueue = useMemo(() => readFiscalQueue(), [])
-  const offlineSales = useMemo(() => readOfflineSales(), [])
+  const [supportQueue, setSupportQueue] = useState<AiSupportDraft[]>(() => readSupportQueue())
+  const [logs, setLogs] = useState(() => readAppLogs())
+  const [fiscalQueue, setFiscalQueue] = useState(() => readFiscalQueue())
+  const [offlineSales, setOfflineSales] = useState(() => readOfflineSales())
+  const [syncMessage, setSyncMessage] = useState('')
+
+  const offlineByType = useMemo(
+    () =>
+      offlineSales.reduce(
+        (summary, sale) => ({
+          ...summary,
+          [sale.targetTable]: (summary[sale.targetTable] ?? 0) + 1,
+        }),
+        { sales: 0, pending_payments: 0 },
+      ),
+    [offlineSales],
+  )
+
+  const refreshQueues = () => {
+    setLogs(readAppLogs())
+    setFiscalQueue(readFiscalQueue())
+    setOfflineSales(readOfflineSales())
+  }
 
   const createDraft = () => {
     const draft = createAiSupportDraft(logs)
     const nextQueue = [draft, ...supportQueue]
     localStorage.setItem(SUPPORT_QUEUE_KEY, JSON.stringify(nextQueue))
     setSupportQueue(nextQueue)
+  }
+
+  const syncOfflineRecords = async () => {
+    setSyncMessage('Sincronizando vendas e pendencias offline...')
+    let synced = 0
+    let failed = 0
+
+    for (const sale of offlineSales) {
+      const { error } = await supabase.from(sale.targetTable).insert([sale.payload])
+
+      if (error) {
+        failed += 1
+        logAppError({
+          source: 'SupportAiManager',
+          action: 'syncOfflineRecords',
+          error,
+          details: { offlineId: sale.id, targetTable: sale.targetTable },
+        })
+      } else {
+        synced += 1
+        removeOfflineSale(sale.id)
+      }
+    }
+
+    refreshQueues()
+    setSyncMessage(`Offline: ${synced} sincronizado(s), ${failed} com erro.`)
+  }
+
+  const syncFiscalRequests = async () => {
+    setSyncMessage(
+      isFiscalBackendConfigured()
+        ? 'Enviando fila fiscal para backend fiscal...'
+        : 'Backend fiscal nao configurado. Enviando fila para fiscal_requests...',
+    )
+    let synced = 0
+    let failed = 0
+
+    for (const request of fiscalQueue) {
+      try {
+        if (isFiscalBackendConfigured()) {
+          await submitFiscalToBackend(request)
+        } else {
+          const { error } = await supabase.from('fiscal_requests').insert([
+            {
+              sale_id: request.saleId,
+              customer_cpf: request.customerCpf ?? null,
+              total_amount: request.totalAmount,
+              payment_method: request.paymentMethod,
+              items: request.items,
+              status: request.status,
+            },
+          ])
+
+          if (error) throw error
+        }
+
+        synced += 1
+        removeFiscalPayload(request.saleId)
+      } catch (error) {
+        failed += 1
+        logAppError({
+          source: 'SupportAiManager',
+          action: 'syncFiscalRequests',
+          error,
+          details: { saleId: request.saleId },
+        })
+      }
+    }
+
+    refreshQueues()
+    setSyncMessage(`Fiscal: ${synced} enviado(s), ${failed} com erro.`)
+  }
+
+  const registerSupportReview = async () => {
+    const draft = createAiSupportDraft(logs)
+    const { error } = await supabase.from('support_ai_reviews').insert([
+      {
+        title: draft.title,
+        status: draft.status,
+        summary: draft.summary,
+        logs: draft.logs,
+      },
+    ])
+
+    if (error) {
+      logAppError({
+        source: 'SupportAiManager',
+        action: 'registerSupportReview',
+        error,
+      })
+      createDraft()
+      setSyncMessage('Supabase indisponivel. Analise ficou salva localmente.')
+      return
+    }
+
+    logAppEvent({
+      level: 'info',
+      source: 'SupportAiManager',
+      action: 'registerSupportReview',
+      message: 'Analise de suporte registrada no Supabase.',
+    })
+    setSyncMessage('Analise registrada em support_ai_reviews.')
   }
 
   return (
@@ -44,6 +180,9 @@ export default function SupportAiManager() {
         <article>
           <span>Vendas offline</span>
           <strong>{offlineSales.length}</strong>
+          <small>
+            vendas {offlineByType.sales} / pendencias {offlineByType.pending_payments}
+          </small>
         </article>
         <article>
           <span>Fila fiscal</span>
@@ -51,9 +190,28 @@ export default function SupportAiManager() {
         </article>
       </section>
 
-      <button className="support-ai-primary" onClick={createDraft}>
-        Gerar analise para suporte
-      </button>
+      <section className="support-ai-retention">
+        <p>
+          Retencao local: offline ate {getOfflineRetentionDays()} dias; fiscal ate{' '}
+          {getFiscalRetentionDays()} dias. Depois da sincronizacao, os dados locais
+          sincronizados sao apagados deste navegador.
+        </p>
+      </section>
+
+      {syncMessage && <div className="support-ai-message">{syncMessage}</div>}
+
+      <div className="support-ai-actions">
+        <button className="support-ai-primary" onClick={registerSupportReview}>
+          Registrar analise no suporte
+        </button>
+        <button onClick={syncOfflineRecords} disabled={offlineSales.length === 0}>
+          Sincronizar offline
+        </button>
+        <button onClick={syncFiscalRequests} disabled={fiscalQueue.length === 0}>
+          Enviar fila fiscal
+        </button>
+        <button onClick={refreshQueues}>Atualizar filas</button>
+      </div>
 
       <section className="support-ai-list">
         {supportQueue.length === 0 ? (
