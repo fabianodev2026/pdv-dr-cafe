@@ -42,3 +42,15 @@ npm run build
 ```sh
 npm run lint
 ```
+# PDV Dr. Cafe
+
+## Publicacao sem custo inicial
+
+O projeto esta preparado para:
+
+- GitHub privado gratuito para codigo.
+- Supabase Free para banco no inicio.
+- Vercel Hobby/Free para publicar o web app.
+- PWA instalavel no celular pelo navegador.
+
+Veja o passo a passo em `docs/FREE_CLOUD_PLAN.md`.

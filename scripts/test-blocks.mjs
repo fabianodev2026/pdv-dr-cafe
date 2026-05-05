@@ -41,6 +41,8 @@ block('Arquivos principais', () => {
     'src/lib/supabaseClient.ts',
     'src/vite-env.d.ts',
     'public/logo.jpeg',
+    'public/manifest.webmanifest',
+    'public/sw.js',
   ].forEach(requireFile)
 })
 
@@ -163,7 +165,10 @@ block('TypeScript', () => {
 block('Public limpo', () => {
   const files = readdirSync(join(root, 'public'))
   const allowed = new Set(['.ico', '.jpg', '.jpeg', '.png', '.webp', '.svg'])
-  const invalid = files.filter((file) => !allowed.has(extname(file).toLowerCase()))
+  const allowedFiles = new Set(['manifest.webmanifest', 'sw.js'])
+  const invalid = files.filter(
+    (file) => !allowedFiles.has(file) && !allowed.has(extname(file).toLowerCase()),
+  )
 
   if (invalid.length > 0) {
     throw new Error(`Arquivos inesperados em public: ${invalid.join(', ')}`)
