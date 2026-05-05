@@ -1,8 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import {
+  getBackupSchedule,
+  getLastBackupSnapshot,
+  readBackupState,
+  runBackup,
+  type BackupState,
+} from '../lib/backupService'
 import './SettingsManager.css'
 
-type SettingsTab = 'fiscal' | 'impressoras' | 'certificado' | 'balanco'
+type SettingsTab =
+  | 'fiscal'
+  | 'impressoras'
+  | 'certificado'
+  | 'balanco'
+  | 'mais-vendidos'
+  | 'backup'
+type SalesPeriod = 'dia' | 'mes' | 'ano' | 'todos'
 
 interface Product {
   id: number
@@ -15,6 +29,22 @@ interface Sale {
   table_number: number
   cashier_name: string
   total_amount: number
+  items?: SaleItem[]
+}
+
+interface SaleItem {
+  name?: string
+  quantity?: number
+  total?: number
+  price?: number
+  unit_price?: number
+}
+
+interface BestSeller {
+  name: string
+  quantity: number
+  revenue: number
+  orders: number
 }
 
 interface FiscalProductData {
@@ -58,6 +88,9 @@ const initialFiscalData: FiscalProductData = {
 
 export default function SettingsManager() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('fiscal')
+  const [salesPeriod, setSalesPeriod] = useState<SalesPeriod>('mes')
+  const [backupState, setBackupState] = useState<BackupState>(() => readBackupState())
+  const [backupRunning, setBackupRunning] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [sales, setSales] = useState<Sale[]>([])
   const [message, setMessage] = useState('')
@@ -120,6 +153,63 @@ export default function SettingsManager() {
     )
   }, [sales])
 
+  const filteredSales = useMemo(() => {
+    const now = new Date()
+
+    return sales.filter((sale) => {
+      const saleDate = new Date(sale.created_at)
+
+      if (salesPeriod === 'todos') return true
+
+      if (salesPeriod === 'dia') {
+        return saleDate.toLocaleDateString('pt-BR') === now.toLocaleDateString('pt-BR')
+      }
+
+      if (salesPeriod === 'mes') {
+        return (
+          saleDate.getMonth() === now.getMonth() &&
+          saleDate.getFullYear() === now.getFullYear()
+        )
+      }
+
+      return saleDate.getFullYear() === now.getFullYear()
+    })
+  }, [sales, salesPeriod])
+
+  const bestSellers = useMemo(() => {
+    const ranking = new Map<string, BestSeller>()
+
+    filteredSales.forEach((sale) => {
+      ;(sale.items ?? []).forEach((item) => {
+        const name = item.name?.trim()
+        if (!name) return
+
+        const quantity = Number(item.quantity || 1)
+        const revenue = Number(
+          item.total ?? Number(item.price ?? item.unit_price ?? 0) * quantity,
+        )
+        const current = ranking.get(name) ?? {
+          name,
+          quantity: 0,
+          revenue: 0,
+          orders: 0,
+        }
+
+        ranking.set(name, {
+          ...current,
+          quantity: current.quantity + quantity,
+          revenue: current.revenue + revenue,
+          orders: current.orders + 1,
+        })
+      })
+    })
+
+    return Array.from(ranking.values()).sort((a, b) => {
+      if (b.quantity !== a.quantity) return b.quantity - a.quantity
+      return b.revenue - a.revenue
+    })
+  }, [filteredSales])
+
   const readInvoiceKey = () => {
     const digits = fiscalData.barcode.replace(/\D/g, '')
 
@@ -140,6 +230,18 @@ export default function SettingsManager() {
   const saveDraft = () => {
     setMessage('Configuracoes salvas como rascunho nesta tela.')
   }
+
+  const executeManualBackup = async () => {
+    setBackupRunning(true)
+    setMessage('Backup iniciado em segundo plano. O PDV continua liberado.')
+    const result = await runBackup('Backup manual pelas configuracoes')
+    setBackupRunning(false)
+    setBackupState(readBackupState())
+    setMessage(result.message || 'Backup finalizado.')
+  }
+
+  const schedule = getBackupSchedule()
+  const lastSnapshot = getLastBackupSnapshot()
 
   return (
     <div className="settings-manager">
@@ -165,6 +267,12 @@ export default function SettingsManager() {
         </button>
         <button className={activeTab === 'balanco' ? 'active' : ''} onClick={() => setActiveTab('balanco')}>
           Balancos
+        </button>
+        <button className={activeTab === 'mais-vendidos' ? 'active' : ''} onClick={() => setActiveTab('mais-vendidos')}>
+          Produtos mais vendidos
+        </button>
+        <button className={activeTab === 'backup' ? 'active' : ''} onClick={() => setActiveTab('backup')}>
+          Backup automatico
         </button>
       </div>
 
@@ -344,6 +452,137 @@ export default function SettingsManager() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'mais-vendidos' && (
+        <section className="settings-panel">
+          <div className="settings-panel-heading">
+            <div>
+              <h2>Produtos mais vendidos</h2>
+              <p>Ranking calculado pelas vendas registradas no PDV.</p>
+            </div>
+            <label>
+              Periodo
+              <select
+                value={salesPeriod}
+                onChange={(e) => setSalesPeriod(e.target.value as SalesPeriod)}
+              >
+                <option value="dia">Hoje</option>
+                <option value="mes">Mes atual</option>
+                <option value="ano">Ano atual</option>
+                <option value="todos">Todos</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="best-seller-summary">
+            <article>
+              <span>Vendas analisadas</span>
+              <strong>{filteredSales.length}</strong>
+            </article>
+            <article>
+              <span>Produtos vendidos</span>
+              <strong>{bestSellers.length}</strong>
+            </article>
+            <article>
+              <span>Top produto</span>
+              <strong>{bestSellers[0]?.name ?? '-'}</strong>
+            </article>
+          </div>
+
+          <div className="history-section">
+            {bestSellers.length === 0 ? (
+              <div className="settings-empty">
+                Nenhum produto vendido neste periodo.
+              </div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Posicao</th>
+                    <th>Produto</th>
+                    <th>Quantidade</th>
+                    <th>Vendas</th>
+                    <th>Faturamento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bestSellers.map((item, index) => (
+                    <tr key={item.name}>
+                      <td>{index + 1}</td>
+                      <td>{item.name}</td>
+                      <td>{item.quantity}</td>
+                      <td>{item.orders}</td>
+                      <td>R$ {item.revenue.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'backup' && (
+        <section className="settings-panel">
+          <div className="settings-panel-heading">
+            <div>
+              <h2>Backup automatico</h2>
+              <p>Rotina diaria sem interromper o atendimento do caixa.</p>
+            </div>
+            <button
+              className="settings-save"
+              onClick={executeManualBackup}
+              disabled={backupRunning}
+            >
+              {backupRunning ? 'Backup em andamento' : 'Executar agora'}
+            </button>
+          </div>
+
+          <div className="backup-grid">
+            <article>
+              <span>Horario diario</span>
+              <strong>{schedule.backupTime}</strong>
+              <small>Mogi das Cruzes, SP ({schedule.timeZone})</small>
+            </article>
+            <article>
+              <span>Abertura</span>
+              <strong>{schedule.openTime}</strong>
+              <small>Se houver movimento apos 20:00, refaz pela manha.</small>
+            </article>
+            <article>
+              <span>Status</span>
+              <strong>{backupState.lastBackupStatus ?? 'aguardando'}</strong>
+              <small>{backupState.lastBackupMessage ?? 'Nenhum backup registrado ainda.'}</small>
+            </article>
+          </div>
+
+          <div className="backup-status">
+            <p>
+              Ultimo backup:{' '}
+              <strong>
+                {backupState.lastBackupAt
+                  ? new Date(backupState.lastBackupAt).toLocaleString('pt-BR')
+                  : 'nenhum'}
+              </strong>
+            </p>
+            <p>
+              Backup da manha:{' '}
+              <strong>
+                {backupState.morningBackupPending ? 'pendente' : 'sem pendencia'}
+              </strong>
+            </p>
+            {backupState.morningBackupReason && (
+              <p>Motivo: {backupState.morningBackupReason}</p>
+            )}
+            {lastSnapshot && (
+              <p>
+                Ultimo pacote local: {Object.keys(lastSnapshot.tables).length} tabelas em{' '}
+                {new Date(lastSnapshot.createdAt).toLocaleString('pt-BR')}
+              </p>
+            )}
           </div>
         </section>
       )}

@@ -3,6 +3,8 @@ import type { FiscalPayload } from './fiscalService'
 interface FiscalBackendResult {
   status: 'emitida' | 'erro' | 'pendente'
   protocol?: string
+  qrCodeUrl?: string
+  qrCodeText?: string
   issuedAt?: string
   message?: string
 }

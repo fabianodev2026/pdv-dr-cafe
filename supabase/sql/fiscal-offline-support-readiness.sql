@@ -5,6 +5,8 @@ alter table public.sales
   add column if not exists fiscal_cpf text,
   add column if not exists fiscal_status text not null default 'nao_emitida',
   add column if not exists fiscal_payload jsonb,
+  add column if not exists fiscal_qr_code_url text,
+  add column if not exists fiscal_qr_code_text text,
   add column if not exists fiscal_error text;
 
 create table if not exists public.fiscal_requests (
@@ -16,6 +18,10 @@ create table if not exists public.fiscal_requests (
   payment_method text,
   items jsonb not null default '[]'::jsonb,
   status text not null default 'pendente_certificado',
+  qr_code_url text,
+  qr_code_text text,
+  protocol text,
+  issued_at timestamptz,
   error_message text
 );
 

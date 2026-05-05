@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { logAppError } from '../lib/appLogger'
+import { markBackupNeededAfterClosing } from '../lib/backupService'
 import { customerFieldLimits } from '../lib/customerLimits'
 import { hashPassword, verifyPassword } from '../lib/passwordSecurity'
 import './CustomerApp.css'
@@ -432,6 +433,7 @@ export default function CustomerApp() {
     }
 
     setCart([])
+    markBackupNeededAfterClosing('Pedido do app registrado apos as 20:00')
     setMessage(
       'Pedido enviado. Seu cadastro foi feito com sucesso; sua forma de pagamento sera todo dia 5 util.',
     )

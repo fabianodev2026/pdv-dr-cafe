@@ -1,4 +1,15 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import {
+  ADMIN_ROLES,
+  CASHIER_ROLES,
+  DIAGNOSTIC_ROLES,
+  MANAGER_ROLES,
+  OPERATION_ROLES,
+  SUPPORT_ROLES,
+  hasRole,
+} from '../lib/rolePermissions'
+import { startBackupScheduler } from '../lib/backupService'
 import './AppShell.css'
 
 interface CurrentUser {
@@ -11,10 +22,19 @@ interface AppShellProps {
   onLogout: () => void
 }
 
-const canManage = (role: string) => ['admin', 'gerente'].includes(role)
-const canUseSupportAi = (role: string) => role === 'suporte_tecnico'
-
 export default function AppShell({ currentUser, onLogout }: AppShellProps) {
+  const canOperate = hasRole(currentUser, OPERATION_ROLES)
+  const canUseCashier = hasRole(currentUser, CASHIER_ROLES)
+  const canManage = hasRole(currentUser, MANAGER_ROLES)
+  const canAdmin = hasRole(currentUser, ADMIN_ROLES)
+  const canDiagnose = hasRole(currentUser, DIAGNOSTIC_ROLES)
+  const canUseSupportAi = hasRole(currentUser, SUPPORT_ROLES)
+
+  useEffect(() => {
+    const intervalId = startBackupScheduler()
+    return () => window.clearInterval(intervalId)
+  }, [])
+
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
@@ -27,16 +47,16 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
         </div>
 
         <nav className="app-tabs" aria-label="Abas do PDV">
-          <NavLink to="/mesas">PDV</NavLink>
-          <NavLink to="/pedidos">Pedidos feitos</NavLink>
-          <NavLink to="/pendencias">Pagar depois</NavLink>
-          {canManage(currentUser.role) && <NavLink to="/almoco-do-dia">Almoco do dia</NavLink>}
-          {canManage(currentUser.role) && <NavLink to="/clientes-app">Clientes app</NavLink>}
-          {canManage(currentUser.role) && <NavLink to="/diagnostico">Diagnostico</NavLink>}
-          {canUseSupportAi(currentUser.role) && <NavLink to="/suporte-ia">Suporte IA</NavLink>}
-          {canManage(currentUser.role) && <NavLink to="/produtos">Produtos</NavLink>}
-          {canManage(currentUser.role) && <NavLink to="/configuracoes">Usuarios</NavLink>}
-          {canManage(currentUser.role) && (
+          {canOperate && <NavLink to="/mesas">PDV</NavLink>}
+          {canOperate && <NavLink to="/pedidos">Pedidos feitos</NavLink>}
+          {canUseCashier && <NavLink to="/pendencias">Pagar depois</NavLink>}
+          {canManage && <NavLink to="/almoco-do-dia">Almoco do dia</NavLink>}
+          {canManage && <NavLink to="/clientes-app">Clientes app</NavLink>}
+          {canDiagnose && <NavLink to="/diagnostico">Diagnostico</NavLink>}
+          {canUseSupportAi && <NavLink to="/suporte-ia">Suporte IA</NavLink>}
+          {canManage && <NavLink to="/produtos">Produtos</NavLink>}
+          {canAdmin && <NavLink to="/configuracoes">Usuarios</NavLink>}
+          {canAdmin && (
             <NavLink to="/configuracoes-sistema">Configuracoes</NavLink>
           )}
         </nav>

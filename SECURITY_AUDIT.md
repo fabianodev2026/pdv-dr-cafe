@@ -16,12 +16,15 @@ Atualizacao: 2026-05-03
 - Fila fiscal agora tenta usar backend fiscal quando `VITE_FISCAL_API_URL` estiver configurado; sem backend, registra em `fiscal_requests`.
 - Foi criado o SQL `supabase/sql/production-security-hardening.sql` para fechar RLS e permissoes abertas em producao.
 - Foi criado `docs/PRODUCTION_ARCHITECTURE.md` com a divisao profissional entre React, Supabase, backend fiscal e suporte tecnico.
+- Permissoes foram separadas por perfil: admin, gerente, caixa, garcom e suporte_tecnico.
+- A impressao da notinha agora possui bloco fiscal da Nota Fiscal Paulista com area de QR Code quando houver CPF.
 
 ## Pontos seguros que ja existem
 
 - Senhas do app de clientes usam bcrypt no frontend antes de salvar o cadastro.
 - Senhas do sistema interno do PDV usam `pgcrypto`/bcrypt nas funcoes SQL `login_pdv_user` e `create_pdv_user`.
 - CPF para Nota Fiscal Paulista esta formatado como `123.456.789-10` e separado do pagamento.
+- A notinha mostra o padrao fiscal com CPF e QR Code pendente de emissao pelo backend fiscal.
 - Falha de internet ou Supabase pode gerar fila local de venda offline para posterior conferencia.
 - Fila fiscal e rascunho de suporte IA ficam separados para acompanhamento tecnico.
 

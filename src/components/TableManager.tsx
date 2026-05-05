@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { createFiscalPayload, formatCpf, isCompleteCpf, queueFiscalPayload } from '../lib/fiscalService'
 import { logAppError } from '../lib/appLogger'
 import { queueOfflineRecord, queueOfflineSale } from '../lib/offlineQueue'
+import { markBackupNeededAfterClosing } from '../lib/backupService'
 import './TableManager.css'
 
 interface Product {
@@ -41,6 +42,7 @@ interface ReceiptData {
   date: string
   payment_method: PaymentMethod
   fiscal_cpf: string
+  fiscal_qr_text: string
 }
 
 type PaymentMethod = 'pix' | 'credito' | 'debito' | 'dinheiro' | 'pagar_depois'
@@ -78,6 +80,21 @@ const roomNumbers = [
 const initialRooms: TableItem[] = roomNumbers.map((number) =>
   createServiceItem(number, 'room'),
 )
+
+const createFiscalQrText = (receipt: Omit<ReceiptData, 'fiscal_qr_text'>) => {
+  if (!receipt.fiscal_cpf || !isCompleteCpf(receipt.fiscal_cpf)) return ''
+
+  return [
+    'DR CAFE',
+    'NOTA FISCAL PAULISTA',
+    `CPF=${receipt.fiscal_cpf}`,
+    `TOTAL=${receipt.total.toFixed(2)}`,
+    `PAGAMENTO=${receipt.payment_method}`,
+    `ATENDIMENTO=${receipt.type}-${receipt.number}`,
+    `DATA=${receipt.date}`,
+    'STATUS=PENDENTE_EMISSAO_FISCAL',
+  ].join('|')
+}
 
 export default function TableManager({ currentUser }: TableManagerProps) {
   const [viewMode, setViewMode] = useState<'salon' | 'hospital'>('salon')
@@ -190,7 +207,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
       return
     }
 
-    const receipt: ReceiptData = {
+    const receiptBase: Omit<ReceiptData, 'fiscal_qr_text'> = {
       type: activeItem.type,
       number: activeItem.number,
       items: [...activeItem.items],
@@ -200,6 +217,10 @@ export default function TableManager({ currentUser }: TableManagerProps) {
       date: new Date().toLocaleString('pt-BR'),
       payment_method: paymentMethod,
       fiscal_cpf: fiscalCpf,
+    }
+    const receipt: ReceiptData = {
+      ...receiptBase,
+      fiscal_qr_text: createFiscalQrText(receiptBase),
     }
 
     setReceiptData(receipt)
@@ -313,6 +334,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
       setActiveItem(null)
       setShowReceipt(false)
+      markBackupNeededAfterClosing('Venda registrada no PDV apos as 20:00')
       alert('Venda registrada com sucesso no cofre!')
     } catch (err) {
       const offlineSale = queueOfflineSale(
@@ -654,6 +676,25 @@ export default function TableManager({ currentUser }: TableManagerProps) {
               )}
               <h3>TOTAL: R$ {receiptData?.total.toFixed(2)}</h3>
             </div>
+            {receiptData?.fiscal_cpf && (
+              <div className="receipt-fiscal">
+                <h3>Nota Fiscal Paulista</h3>
+                <div className="receipt-fiscal__qr" aria-label="QR Code da Nota Fiscal Paulista">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <p>CPF: {receiptData.fiscal_cpf}</p>
+                <p>QR Code fiscal pendente de emissao pela SEFAZ.</p>
+                <small>{receiptData.fiscal_qr_text}</small>
+              </div>
+            )}
           </div>
         </>
       )}

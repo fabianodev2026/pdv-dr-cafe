@@ -57,6 +57,11 @@
   font-weight: 800;
 }
 
+.settings-save:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .settings-tabs button {
   background: #fff8ef;
   color: #5a2f17;
@@ -78,6 +83,32 @@
 
 .settings-panel h2 {
   margin-top: 0;
+}
+
+.settings-panel-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.settings-panel-heading h2,
+.settings-panel-heading p {
+  margin: 0;
+}
+
+.settings-panel-heading p {
+  margin-top: 6px;
+  color: #7b4a27;
+}
+
+.settings-panel-heading label {
+  display: grid;
+  gap: 7px;
+  min-width: 180px;
+  color: #5a2f17;
+  font-weight: 800;
 }
 
 .settings-form {
@@ -138,6 +169,18 @@
   gap: 12px;
 }
 
+.best-seller-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.backup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
 .balance-grid article {
   padding: 18px;
   border-radius: 8px;
@@ -145,14 +188,56 @@
   border-left: 4px solid #7b4a27;
 }
 
+.best-seller-summary article {
+  padding: 16px;
+  border-radius: 8px;
+  background: #fffaf5;
+  border-left: 4px solid #2b160d;
+}
+
+.backup-grid article {
+  padding: 16px;
+  border-radius: 8px;
+  background: #fffaf5;
+  border-left: 4px solid #6a7f3f;
+}
+
 .balance-grid span,
-.balance-grid strong {
+.balance-grid strong,
+.best-seller-summary span,
+.best-seller-summary strong,
+.backup-grid span,
+.backup-grid strong,
+.backup-grid small {
   display: block;
 }
 
-.balance-grid strong {
+.balance-grid strong,
+.best-seller-summary strong,
+.backup-grid strong {
   margin-top: 8px;
   font-size: 1.5rem;
+}
+
+.best-seller-summary strong {
+  font-size: 1.25rem;
+}
+
+.backup-grid small {
+  margin-top: 6px;
+  color: #7b4a27;
+}
+
+.backup-status {
+  margin-top: 16px;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fffaf5;
+  color: #5a2f17;
+}
+
+.backup-status p {
+  margin: 6px 0;
 }
 
 .history-section {
@@ -178,8 +263,21 @@
   color: #5a2f17;
 }
 
+.settings-empty {
+  padding: 18px;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #7b4a27;
+  font-weight: 800;
+}
+
 @media (max-width: 620px) {
   .inline-field {
     grid-template-columns: 1fr;
+  }
+
+  .settings-panel-heading {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
