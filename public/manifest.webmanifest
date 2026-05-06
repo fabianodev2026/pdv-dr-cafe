@@ -1,11 +1,11 @@
 {
   "name": "Dr. Cafe PDV",
-  "short_name": "Dr. Cafe",
-  "description": "PDV e app de pedidos Dr. Cafe.",
-  "start_url": "/app",
+  "short_name": "Dr. Cafe PDV",
+  "description": "PDV interno Dr. Cafe.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "landscape",
   "background_color": "#f3e4d2",
   "theme_color": "#2b160d",
   "icons": [
@@ -18,14 +18,14 @@
   ],
   "shortcuts": [
     {
-      "name": "App do cliente",
-      "short_name": "Cliente",
-      "url": "/app"
-    },
-    {
       "name": "PDV interno",
       "short_name": "PDV",
       "url": "/"
+    },
+    {
+      "name": "Clientes app",
+      "short_name": "Clientes",
+      "url": "/clientes-app"
     }
   ]
 }

@@ -42,6 +42,7 @@ block('Arquivos principais', () => {
     'src/vite-env.d.ts',
     'public/logo.jpeg',
     'public/manifest.webmanifest',
+    'public/manifest-app.webmanifest',
     'public/sw.js',
   ].forEach(requireFile)
 })
@@ -165,7 +166,7 @@ block('TypeScript', () => {
 block('Public limpo', () => {
   const files = readdirSync(join(root, 'public'))
   const allowed = new Set(['.ico', '.jpg', '.jpeg', '.png', '.webp', '.svg'])
-  const allowedFiles = new Set(['manifest.webmanifest', 'sw.js'])
+  const allowedFiles = new Set(['manifest.webmanifest', 'manifest-app.webmanifest', 'sw.js'])
   const invalid = files.filter(
     (file) => !allowedFiles.has(file) && !allowed.has(extname(file).toLowerCase()),
   )

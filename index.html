@@ -5,9 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#2b160d" />
     <meta name="description" content="PDV e app de pedidos Dr. Cafe." />
-    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/logo.jpeg" />
     <link rel="icon" href="/logo.jpeg" type="image/jpeg" />
+    <script>
+      const manifest = document.createElement('link')
+      manifest.rel = 'manifest'
+      manifest.href = window.location.pathname.startsWith('/app')
+        ? '/manifest-app.webmanifest'
+        : '/manifest.webmanifest'
+      document.head.appendChild(manifest)
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

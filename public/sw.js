@@ -1,5 +1,12 @@
 const CACHE_NAME = 'dr-cafe-pwa-v1'
-const APP_SHELL = ['/', '/app', '/manifest.webmanifest', '/logo.jpeg', '/favicon.ico']
+const APP_SHELL = [
+  '/',
+  '/app',
+  '/manifest.webmanifest',
+  '/manifest-app.webmanifest',
+  '/logo.jpeg',
+  '/favicon.ico',
+]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
