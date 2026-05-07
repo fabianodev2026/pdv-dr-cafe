@@ -263,11 +263,12 @@ export default function CustomerApp() {
       form.name.length > customerFieldLimits.name ||
       form.login.length > customerFieldLimits.login ||
       form.password.length > customerFieldLimits.password ||
+      form.phone.length > customerFieldLimits.phone ||
       form.position.length > customerFieldLimits.position ||
       form.email.length > customerFieldLimits.email
     ) {
       setMessage(
-        `Nome ate ${customerFieldLimits.name}, login ate ${customerFieldLimits.login}, senha ate ${customerFieldLimits.password}, cargo ate ${customerFieldLimits.position} e email ate ${customerFieldLimits.email} caracteres.`,
+        `Nome ate ${customerFieldLimits.name}, login ate ${customerFieldLimits.login}, senha ate ${customerFieldLimits.password}, telefone ate ${customerFieldLimits.phone}, cargo ate ${customerFieldLimits.position} e email ate ${customerFieldLimits.email} caracteres.`,
       )
       return
     }

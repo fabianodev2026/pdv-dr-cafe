@@ -24,6 +24,10 @@ alter table public.app_customers
   add constraint app_customers_position_length check (char_length(position) <= 20) not valid;
 
 alter table public.app_customers
+  drop constraint if exists app_customers_phone_length,
+  add constraint app_customers_phone_length check (char_length(phone) <= 15) not valid;
+
+alter table public.app_customers
   drop constraint if exists app_customers_email_length,
   add constraint app_customers_email_length check (char_length(email) <= 30) not valid;
 
@@ -80,6 +84,10 @@ begin
 
   if char_length(v_position) > 20 then
     raise exception 'Cargo deve ter ate 20 caracteres.';
+  end if;
+
+  if char_length(v_phone) > 15 then
+    raise exception 'Telefone deve ter ate 15 caracteres.';
   end if;
 
   if char_length(v_email) > 30 then
