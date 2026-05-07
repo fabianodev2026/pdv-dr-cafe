@@ -100,7 +100,7 @@
 
 .app-customer-admin-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   align-items: end;
   border-top: 1px solid #ead4b9;
@@ -109,6 +109,7 @@
 
 .app-customer-admin-actions label {
   display: grid;
+  grid-column: 1 / -1;
   gap: 6px;
   color: #5a2f17;
   font-weight: 900;
@@ -144,7 +145,7 @@
 /*colocar o cifrão*/
 .app-customer-money-field {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: 52px minmax(120px, 1fr);
   align-items: center;
   border: 1px solid #b98554;
   border-radius: 8px;
@@ -153,12 +154,17 @@
 }
 
 .app-customer-money-field span {
-  padding: 10px;
+  display: grid;
+  min-height: 44px;
+  place-items: center;
   color: #7b4a27;
   font-weight: 900;
 }
 .app-customer-money-field input {
+  width: 100%;
+  min-height: 44px;
   border: 0;
   border-left: 1px solid #ead4b9;
   border-radius: 0;
+  font-size: 1rem;
 }

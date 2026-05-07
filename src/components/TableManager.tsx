@@ -635,10 +635,12 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
           <div className="printable-receipt">
             <div className="receipt-header">
-              <h2>☕ DR. CAFÉ</h2>
+              <img className="receipt-logo" src="/logo.jpeg" alt="Dr. Cafe" />
+              <h2>DR. CAFE</h2>
               <p>
-                <strong>CUPOM NÃO FISCAL</strong>
+                <strong>CUPOM NAO FISCAL</strong>
               </p>
+              <p>Impressora: TRPSX88V0011CB0X</p>
               <hr />
             </div>
             <div className="receipt-section">

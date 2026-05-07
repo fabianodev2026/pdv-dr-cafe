@@ -80,7 +80,7 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
     }
 
     const value = creditInputs[customer.id] ?? String(Number(customer.credit_limit || 0))
-    const creditLimit = Number(value || 0)
+    const creditLimit = Number(value.replace(',', '.') || 0)
     if (Number.isNaN(creditLimit) || creditLimit < 0) {
       setMessage('Informe um saldo valido.')
       return
@@ -182,14 +182,13 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
                   <div className="app-customer-money-field">
                     <span>R$</span>
                     <input
-                      type="number"
-                      min="0"
-                      step="10"
+                      type="text"
+                      inputMode="decimal"
                       value={creditInputs[customer.id] ?? String(Number(customer.credit_limit || 0))}
                       onChange={(event) =>
                         setCreditInputs((current) => ({
                           ...current,
-                          [customer.id]: event.target.value,
+                          [customer.id]: event.target.value.replace(/[^\d.,]/g, ''),
                         }))
                       }
                     />
