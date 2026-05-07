@@ -14,11 +14,27 @@ interface AppCustomer {
   email: string
   status: CustomerStatus
   payment_day: number
+  credit_limit: number
 }
 
-export default function AppCustomersManager() {
+interface CurrentUser {
+  username: string
+  role: string
+}
+
+interface AppCustomersManagerProps {
+  currentUser: CurrentUser
+}
+
+const currencyFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+})
+
+export default function AppCustomersManager({ currentUser }: AppCustomersManagerProps) {
   const [customers, setCustomers] = useState<AppCustomer[]>([])
   const [message, setMessage] = useState('')
+  const isAdmin = currentUser.role === 'admin'
 
   const fetchCustomers = async () => {
     const { data, error } = await supabase
@@ -53,6 +69,66 @@ export default function AppCustomersManager() {
     fetchCustomers()
   }
 
+  const updateCreditLimit = async (customer: AppCustomer, value: string) => {
+    if (!isAdmin) {
+      setMessage('Somente administrador geral pode alterar limite.')
+      return
+    }
+
+    const creditLimit = Number(value || 0)
+    if (Number.isNaN(creditLimit) || creditLimit < 0) {
+      setMessage('Informe um limite valido.')
+      return
+    }
+
+    const adminPassword = window.prompt('Confirme sua senha de administrador.')
+    if (!adminPassword) return
+
+    const { error } = await supabase.rpc('admin_update_app_customer_credit_limit', {
+      p_admin_username: currentUser.username,
+      p_admin_password: adminPassword,
+      p_customer_id: customer.id,
+      p_credit_limit: creditLimit,
+    })
+
+    if (error) {
+      setMessage(`Erro ao ajustar limite: ${error.message}`)
+      return
+    }
+
+    setMessage(`Limite de ${customer.name} atualizado.`)
+    fetchCustomers()
+  }
+
+  const deleteCustomer = async (customer: AppCustomer) => {
+    if (!isAdmin) {
+      setMessage('Somente administrador geral pode excluir conta do app.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Excluir a conta do app de ${customer.name}? Esta acao nao remove historico financeiro.`,
+    )
+    if (!confirmed) return
+
+    const adminPassword = window.prompt('Confirme sua senha de administrador.')
+    if (!adminPassword) return
+
+    const { error } = await supabase.rpc('admin_delete_app_customer', {
+      p_admin_username: currentUser.username,
+      p_admin_password: adminPassword,
+      p_customer_id: customer.id,
+    })
+
+    if (error) {
+      setMessage(`Erro ao excluir cliente: ${error.message}`)
+      return
+    }
+
+    setMessage(`Conta do app de ${customer.name} excluida.`)
+    fetchCustomers()
+  }
+
   return (
     <div className="app-customers-manager">
       <header className="app-customers-heading">
@@ -60,6 +136,11 @@ export default function AppCustomersManager() {
         <div>
           <h1>Clientes do app</h1>
           <p>Controle quem pode usar pagar depois pelo aplicativo.</p>
+          {!isAdmin && (
+            <p className="app-customers-note">
+              Limite e exclusao ficam disponiveis somente para administrador geral.
+            </p>
+          )}
         </div>
       </header>
 
@@ -83,11 +164,29 @@ export default function AppCustomersManager() {
             <small>
               Pagamento: todo dia {customer.payment_day} util
             </small>
+            <small>
+              Limite: {currencyFormatter.format(Number(customer.credit_limit || 0))}
+            </small>
             <div className="app-customer-actions">
               <button onClick={() => updateStatus(customer, 'ativo')}>Liberar</button>
               <button onClick={() => updateStatus(customer, 'bloqueado')}>Bloquear</button>
               <button onClick={() => updateStatus(customer, 'pendente')}>Pendente</button>
             </div>
+            {isAdmin && (
+              <div className="app-customer-admin-actions">
+                <label>
+                  Limite disponivel
+                  <input
+                    type="number"
+                    min="0"
+                    step="10"
+                    defaultValue={Number(customer.credit_limit || 0)}
+                    onBlur={(event) => updateCreditLimit(customer, event.target.value)}
+                  />
+                </label>
+                <button onClick={() => deleteCustomer(customer)}>Excluir conta</button>
+              </div>
+            )}
           </article>
         ))}
       </section>

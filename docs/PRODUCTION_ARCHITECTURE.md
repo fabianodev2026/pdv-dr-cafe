@@ -6,6 +6,7 @@
    - Operacao do caixa, mesas, quartos, pedidos, fila offline e suporte.
    - Usa somente `VITE_SUPABASE_ANON_KEY`.
    - Nao guarda certificado digital nem `service_role`.
+   - Abertura de gaveta usa ponte local de hardware no PC do caixa.
 
 2. Supabase
    - Banco de dados, RLS e funcoes SQL.
@@ -32,6 +33,27 @@
 - `caixa`: PDV, fechamento, pagar depois, pedidos e financeiro.
 - `garcom`: lancar pedido e enviar para preparo, sem finalizar pagamento.
 - `suporte_tecnico`: diagnostico e suporte IA, sem operar caixa.
+
+## Limite do app de clientes
+
+- Cada cliente do app pode ter um `credit_limit`.
+- Somente `admin` altera limite ou exclui conta gerada pelo app.
+- O app mostra limite, saldo em aberto e saldo disponivel.
+- Pedido pelo app nao abre gaveta porque o pagamento e futuro.
+
+## Gaveta de dinheiro
+
+- Marca: Brasil PC.
+- Numero de serie: 715sz25081460.
+- Abertura acontece somente apos pagamento concluido no PDV.
+- Pedidos do app nao abrem gaveta.
+- Como navegador/PWA nao controla hardware diretamente, o PDV envia o comando para uma ponte local:
+
+```txt
+VITE_CASH_DRAWER_URL=http://127.0.0.1:8787/cash-drawer/open
+```
+
+Essa ponte local deve ficar instalada no PC do caixa e converter o comando web para o acionamento real da gaveta/impressora.
 
 ## Contrato sugerido do backend fiscal
 

@@ -25,6 +25,14 @@ as $$
   select public.current_pdv_role() in ('admin', 'gerente');
 $$;
 
+create or replace function public.is_pdv_admin()
+returns boolean
+language sql
+stable
+as $$
+  select public.current_pdv_role() = 'admin';
+$$;
+
 create or replace function public.is_pdv_support()
 returns boolean
 language sql
@@ -108,6 +116,8 @@ drop policy if exists "pending payments app update" on public.pending_payments;
 drop policy if exists "app customers read" on public.app_customers;
 drop policy if exists "app customers insert" on public.app_customers;
 drop policy if exists "app customers update" on public.app_customers;
+drop policy if exists "managers can manage app customers" on public.app_customers;
+drop policy if exists "admins can manage app customers" on public.app_customers;
 drop policy if exists "app orders read" on public.app_orders;
 drop policy if exists "app orders insert" on public.app_orders;
 drop policy if exists "app orders update" on public.app_orders;
@@ -196,12 +206,12 @@ for insert
 to anon, authenticated
 with check (true);
 
-create policy "managers can manage app customers"
+create policy "admins can manage app customers"
 on public.app_customers
 for all
 to authenticated
-using (public.is_pdv_manager())
-with check (public.is_pdv_manager());
+using (public.is_pdv_admin())
+with check (public.is_pdv_admin());
 
 create policy "operators can read app orders"
 on public.app_orders

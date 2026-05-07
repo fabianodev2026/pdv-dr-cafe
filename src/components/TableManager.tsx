@@ -4,6 +4,7 @@ import { createFiscalPayload, formatCpf, isCompleteCpf, queueFiscalPayload } fro
 import { logAppError } from '../lib/appLogger'
 import { queueOfflineRecord, queueOfflineSale } from '../lib/offlineQueue'
 import { markBackupNeededAfterClosing } from '../lib/backupService'
+import { openCashDrawer } from '../lib/cashDrawerService'
 import './TableManager.css'
 
 interface Product {
@@ -335,6 +336,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
       setActiveItem(null)
       setShowReceipt(false)
       markBackupNeededAfterClosing('Venda registrada no PDV apos as 20:00')
+      void openCashDrawer(receiptData.payment_method)
       alert('Venda registrada com sucesso no cofre!')
     } catch (err) {
       const offlineSale = queueOfflineSale(

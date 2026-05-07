@@ -127,7 +127,7 @@
 
 .customer-app__account {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   max-width: 1080px;
   margin: 0 auto 14px;

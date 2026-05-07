@@ -33,14 +33,16 @@ create table if not exists public.app_customers (
   position text not null,
   email text not null,
   status text not null default 'pendente',
-  payment_day int not null default 5
+  payment_day int not null default 5,
+  credit_limit numeric(10,2) not null default 0
 );
 
 alter table public.app_customers
   add column if not exists login text,
   add column if not exists password_hash text,
   add column if not exists status text not null default 'pendente',
-  add column if not exists payment_day int not null default 5;
+  add column if not exists payment_day int not null default 5,
+  add column if not exists credit_limit numeric(10,2) not null default 0;
 
 update public.app_customers
 set
@@ -75,6 +77,11 @@ alter table public.app_customers
   drop constraint if exists app_customers_status_check,
   add constraint app_customers_status_check
   check (status in ('pendente', 'ativo', 'bloqueado')) not valid;
+
+alter table public.app_customers
+  drop constraint if exists app_customers_credit_limit_positive,
+  add constraint app_customers_credit_limit_positive
+  check (credit_limit >= 0) not valid;
 
 create unique index if not exists app_customers_phone_key
 on public.app_customers (phone);

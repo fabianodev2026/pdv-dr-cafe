@@ -18,6 +18,7 @@ interface AppCustomer {
   password_hash: string
   status: CustomerStatus
   payment_day: number
+  credit_limit: number
 }
 
 interface Product {
@@ -105,6 +106,9 @@ export default function CustomerApp() {
     () => cart.reduce((sum, item) => sum + item.quantity * item.unit_price, 0),
     [cart],
   )
+  const creditLimit = Number(customer?.credit_limit || 0)
+  const availableCredit = Math.max(creditLimit - pendingTotal, 0)
+  const availableAfterCart = Math.max(availableCredit - total, 0)
 
   const foods = products.filter((product) => product.category !== 'bebida')
   const drinks = products.filter((product) => product.category === 'bebida')
@@ -370,6 +374,11 @@ export default function CustomerApp() {
       return
     }
 
+    if (creditLimit > 0 && total > availableCredit) {
+      setMessage('Pedido acima do limite disponivel. Procure o cafe para ajustar seu limite.')
+      return
+    }
+
     const dueDate = getFifthBusinessDay()
     const orderItems = cart.map((item) => ({
       name: item.name,
@@ -542,6 +551,11 @@ export default function CustomerApp() {
                 Vencimento: {new Date(`${nextDueDate}T00:00:00`).toLocaleDateString('pt-BR')}
               </span>
             </div>
+            <div>
+              <strong>{currencyFormatter.format(availableCredit)}</strong>
+              <span>saldo disponivel</span>
+              <span>Limite: {currencyFormatter.format(creditLimit)}</span>
+            </div>
           </section>
 
           {dueWarning && (
@@ -620,8 +634,20 @@ export default function CustomerApp() {
                 ))
               )}
               <strong>Total: {currencyFormatter.format(total)}</strong>
+              {customer && (
+                <p>
+                  Saldo depois deste pedido: {currencyFormatter.format(availableAfterCart)}
+                </p>
+              )}
               <p>Pagamento: pagar depois, Pix ou dinheiro no dia combinado.</p>
-              <button onClick={sendOrder} disabled={customer.status !== 'ativo' || isBlockedByDebt}>
+              <button
+                onClick={sendOrder}
+                disabled={
+                  customer.status !== 'ativo' ||
+                  isBlockedByDebt ||
+                  (creditLimit > 0 && total > availableCredit)
+                }
+              >
                 Enviar pedido
               </button>
             </aside>

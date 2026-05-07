@@ -93,7 +93,10 @@ export default function AppRouter() {
             />
             <Route
               path="/clientes-app"
-              element={requireRole(<AppCustomersManager />, MANAGER_ROLES)}
+              element={requireRole(
+                <AppCustomersManager currentUser={currentUser} />,
+                MANAGER_ROLES,
+              )}
             />
             <Route
               path="/diagnostico"
