@@ -176,6 +176,11 @@
   padding: 14px;
 }
 
+.customer-app__search input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .customer-app__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -208,9 +213,15 @@
 .customer-app__fallback {
   display: grid;
   place-items: center;
-  background: #2a211c;
+  background: linear-gradient(135deg, #2a211c, #6f4a2f);
   color: #f5be7d;
   font-weight: 900;
+  text-align: center;
+}
+
+.customer-app__fallback.bebida {
+  background: linear-gradient(135deg, #17384a, #4c8baa);
+  color: #eef8ff;
 }
 
 .customer-app__item > div:last-child {

@@ -90,6 +90,7 @@ export default function CustomerApp() {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false)
   const [showPasswordReset, setShowPasswordReset] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
+  const [productSearch, setProductSearch] = useState('')
   const [dailyLunch, setDailyLunch] = useState<DailyLunch | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [pendingTotal, setPendingTotal] = useState(0)
@@ -113,8 +114,19 @@ export default function CustomerApp() {
   const availableCredit = Math.max(creditLimit - pendingTotal, 0)
   const availableAfterCart = Math.max(availableCredit - total, 0)
 
-  const foods = products.filter((product) => product.category !== 'bebida')
-  const drinks = products.filter((product) => product.category === 'bebida')
+  const filteredProducts = useMemo(() => {
+    const search = productSearch.trim().toLowerCase()
+    if (!search) return products
+
+    return products.filter((product) =>
+      [product.name, product.description, product.category]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search)),
+    )
+  }, [products, productSearch])
+
+  const foods = filteredProducts.filter((product) => product.category !== 'bebida')
+  const drinks = filteredProducts.filter((product) => product.category === 'bebida')
 
   const loadMenu = async () => {
     const productsResult = await supabase.from('products').select('*').order('name')
@@ -654,6 +666,14 @@ export default function CustomerApp() {
 
           <main className="customer-app__layout">
             <section className="customer-app__menu">
+              <div className="customer-app__section customer-app__search">
+                <input
+                  value={productSearch}
+                  onChange={(event) => setProductSearch(event.target.value)}
+                  placeholder="Pesquisar produto"
+                />
+              </div>
+
               {dailyLunch && (
                 <div className="customer-app__section">
                   <h2>Almoco do dia</h2>
@@ -752,7 +772,9 @@ function MenuItem({
       {product.image_url ? (
         <img src={product.image_url} alt={product.name} />
       ) : (
-        <div className="customer-app__fallback">Dr. Cafe</div>
+        <div className={`customer-app__fallback ${product.category === 'bebida' ? 'bebida' : 'comida'}`}>
+          {product.category === 'bebida' ? 'Bebida' : 'Dr. Cafe'}
+        </div>
       )}
       <div>
         <strong>{product.name}</strong>

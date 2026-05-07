@@ -12,6 +12,8 @@ interface Product {
   name: string
   unit_price: number
   image_url?: string
+  description?: string
+  category?: 'comida' | 'bebida'
 }
 
 interface OrderItem {
@@ -110,6 +112,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
   const [fiscalCpf, setFiscalCpf] = useState('')
   const [selectedFloor, setSelectedFloor] = useState('todos')
   const [roomSearch, setRoomSearch] = useState('')
+  const [productSearch, setProductSearch] = useState('')
   const [orderMessage, setOrderMessage] = useState('')
 
   const fetchProducts = async () => {
@@ -376,6 +379,17 @@ export default function TableManager({ currentUser }: TableManagerProps) {
     })
   }, [rooms, roomSearch, selectedFloor, tables, viewMode])
 
+  const filteredProducts = useMemo(() => {
+    const search = productSearch.trim().toLowerCase()
+    if (!search) return availableProducts
+
+    return availableProducts.filter((product) =>
+      [product.name, product.description, product.category]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search)),
+    )
+  }, [availableProducts, productSearch])
+
   return (
     <div className="pdv-container">
       {!activeItem && (
@@ -454,9 +468,16 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
           <div className="split-layout">
             <div className="products-showcase glass-panel">
-              <h3>📦 Toque para Adicionar</h3>
+              <div className="products-showcase-header">
+                <h3>Produtos</h3>
+                <input
+                  value={productSearch}
+                  onChange={(event) => setProductSearch(event.target.value)}
+                  placeholder="Pesquisar produto"
+                />
+              </div>
               <div className="visual-menu">
-                {availableProducts.map((product) => (
+                {filteredProducts.map((product) => (
                   <div
                     key={product.id}
                     className="product-item-card"
@@ -466,7 +487,9 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                       {product.image_url ? (
                         <img src={product.image_url} alt={product.name} />
                       ) : (
-                        <div className="no-img-placeholder">☕</div>
+                        <div className={`no-img-placeholder ${product.category === 'bebida' ? 'bebida' : 'comida'}`}>
+                          <span>{product.category === 'bebida' ? 'Bebida' : 'Cafe'}</span>
+                        </div>
                       )}
                     </div>
                     <div className="product-info-mini">
@@ -478,6 +501,9 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                   </div>
                 ))}
               </div>
+              {filteredProducts.length === 0 && (
+                <p className="product-search-empty">Nenhum produto encontrado.</p>
+              )}
             </div>
 
             <div className="active-command-panel">
