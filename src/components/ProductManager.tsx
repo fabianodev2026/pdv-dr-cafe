@@ -53,8 +53,13 @@ export default function ProductManager() {
       return
     }
 
-    if (newProduct.description.length > 25) {
-      alert('A descrição deve ter no máximo 25 caracteres.')
+    if (newProduct.name.length > 60) {
+      alert('O nome deve ter no máximo 60 caracteres.')
+      return
+    }
+
+    if (newProduct.description.length > 80) {
+      alert('A descrição deve ter no máximo 80 caracteres.')
       return
     }
 
@@ -148,7 +153,7 @@ export default function ProductManager() {
                 setNewProduct({ ...newProduct, name: e.target.value })
               }
               placeholder="Ex: Capuccino"
-              maxLength={25}
+              maxLength={60}
             />
           </div>
           <div className="form-group">
@@ -190,7 +195,7 @@ export default function ProductManager() {
             </select>
           </div>
           <div className="form-group full-width">
-            <label>Descrição do produto ({newProduct.description.length}/25)</label>
+            <label>Descrição do produto ({newProduct.description.length}/80)</label>
             <textarea
               value={newProduct.description}
               onChange={(e) =>
@@ -198,7 +203,7 @@ export default function ProductManager() {
               }
               placeholder="Descreva o produto..."
               rows={3}
-              maxLength={25}
+              maxLength={80}
             />
           </div>
         </div>
