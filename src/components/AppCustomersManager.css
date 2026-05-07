@@ -100,7 +100,7 @@
 
 .app-customer-admin-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: end;
   border-top: 1px solid #ead4b9;
@@ -131,6 +131,10 @@
   padding: 11px;
   font-weight: 900;
   cursor: pointer;
+}
+
+.app-customer-admin-actions .app-customer-save-balance {
+  background: #2f7d42;
 }
 
 @media (max-width: 620px) {

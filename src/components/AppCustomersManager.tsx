@@ -33,6 +33,7 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 
 export default function AppCustomersManager({ currentUser }: AppCustomersManagerProps) {
   const [customers, setCustomers] = useState<AppCustomer[]>([])
+  const [creditInputs, setCreditInputs] = useState<Record<number, string>>({})
   const [message, setMessage] = useState('')
   const isAdmin = currentUser.role === 'admin'
 
@@ -48,7 +49,16 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
     }
 
     setMessage('')
-    setCustomers(data ?? [])
+    const nextCustomers = data ?? []
+    setCustomers(nextCustomers)
+    setCreditInputs(
+      Object.fromEntries(
+        nextCustomers.map((customer) => [
+          customer.id,
+          String(Number(customer.credit_limit || 0)),
+        ]),
+      ),
+    )
   }
 
   useEffect(() => {
@@ -69,15 +79,16 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
     fetchCustomers()
   }
 
-  const updateCreditLimit = async (customer: AppCustomer, value: string) => {
+  const updateCreditLimit = async (customer: AppCustomer) => {
     if (!isAdmin) {
       setMessage('Somente administrador geral pode alterar limite.')
       return
     }
 
+    const value = creditInputs[customer.id] ?? String(Number(customer.credit_limit || 0))
     const creditLimit = Number(value || 0)
     if (Number.isNaN(creditLimit) || creditLimit < 0) {
-      setMessage('Informe um limite valido.')
+      setMessage('Informe um saldo valido.')
       return
     }
 
@@ -92,11 +103,11 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
     })
 
     if (error) {
-      setMessage(`Erro ao ajustar limite: ${error.message}`)
+      setMessage(`Erro ao salvar saldo: ${error.message}`)
       return
     }
 
-    setMessage(`Limite de ${customer.name} atualizado.`)
+    setMessage(`Saldo de ${customer.name} atualizado para ${currencyFormatter.format(creditLimit)}.`)
     fetchCustomers()
   }
 
@@ -175,15 +186,27 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
             {isAdmin && (
               <div className="app-customer-admin-actions">
                 <label>
-                  Limite disponivel
+                  Saldo disponivel
                   <input
                     type="number"
                     min="0"
                     step="10"
-                    defaultValue={Number(customer.credit_limit || 0)}
-                    onBlur={(event) => updateCreditLimit(customer, event.target.value)}
+                    value={creditInputs[customer.id] ?? String(Number(customer.credit_limit || 0))}
+                    onChange={(event) =>
+                      setCreditInputs((current) => ({
+                        ...current,
+                        [customer.id]: event.target.value,
+                      }))
+                    }
                   />
                 </label>
+                <button
+                  type="button"
+                  className="app-customer-save-balance"
+                  onClick={() => updateCreditLimit(customer)}
+                >
+                  Salvar saldo
+                </button>
                 <button onClick={() => deleteCustomer(customer)}>Excluir conta</button>
               </div>
             )}

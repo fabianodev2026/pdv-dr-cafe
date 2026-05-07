@@ -11,7 +11,7 @@ create or replace function public.ensure_pdv_admin(
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   if not exists (
@@ -42,7 +42,7 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   perform public.ensure_pdv_admin(p_admin_username, p_admin_password);
@@ -71,7 +71,7 @@ create or replace function public.admin_delete_app_customer(
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   perform public.ensure_pdv_admin(p_admin_username, p_admin_password);
@@ -88,3 +88,5 @@ $$;
 revoke all on function public.admin_delete_app_customer(text, text, bigint) from public;
 grant execute on function public.admin_delete_app_customer(text, text, bigint) to anon;
 grant execute on function public.admin_delete_app_customer(text, text, bigint) to authenticated;
+
+notify pgrst, 'reload schema';
