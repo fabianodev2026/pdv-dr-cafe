@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { logAppError } from '../lib/appLogger'
+import { logAppError, normalizeError } from '../lib/appLogger'
 import { markBackupNeededAfterClosing } from '../lib/backupService'
 import { customerFieldLimits } from '../lib/customerLimits'
-import { hashPassword, verifyPassword } from '../lib/passwordSecurity'
 import './CustomerApp.css'
 
 type CustomerStatus = 'pendente' | 'ativo' | 'bloqueado'
@@ -15,7 +14,6 @@ interface AppCustomer {
   phone: string
   position: string
   email: string
-  password_hash: string
   status: CustomerStatus
   payment_day: number
   credit_limit: number
@@ -199,12 +197,13 @@ export default function CustomerApp() {
     }
 
     const { data, error } = await supabase
-      .from('app_customers')
-      .select('*')
-      .eq('login', login)
-      .maybeSingle()
+      .rpc('app_customer_login', {
+        p_login: login,
+        p_password: password,
+      })
 
     if (error) {
+      const normalized = normalizeError(error)
       logAppError({
         source: 'CustomerApp',
         action: 'loginCustomer',
@@ -215,53 +214,36 @@ export default function CustomerApp() {
           hasPassword: Boolean(password),
         },
       })
+      setMessage(
+        `Nao foi possivel entrar agora. Codigo suporte: ${normalized.code || 'LOGIN-RPC'}.`,
+      )
+      return
+    }
+
+    const customerData = Array.isArray(data) ? data[0] : null
+
+    if (!customerData) {
       setMessage('Login ou senha incorretos. Se ainda nao tem acesso, faca seu cadastro.')
       return
     }
 
-    if (!data) {
-      setMessage('Login ou senha incorretos. Se ainda nao tem acesso, faca seu cadastro.')
-      return
-    }
-
-    if (!data.password_hash) {
-      logAppError({
-        source: 'CustomerApp',
-        action: 'loginCustomer.missingPasswordHash',
-        error: new Error('Cadastro sem password_hash. Recrie a senha do cliente.'),
-        details: { table: 'app_customers', hasLogin: Boolean(login) },
-      })
-      setMessage('Cadastro antigo sem senha protegida. Faca um novo cadastro.')
-      return
-    }
-
-    const passwordMatches = await verifyPassword(password, data.password_hash)
-
-    if (!passwordMatches) {
-      logAppError({
-        source: 'CustomerApp',
-        action: 'loginCustomer.passwordMismatch',
-        error: new Error('Senha nao confere com o hash bcrypt salvo.'),
-        details: { table: 'app_customers', hasLogin: Boolean(login) },
-      })
-      setMessage('Login ou senha incorretos. Se ainda nao tem acesso, faca seu cadastro.')
-      return
-    }
-
-    if (data.status === 'pendente') {
+    if (customerData.status === 'pendente') {
       setMessage('Cadastro recebido. Aguarde o cafe liberar seu acesso.')
       return
     }
 
-    if (data.status === 'bloqueado') {
+    if (customerData.status === 'bloqueado') {
       setMessage('Cadastro bloqueado. Procure o cafe para regularizar.')
       return
     }
 
-    setCustomer(data)
-    localStorage.setItem('dr-cafe-app-login', data.login)
+    setCustomer({
+      ...customerData,
+      position: customerData.position ?? customerData.customer_position,
+    })
+    localStorage.setItem('dr-cafe-app-login', customerData.login)
     setMessage('')
-    loadPending(data.phone)
+    loadPending(customerData.phone)
   }
 
   const registerCustomer = async () => {
@@ -290,24 +272,17 @@ export default function CustomerApp() {
       return
     }
 
-    const passwordHash = await hashPassword(form.password)
-
-    const { error } = await supabase.from('app_customers').insert(
-      [
-        {
-          name: form.name.trim(),
-          login: form.login.trim(),
-          password_hash: passwordHash,
-          phone: form.phone.trim(),
-          position: form.position.trim(),
-          email: form.email.trim(),
-          status: 'pendente',
-          payment_day: 5,
-        },
-      ],
-    )
+    const { error } = await supabase.rpc('app_customer_register', {
+      p_name: form.name.trim(),
+      p_login: form.login.trim(),
+      p_password: form.password.trim(),
+      p_phone: form.phone.trim(),
+      p_position: form.position.trim(),
+      p_email: form.email.trim(),
+    })
 
     if (error) {
+      const normalized = normalizeError(error)
       logAppError({
         source: 'CustomerApp',
         action: 'registerCustomer',
@@ -334,7 +309,9 @@ export default function CustomerApp() {
         return
       }
 
-      setMessage('Nao foi possivel enviar o cadastro agora. Tente novamente em instantes.')
+      setMessage(
+        `Nao foi possivel enviar o cadastro agora. Codigo suporte: ${normalized.code || 'CAD-RPC'}.`,
+      )
       return
     }
 
