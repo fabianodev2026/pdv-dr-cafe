@@ -52,7 +52,7 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_name text := trim(p_name);
@@ -134,7 +134,7 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   return query
@@ -159,3 +159,5 @@ $$;
 revoke all on function public.app_customer_login(text, text) from public;
 grant execute on function public.app_customer_login(text, text) to anon;
 grant execute on function public.app_customer_login(text, text) to authenticated;
+
+notify pgrst, 'reload schema';
