@@ -90,10 +90,10 @@
 
 .app-customer-actions button {
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #2b160d;
   color: #f8dfbf;
-  padding: 10px;
+  padding: 8px;
   font-weight: 900;
   cursor: pointer;
 }
@@ -122,7 +122,6 @@
   background: #fff;
   color: #2b160d;
 }
-
 .app-customer-admin-actions button {
   border: 0;
   border-radius: 10px;
@@ -141,4 +140,25 @@
   .app-customer-admin-actions {
     grid-template-columns: 1fr;
   }
+}
+/*colocar o cifrão*/
+.app-customer-money-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  border: 1px solid #b98554;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.app-customer-money-field span {
+  padding: 10px;
+  color: #7b4a27;
+  font-weight: 900;
+}
+.app-customer-money-field input {
+  border: 0;
+  border-left: 1px solid #ead4b9;
+  border-radius: 0;
 }

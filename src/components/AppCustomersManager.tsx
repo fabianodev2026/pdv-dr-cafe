@@ -53,10 +53,7 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
     setCustomers(nextCustomers)
     setCreditInputs(
       Object.fromEntries(
-        nextCustomers.map((customer) => [
-          customer.id,
-          String(Number(customer.credit_limit || 0)),
-        ]),
+        nextCustomers.map((customer) => [customer.id, String(Number(customer.credit_limit || 0))]),
       ),
     )
   }
@@ -66,10 +63,7 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
   }, [])
 
   const updateStatus = async (customer: AppCustomer, status: CustomerStatus) => {
-    const { error } = await supabase
-      .from('app_customers')
-      .update({ status })
-      .eq('id', customer.id)
+    const { error } = await supabase.from('app_customers').update({ status }).eq('id', customer.id)
 
     if (error) {
       setMessage(`Erro ao atualizar cliente: ${error.message}`)
@@ -107,7 +101,9 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
       return
     }
 
-    setMessage(`Saldo de ${customer.name} atualizado para ${currencyFormatter.format(creditLimit)}.`)
+    setMessage(
+      `Saldo de ${customer.name} atualizado para ${currencyFormatter.format(creditLimit)}.`,
+    )
     fetchCustomers()
   }
 
@@ -172,12 +168,8 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
               <span>{customer.email}</span>
             </div>
             <strong>{customer.status}</strong>
-            <small>
-              Pagamento: todo dia {customer.payment_day} util
-            </small>
-            <small>
-              Limite: {currencyFormatter.format(Number(customer.credit_limit || 0))}
-            </small>
+            <small>Pagamento: todo dia {customer.payment_day} util</small>
+            <small>Limite: {currencyFormatter.format(Number(customer.credit_limit || 0))}</small>
             <div className="app-customer-actions">
               <button onClick={() => updateStatus(customer, 'ativo')}>Liberar</button>
               <button onClick={() => updateStatus(customer, 'bloqueado')}>Bloquear</button>
@@ -187,18 +179,21 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
               <div className="app-customer-admin-actions">
                 <label>
                   Saldo disponivel
-                  <input
-                    type="number"
-                    min="0"
-                    step="10"
-                    value={creditInputs[customer.id] ?? String(Number(customer.credit_limit || 0))}
-                    onChange={(event) =>
-                      setCreditInputs((current) => ({
-                        ...current,
-                        [customer.id]: event.target.value,
-                      }))
-                    }
-                  />
+                  <div className="app-customer-money-field">
+                    <span>R$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="10"
+                      value={creditInputs[customer.id] ?? String(Number(customer.credit_limit || 0))}
+                      onChange={(event) =>
+                        setCreditInputs((current) => ({
+                          ...current,
+                          [customer.id]: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
                 </label>
                 <button
                   type="button"
