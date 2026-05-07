@@ -11,6 +11,18 @@ alter table public.app_customers
   add column if not exists payment_day int not null default 5,
   add column if not exists credit_limit numeric(10,2) not null default 0;
 
+create table if not exists public.app_customer_password_reset_requests (
+  id bigserial primary key,
+  created_at timestamptz not null default now(),
+  customer_id bigint references public.app_customers(id) on delete set null,
+  login text not null,
+  email text not null,
+  status text not null default 'novo'
+);
+
+alter table public.app_customer_password_reset_requests enable row level security;
+revoke all on table public.app_customer_password_reset_requests from anon, authenticated;
+
 alter table public.app_customers
   drop constraint if exists app_customers_name_length,
   add constraint app_customers_name_length check (char_length(name) <= 25) not valid;
@@ -41,6 +53,9 @@ on public.app_customers (phone);
 create unique index if not exists app_customers_login_key
 on public.app_customers (login);
 
+create index if not exists app_customer_password_reset_requests_status_idx
+on public.app_customer_password_reset_requests (status, created_at desc);
+
 create or replace function public.app_customer_register(
   p_name text,
   p_login text,
@@ -64,7 +79,7 @@ declare
   v_password text := trim(p_password);
   v_phone text := trim(p_phone);
   v_position text := trim(p_position);
-  v_email text := trim(p_email);
+  v_email text := lower(trim(p_email));
 begin
   if v_name = '' or v_login = '' or v_password = '' or v_phone = '' or v_position = '' or v_email = '' then
     raise exception 'Preencha todos os campos do cadastro.';
@@ -167,5 +182,59 @@ $$;
 revoke all on function public.app_customer_login(text, text) from public;
 grant execute on function public.app_customer_login(text, text) to anon;
 grant execute on function public.app_customer_login(text, text) to authenticated;
+
+create or replace function public.app_customer_request_password_reset(
+  p_login text,
+  p_email text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_login text := trim(p_login);
+  v_email text := lower(trim(p_email));
+  v_customer_id bigint;
+begin
+  if v_login = '' or v_email = '' then
+    raise exception 'Preencha login e email cadastrado.';
+  end if;
+
+  if char_length(v_login) > 20 then
+    raise exception 'Login deve ter ate 20 caracteres.';
+  end if;
+
+  if char_length(v_email) > 30 then
+    raise exception 'Email deve ter ate 30 caracteres.';
+  end if;
+
+  select c.id
+  into v_customer_id
+  from public.app_customers as c
+  where c.login = v_login
+    and lower(c.email) = v_email
+  limit 1;
+
+  if v_customer_id is not null then
+    insert into public.app_customer_password_reset_requests (
+      customer_id,
+      login,
+      email,
+      status
+    )
+    values (
+      v_customer_id,
+      v_login,
+      v_email,
+      'novo'
+    );
+  end if;
+end;
+$$;
+
+revoke all on function public.app_customer_request_password_reset(text, text) from public;
+grant execute on function public.app_customer_request_password_reset(text, text) to anon;
+grant execute on function public.app_customer_request_password_reset(text, text) to authenticated;
 
 notify pgrst, 'reload schema';

@@ -83,8 +83,12 @@ const formatPhone = (value: string) => {
 export default function CustomerApp() {
   const [customer, setCustomer] = useState<AppCustomer | null>(null)
   const [loginForm, setLoginForm] = useState({ login: '', password: '' })
+  const [resetForm, setResetForm] = useState({ login: '', email: '' })
   const [message, setMessage] = useState('')
   const [menuMessage, setMenuMessage] = useState('')
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false)
+  const [showPasswordReset, setShowPasswordReset] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [dailyLunch, setDailyLunch] = useState<DailyLunch | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
@@ -98,6 +102,7 @@ export default function CustomerApp() {
     phone: '',
     position: '',
     email: '',
+    emailConfirmation: '',
   })
 
   const total = useMemo(
@@ -253,9 +258,15 @@ export default function CustomerApp() {
       !form.password ||
       !form.phone ||
       !form.position ||
-      !form.email
+      !form.email ||
+      !form.emailConfirmation
     ) {
-      setMessage('Preencha nome, login, senha, telefone, cargo e email.')
+      setMessage('Preencha nome, login, senha, telefone, cargo, email e confirmacao do email.')
+      return
+    }
+
+    if (form.email.trim().toLowerCase() !== form.emailConfirmation.trim().toLowerCase()) {
+      setMessage('O email e a confirmacao do email precisam ser iguais.')
       return
     }
 
@@ -265,7 +276,8 @@ export default function CustomerApp() {
       form.password.length > customerFieldLimits.password ||
       form.phone.length > customerFieldLimits.phone ||
       form.position.length > customerFieldLimits.position ||
-      form.email.length > customerFieldLimits.email
+      form.email.length > customerFieldLimits.email ||
+      form.emailConfirmation.length > customerFieldLimits.email
     ) {
       setMessage(
         `Nome ate ${customerFieldLimits.name}, login ate ${customerFieldLimits.login}, senha ate ${customerFieldLimits.password}, telefone ate ${customerFieldLimits.phone}, cargo ate ${customerFieldLimits.position} e email ate ${customerFieldLimits.email} caracteres.`,
@@ -279,7 +291,7 @@ export default function CustomerApp() {
       p_password: form.password.trim(),
       p_phone: form.phone.trim(),
       p_position: form.position.trim(),
-      p_email: form.email.trim(),
+      p_email: form.email.trim().toLowerCase(),
     })
 
     if (error) {
@@ -320,6 +332,49 @@ export default function CustomerApp() {
     setMessage(
       'Cadastro enviado com sucesso. O cafe precisa liberar seu acesso antes do primeiro pedido.',
     )
+  }
+
+  const requestCustomerPasswordReset = async () => {
+    const login = resetForm.login.trim()
+    const email = resetForm.email.trim().toLowerCase()
+
+    if (!login || !email) {
+      setMessage('Preencha login e email cadastrado.')
+      return
+    }
+
+    if (
+      login.length > customerFieldLimits.login ||
+      email.length > customerFieldLimits.email
+    ) {
+      setMessage(
+        `Login ate ${customerFieldLimits.login} e email ate ${customerFieldLimits.email} caracteres.`,
+      )
+      return
+    }
+
+    const { error } = await supabase.rpc('app_customer_request_password_reset', {
+      p_login: login,
+      p_email: email,
+    })
+
+    if (error) {
+      const normalized = normalizeError(error)
+      logAppError({
+        source: 'CustomerApp',
+        action: 'requestCustomerPasswordReset',
+        error,
+        details: { table: 'app_customers', hasLogin: Boolean(login), hasEmail: Boolean(email) },
+      })
+      setMessage(
+        `Nao foi possivel solicitar recuperacao agora. Codigo suporte: ${normalized.code || 'RESET-RPC'}.`,
+      )
+      return
+    }
+
+    setResetForm({ login: '', email: '' })
+    setShowPasswordReset(false)
+    setMessage('Solicitacao enviada. O cafe vai conferir o email cadastrado e liberar a troca.')
   }
 
   const addToCart = (item: { id: string; name: string; unit_price: number }) => {
@@ -449,21 +504,55 @@ export default function CustomerApp() {
             <h2>Entrar</h2>
             <input
               value={loginForm.login}
-              onChange={(e) =>
-                setLoginForm({ ...loginForm, login: e.target.value.toUpperCase() })
-              }
+              onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
               placeholder="Login"
               maxLength={customerFieldLimits.login}
             />
-            <input
-              type="password"
-              value={loginForm.password}
-              onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-              placeholder="Senha"
-              maxLength={customerFieldLimits.password}
-            />
+            <div className="customer-app__password-field">
+              <input
+                type={showLoginPassword ? 'text' : 'password'}
+                value={loginForm.password}
+                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                placeholder="Senha"
+                maxLength={customerFieldLimits.password}
+              />
+              <button type="button" onClick={() => setShowLoginPassword((current) => !current)}>
+                {showLoginPassword ? 'Ocultar' : 'Ver'}
+              </button>
+            </div>
             <button onClick={loginCustomer}>Entrar no app</button>
+            <button
+              type="button"
+              className="customer-app__link-button"
+              onClick={() => setShowPasswordReset((current) => !current)}
+            >
+              Esqueci a senha
+            </button>
           </div>
+
+          {showPasswordReset && (
+            <div className="customer-app__panel">
+              <h2>RECUPERAR SENHA</h2>
+              <input
+                value={resetForm.login}
+                onChange={(e) => setResetForm({ ...resetForm, login: e.target.value })}
+                placeholder="Login"
+                maxLength={customerFieldLimits.login}
+              />
+              <input
+                type="email"
+                value={resetForm.email}
+                onChange={(e) => setResetForm({ ...resetForm, email: e.target.value })}
+                placeholder="Email cadastrado"
+                maxLength={customerFieldLimits.email}
+              />
+              <button onClick={requestCustomerPasswordReset}>Solicitar recuperacao</button>
+              <small>
+                O email precisa ser o mesmo do cadastro. A troca automatica por email sera ligada
+                quando configurarmos o envio de emails.
+              </small>
+            </div>
+          )}
 
           <div className="customer-app__panel">
             <h2>NOVO CADASTRO</h2>
@@ -475,17 +564,25 @@ export default function CustomerApp() {
             />
             <input
               value={form.login}
-              onChange={(e) => setForm({ ...form, login: e.target.value.toUpperCase() })}
+              onChange={(e) => setForm({ ...form, login: e.target.value })}
               placeholder="Criar login"
               maxLength={customerFieldLimits.login}
             />
-            <input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="Criar senha"
-              maxLength={customerFieldLimits.password}
-            />
+            <div className="customer-app__password-field">
+              <input
+                type={showRegisterPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder="Criar senha"
+                maxLength={customerFieldLimits.password}
+              />
+              <button
+                type="button"
+                onClick={() => setShowRegisterPassword((current) => !current)}
+              >
+                {showRegisterPassword ? 'Ocultar' : 'Ver'}
+              </button>
+            </div>
             <input
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
@@ -504,6 +601,13 @@ export default function CustomerApp() {
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="Email"
+              maxLength={customerFieldLimits.email}
+            />
+            <input
+              type="email"
+              value={form.emailConfirmation}
+              onChange={(e) => setForm({ ...form, emailConfirmation: e.target.value })}
+              placeholder="Confirmar email"
               maxLength={customerFieldLimits.email}
             />
             <button onClick={registerCustomer}>Enviar cadastro</button>

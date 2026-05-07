@@ -109,6 +109,16 @@
   color: #d8c7b6;
 }
 
+.customer-app__password-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  gap: 8px;
+}
+
+.customer-app__password-field input {
+  min-width: 0;
+}
+
 .customer-app button {
   min-height: 44px;
   border: 0;
@@ -118,6 +128,12 @@
   padding: 10px 12px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.customer-app__link-button {
+  background: transparent;
+  border: 1px solid rgba(245, 190, 125, 0.35);
+  color: #f5be7d;
 }
 
 .customer-app button:disabled {
