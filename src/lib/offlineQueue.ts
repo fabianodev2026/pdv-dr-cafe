@@ -67,6 +67,38 @@ export function removeOfflineSale(id: string) {
   persistOfflineSales(readOfflineSales().filter((sale) => sale.id !== id))
 }
 
+export async function syncOfflineRecords(
+  insertRecord: (sale: OfflineSale) => Promise<{ error?: unknown }>,
+) {
+  const queuedSales = readOfflineSales()
+  let synced = 0
+  let failed = 0
+  const errors: Array<{ id: string; targetTable: OfflineTargetTable; error: unknown }> = []
+
+  for (const sale of queuedSales) {
+    const { error } = await insertRecord(sale)
+
+    if (error) {
+      failed += 1
+      errors.push({
+        id: sale.id,
+        targetTable: sale.targetTable,
+        error,
+      })
+    } else {
+      synced += 1
+      removeOfflineSale(sale.id)
+    }
+  }
+
+  return {
+    synced,
+    failed,
+    errors,
+    remaining: readOfflineSales().length,
+  }
+}
+
 export function getOfflineRetentionDays() {
   return OFFLINE_RETENTION_DAYS
 }

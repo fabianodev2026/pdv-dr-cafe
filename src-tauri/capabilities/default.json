@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissoes principais do PDV Dr. Cafe desktop.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}
