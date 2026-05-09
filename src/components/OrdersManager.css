@@ -194,7 +194,7 @@
 
 @media print {
   @page {
-    size: 80mm 300mm;
+    size: 80mm 500mm;
     margin: 0;
   }
 
