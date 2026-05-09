@@ -174,8 +174,7 @@ export default function SettingsManager() {
 
       if (salesPeriod === 'mes') {
         return (
-          saleDate.getMonth() === now.getMonth() &&
-          saleDate.getFullYear() === now.getFullYear()
+          saleDate.getMonth() === now.getMonth() && saleDate.getFullYear() === now.getFullYear()
         )
       }
 
@@ -192,9 +191,7 @@ export default function SettingsManager() {
         if (!name) return
 
         const quantity = Number(item.quantity || 1)
-        const revenue = Number(
-          item.total ?? Number(item.price ?? item.unit_price ?? 0) * quantity,
-        )
+        const revenue = Number(item.total ?? Number(item.price ?? item.unit_price ?? 0) * quantity)
         const current = ranking.get(name) ?? {
           name,
           quantity: 0,
@@ -268,25 +265,46 @@ export default function SettingsManager() {
       {message && <div className="settings-alert">{message}</div>}
 
       <div className="settings-tabs">
-        <button className={activeTab === 'fiscal' ? 'active' : ''} onClick={() => setActiveTab('fiscal')}>
+        <button
+          className={activeTab === 'fiscal' ? 'active' : ''}
+          onClick={() => setActiveTab('fiscal')}
+        >
           Fiscal por produto
         </button>
-        <button className={activeTab === 'impressoras' ? 'active' : ''} onClick={() => setActiveTab('impressoras')}>
+        <button
+          className={activeTab === 'impressoras' ? 'active' : ''}
+          onClick={() => setActiveTab('impressoras')}
+        >
           Impressoras
         </button>
-        <button className={activeTab === 'certificado' ? 'active' : ''} onClick={() => setActiveTab('certificado')}>
+        <button
+          className={activeTab === 'certificado' ? 'active' : ''}
+          onClick={() => setActiveTab('certificado')}
+        >
           Certificado NFC-e
         </button>
-        <button className={activeTab === 'balanco' ? 'active' : ''} onClick={() => setActiveTab('balanco')}>
+        <button
+          className={activeTab === 'balanco' ? 'active' : ''}
+          onClick={() => setActiveTab('balanco')}
+        >
           Balancos
         </button>
-        <button className={activeTab === 'mais-vendidos' ? 'active' : ''} onClick={() => setActiveTab('mais-vendidos')}>
+        <button
+          className={activeTab === 'mais-vendidos' ? 'active' : ''}
+          onClick={() => setActiveTab('mais-vendidos')}
+        >
           Produtos mais vendidos
         </button>
-        <button className={activeTab === 'qrcodes' ? 'active' : ''} onClick={() => setActiveTab('qrcodes')}>
+        <button
+          className={activeTab === 'qrcodes' ? 'active' : ''}
+          onClick={() => setActiveTab('qrcodes')}
+        >
           QR Codes
         </button>
-        <button className={activeTab === 'backup' ? 'active' : ''} onClick={() => setActiveTab('backup')}>
+        <button
+          className={activeTab === 'backup' ? 'active' : ''}
+          onClick={() => setActiveTab('backup')}
+        >
           Backup automatico
         </button>
       </div>
@@ -322,34 +340,57 @@ export default function SettingsManager() {
             </label>
             <label>
               NCM
-              <input value={fiscalData.ncm} onChange={(e) => setFiscalData({ ...fiscalData, ncm: e.target.value })} />
+              <input
+                value={fiscalData.ncm}
+                onChange={(e) => setFiscalData({ ...fiscalData, ncm: e.target.value })}
+              />
             </label>
             <label>
               CEST
-              <input value={fiscalData.cest} onChange={(e) => setFiscalData({ ...fiscalData, cest: e.target.value })} />
+              <input
+                value={fiscalData.cest}
+                onChange={(e) => setFiscalData({ ...fiscalData, cest: e.target.value })}
+              />
             </label>
             <label>
               CFOP
-              <input value={fiscalData.cfop} onChange={(e) => setFiscalData({ ...fiscalData, cfop: e.target.value })} />
+              <input
+                value={fiscalData.cfop}
+                onChange={(e) => setFiscalData({ ...fiscalData, cfop: e.target.value })}
+              />
             </label>
             <label>
               CST/CSOSN
-              <input value={fiscalData.cst} onChange={(e) => setFiscalData({ ...fiscalData, cst: e.target.value })} />
+              <input
+                value={fiscalData.cst}
+                onChange={(e) => setFiscalData({ ...fiscalData, cst: e.target.value })}
+              />
             </label>
             <label>
               Aliquota
-              <input value={fiscalData.aliquot} onChange={(e) => setFiscalData({ ...fiscalData, aliquot: e.target.value })} />
+              <input
+                value={fiscalData.aliquot}
+                onChange={(e) => setFiscalData({ ...fiscalData, aliquot: e.target.value })}
+              />
             </label>
             <label>
               CNPJ fornecedor
-              <input value={fiscalData.supplierCnpj} onChange={(e) => setFiscalData({ ...fiscalData, supplierCnpj: e.target.value })} />
+              <input
+                value={fiscalData.supplierCnpj}
+                onChange={(e) => setFiscalData({ ...fiscalData, supplierCnpj: e.target.value })}
+              />
             </label>
             <label>
               Numero da nota
-              <input value={fiscalData.invoiceNumber} onChange={(e) => setFiscalData({ ...fiscalData, invoiceNumber: e.target.value })} />
+              <input
+                value={fiscalData.invoiceNumber}
+                onChange={(e) => setFiscalData({ ...fiscalData, invoiceNumber: e.target.value })}
+              />
             </label>
           </div>
-          <button className="settings-save" onClick={saveDraft}>Salvar fiscal do produto</button>
+          <button className="settings-save" onClick={saveDraft}>
+            Salvar fiscal do produto
+          </button>
         </section>
       )}
 
@@ -362,7 +403,10 @@ export default function SettingsManager() {
               <select
                 value={printer.connectionType}
                 onChange={(e) =>
-                  setPrinter({ ...printer, connectionType: e.target.value as PrinterSettings['connectionType'] })
+                  setPrinter({
+                    ...printer,
+                    connectionType: e.target.value as PrinterSettings['connectionType'],
+                  })
                 }
               >
                 <option value="usb">USB</option>
@@ -372,7 +416,10 @@ export default function SettingsManager() {
             </label>
             <label>
               IP da impressora
-              <input value={printer.ipAddress} onChange={(e) => setPrinter({ ...printer, ipAddress: e.target.value })} />
+              <input
+                value={printer.ipAddress}
+                onChange={(e) => setPrinter({ ...printer, ipAddress: e.target.value })}
+              />
             </label>
             <label>
               Bobina
@@ -453,7 +500,7 @@ export default function SettingsManager() {
               <input
                 type="number"
                 min="0"
-                max="70"
+                max="5"
                 value={printer.receipt.bottomFeedMm}
                 onChange={(e) =>
                   setPrinter({
@@ -520,10 +567,12 @@ export default function SettingsManager() {
             </label>
           </div>
           <p className="settings-note">
-            No Edge/Chrome, desative cabecalhos e rodapes e use margens nenhuma ou minimas.
-            Se o papel ficar preso na serrilha, aumente o avanco final.
+            No Edge/Chrome, desative cabecalhos e rodapes e use margens nenhuma ou minimas. Se o
+            papel ficar preso na serrilha, aumente o avanco final.
           </p>
-          <button className="settings-save" onClick={savePrinterSettings}>Salvar impressora</button>
+          <button className="settings-save" onClick={savePrinterSettings}>
+            Salvar impressora
+          </button>
         </section>
       )}
 
@@ -536,7 +585,10 @@ export default function SettingsManager() {
               <select
                 value={certificate.environment}
                 onChange={(e) =>
-                  setCertificate({ ...certificate, environment: e.target.value as CertificateSettings['environment'] })
+                  setCertificate({
+                    ...certificate,
+                    environment: e.target.value as CertificateSettings['environment'],
+                  })
                 }
               >
                 <option value="homologacao">Homologacao</option>
@@ -545,25 +597,51 @@ export default function SettingsManager() {
             </label>
             <label>
               CNPJ
-              <input value={certificate.cnpj} onChange={(e) => setCertificate({ ...certificate, cnpj: e.target.value })} />
+              <input
+                value={certificate.cnpj}
+                onChange={(e) => setCertificate({ ...certificate, cnpj: e.target.value })}
+              />
             </label>
             <label>
               Inscricao estadual
-              <input value={certificate.stateInscription} onChange={(e) => setCertificate({ ...certificate, stateInscription: e.target.value })} />
+              <input
+                value={certificate.stateInscription}
+                onChange={(e) =>
+                  setCertificate({ ...certificate, stateInscription: e.target.value })
+                }
+              />
             </label>
             <label>
               Certificado A1
-              <input type="file" accept=".pfx,.p12" onChange={(e) => setCertificate({ ...certificate, certificateName: e.target.files?.[0]?.name ?? '' })} />
+              <input
+                type="file"
+                accept=".pfx,.p12"
+                onChange={(e) =>
+                  setCertificate({
+                    ...certificate,
+                    certificateName: e.target.files?.[0]?.name ?? '',
+                  })
+                }
+              />
             </label>
             <label>
               Senha do certificado
-              <input type="password" value={certificate.certificatePassword} onChange={(e) => setCertificate({ ...certificate, certificatePassword: e.target.value })} />
+              <input
+                type="password"
+                value={certificate.certificatePassword}
+                onChange={(e) =>
+                  setCertificate({ ...certificate, certificatePassword: e.target.value })
+                }
+              />
             </label>
           </div>
           <p className="settings-note">
-            A emissao NFC-e real precisa de um servico fiscal no backend para assinar e transmitir a nota.
+            A emissao NFC-e real precisa de um servico fiscal no backend para assinar e transmitir a
+            nota.
           </p>
-          <button className="settings-save" onClick={saveDraft}>Salvar certificado</button>
+          <button className="settings-save" onClick={saveDraft}>
+            Salvar certificado
+          </button>
         </section>
       )}
 
@@ -571,9 +649,18 @@ export default function SettingsManager() {
         <section className="settings-panel">
           <h2>Balancos</h2>
           <div className="balance-grid">
-            <article><span>Diario</span><strong>R$ {balance.day.toFixed(2)}</strong></article>
-            <article><span>Mensal</span><strong>R$ {balance.month.toFixed(2)}</strong></article>
-            <article><span>Anual</span><strong>R$ {balance.year.toFixed(2)}</strong></article>
+            <article>
+              <span>Diario</span>
+              <strong>R$ {balance.day.toFixed(2)}</strong>
+            </article>
+            <article>
+              <span>Mensal</span>
+              <strong>R$ {balance.month.toFixed(2)}</strong>
+            </article>
+            <article>
+              <span>Anual</span>
+              <strong>R$ {balance.year.toFixed(2)}</strong>
+            </article>
           </div>
           <div className="history-section">
             <h3>Ultimas vendas</h3>
@@ -639,9 +726,7 @@ export default function SettingsManager() {
 
           <div className="history-section">
             {bestSellers.length === 0 ? (
-              <div className="settings-empty">
-                Nenhum produto vendido neste periodo.
-              </div>
+              <div className="settings-empty">Nenhum produto vendido neste periodo.</div>
             ) : (
               <table>
                 <thead>
@@ -721,13 +806,9 @@ export default function SettingsManager() {
             </p>
             <p>
               Backup da manha:{' '}
-              <strong>
-                {backupState.morningBackupPending ? 'pendente' : 'sem pendencia'}
-              </strong>
+              <strong>{backupState.morningBackupPending ? 'pendente' : 'sem pendencia'}</strong>
             </p>
-            {backupState.morningBackupReason && (
-              <p>Motivo: {backupState.morningBackupReason}</p>
-            )}
+            {backupState.morningBackupReason && <p>Motivo: {backupState.morningBackupReason}</p>}
             {lastSnapshot && (
               <p>
                 Ultimo pacote local: {Object.keys(lastSnapshot.tables).length} tabelas em{' '}
