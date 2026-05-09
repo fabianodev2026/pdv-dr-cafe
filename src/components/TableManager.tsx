@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, type CSSProperties } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { createFiscalPayload, formatCpf, isCompleteCpf, queueFiscalPayload } from '../lib/fiscalService'
 import { logAppError } from '../lib/appLogger'
 import { queueOfflineRecord, queueOfflineSale } from '../lib/offlineQueue'
 import { markBackupNeededAfterClosing } from '../lib/backupService'
 import { openCashDrawer } from '../lib/cashDrawerService'
+import { readReceiptPrinterSettings, type ReceiptPrinterSettings } from '../lib/printerSettings'
 import './TableManager.css'
 
 interface Product {
@@ -61,6 +62,8 @@ interface TableManagerProps {
   currentUser?: CurrentUser
 }
 
+const LAST_RECEIPT_KEY = 'dr-cafe-last-receipt'
+
 const createServiceItem = (number: number, type: 'table' | 'room'): TableItem => ({
   id: type === 'table' ? number : 1000 + number,
   number,
@@ -109,6 +112,18 @@ export default function TableManager({ currentUser }: TableManagerProps) {
   const [availableProducts, setAvailableProducts] = useState<Product[]>([])
   const [showReceipt, setShowReceipt] = useState(false)
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
+  const [isReprint, setIsReprint] = useState(false)
+  const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(() => {
+    try {
+      const raw = localStorage.getItem(LAST_RECEIPT_KEY)
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  })
+  const [printerSettings, setPrinterSettings] = useState<ReceiptPrinterSettings>(() =>
+    readReceiptPrinterSettings(),
+  )
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix')
   const [payLaterDueDate, setPayLaterDueDate] = useState('')
   const [fiscalCpf, setFiscalCpf] = useState('')
@@ -230,10 +245,16 @@ export default function TableManager({ currentUser }: TableManagerProps) {
     }
 
     setReceiptData(receipt)
+    setIsReprint(false)
     setShowReceipt(true)
   }
 
+  const refreshPrinterSettings = () => {
+    setPrinterSettings(readReceiptPrinterSettings())
+  }
+
   const printReceipt = () => {
+    refreshPrinterSettings()
     document.body.classList.add('printing-receipt')
     const clearPrintMode = () => {
       document.body.classList.remove('printing-receipt')
@@ -251,7 +272,16 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
   const closeReceiptPreview = () => {
     document.body.classList.remove('printing-receipt')
+    setIsReprint(false)
     setShowReceipt(false)
+  }
+
+  const reprintLastReceipt = () => {
+    if (!lastReceipt) return
+    refreshPrinterSettings()
+    setReceiptData(lastReceipt)
+    setIsReprint(true)
+    setShowReceipt(true)
   }
 
   const finalizePayment = async () => {
@@ -272,6 +302,9 @@ export default function TableManager({ currentUser }: TableManagerProps) {
       const { error } = await supabase.from('sales').insert([salePayload])
 
       if (error) throw error
+
+      localStorage.setItem(LAST_RECEIPT_KEY, JSON.stringify(receiptData))
+      setLastReceipt(receiptData)
 
       if (receiptData.fiscal_cpf && isCompleteCpf(receiptData.fiscal_cpf)) {
         queueFiscalPayload(
@@ -357,6 +390,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
       setActiveItem(null)
       setShowReceipt(false)
+      setIsReprint(false)
       markBackupNeededAfterClosing('Venda registrada no PDV apos as 20:00')
       void openCashDrawer(receiptData.payment_method)
       alert('Venda registrada com sucesso no cofre!')
@@ -425,6 +459,13 @@ export default function TableManager({ currentUser }: TableManagerProps) {
               onClick={() => setViewMode('hospital')}
             >
               🏥 Hospital (Quartos)
+            </button>
+            <button
+              className="mode-btn"
+              onClick={reprintLastReceipt}
+              disabled={!lastReceipt}
+            >
+              Reimprimir ultimo cupom
             </button>
           </div>
 
@@ -685,16 +726,34 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                 <button onClick={closeReceiptPreview} className="btn-close-receipt">
                   Fechar recibo
                 </button>
-                <button onClick={finalizePayment} className="btn-close-receipt">
-                  Confirmar no Sistema
-                </button>
+                {!isReprint && (
+                  <button onClick={finalizePayment} className="btn-close-receipt">
+                    Confirmar no Sistema
+                  </button>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="printable-receipt">
+          <div
+            className={`printable-receipt ${
+              printerSettings.compactMode ? 'compact' : ''
+            } receipt-${printerSettings.paperWidth}`}
+            style={
+              {
+                '--receipt-width': printerSettings.paperWidth,
+                '--receipt-height': `${printerSettings.paperHeightMm}mm`,
+                '--receipt-font-size': `${printerSettings.fontSizePt}pt`,
+                '--receipt-line-height': printerSettings.lineHeight,
+                '--receipt-logo-size': `${printerSettings.logoSizeMm}mm`,
+                '--receipt-feed-space': `${printerSettings.bottomFeedMm}mm`,
+              } as CSSProperties
+            }
+          >
             <div className="receipt-header">
-              <img className="receipt-logo" src="/logo.jpeg" alt="Dr. Cafe" />
+              {printerSettings.logoEnabled && printerSettings.logoSizeMm > 0 && (
+                <img className="receipt-logo" src="/logo.jpeg" alt="Dr. Cafe" />
+              )}
               <h2>DR. CAFE</h2>
               <p>
                 <strong>CUPOM NAO FISCAL</strong>
@@ -750,6 +809,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                 <small>{receiptData.fiscal_qr_text}</small>
               </div>
             )}
+            <div className="receipt-feed-space" aria-hidden="true" />
           </div>
         </>
       )}

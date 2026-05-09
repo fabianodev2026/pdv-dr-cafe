@@ -7,6 +7,11 @@ import {
   runBackup,
   type BackupState,
 } from '../lib/backupService'
+import {
+  readReceiptPrinterSettings,
+  saveReceiptPrinterSettings,
+  type ReceiptPrinterSettings,
+} from '../lib/printerSettings'
 import QrCodePrintManager from './QrCodePrintManager'
 import './SettingsManager.css'
 
@@ -64,7 +69,7 @@ interface FiscalProductData {
 interface PrinterSettings {
   connectionType: 'usb' | 'network' | 'bluetooth'
   ipAddress: string
-  paperWidth: '80mm' | '58mm'
+  receipt: ReceiptPrinterSettings
   autoPrint: boolean
 }
 
@@ -100,7 +105,7 @@ export default function SettingsManager() {
   const [printer, setPrinter] = useState<PrinterSettings>({
     connectionType: 'usb',
     ipAddress: '',
-    paperWidth: '80mm',
+    receipt: readReceiptPrinterSettings(),
     autoPrint: true,
   })
   const [certificate, setCertificate] = useState<CertificateSettings>({
@@ -231,6 +236,11 @@ export default function SettingsManager() {
 
   const saveDraft = () => {
     setMessage('Configuracoes salvas como rascunho nesta tela.')
+  }
+
+  const savePrinterSettings = () => {
+    saveReceiptPrinterSettings(printer.receipt)
+    setMessage('Configuracoes da impressora salvas neste computador.')
   }
 
   const executeManualBackup = async () => {
@@ -367,12 +377,138 @@ export default function SettingsManager() {
             <label>
               Bobina
               <select
-                value={printer.paperWidth}
-                onChange={(e) => setPrinter({ ...printer, paperWidth: e.target.value as PrinterSettings['paperWidth'] })}
+                value={printer.receipt.paperWidth}
+                onChange={(e) =>
+                  setPrinter({
+                    ...printer,
+                    receipt: {
+                      ...printer.receipt,
+                      paperWidth: e.target.value as ReceiptPrinterSettings['paperWidth'],
+                    },
+                  })
+                }
               >
                 <option value="80mm">80mm</option>
                 <option value="58mm">58mm</option>
               </select>
+            </label>
+            <label>
+              Altura da folha do cupom (mm)
+              <input
+                type="number"
+                min="80"
+                max="240"
+                value={printer.receipt.paperHeightMm}
+                onChange={(e) =>
+                  setPrinter({
+                    ...printer,
+                    receipt: {
+                      ...printer.receipt,
+                      paperHeightMm: Number(e.target.value) || 135,
+                    },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Tamanho da fonte do cupom
+              <input
+                type="number"
+                min="8"
+                max="14"
+                step="0.5"
+                value={printer.receipt.fontSizePt}
+                onChange={(e) =>
+                  setPrinter({
+                    ...printer,
+                    receipt: {
+                      ...printer.receipt,
+                      fontSizePt: Number(e.target.value) || 10,
+                    },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Espacamento entre linhas
+              <input
+                type="number"
+                min="1"
+                max="1.8"
+                step="0.05"
+                value={printer.receipt.lineHeight}
+                onChange={(e) =>
+                  setPrinter({
+                    ...printer,
+                    receipt: {
+                      ...printer.receipt,
+                      lineHeight: Number(e.target.value) || 1.35,
+                    },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Avanco final do papel (mm)
+              <input
+                type="number"
+                min="0"
+                max="70"
+                value={printer.receipt.bottomFeedMm}
+                onChange={(e) =>
+                  setPrinter({
+                    ...printer,
+                    receipt: {
+                      ...printer.receipt,
+                      bottomFeedMm: Number(e.target.value) || 0,
+                    },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Tamanho do logo (mm)
+              <input
+                type="number"
+                min="0"
+                max="28"
+                value={printer.receipt.logoSizeMm}
+                onChange={(e) =>
+                  setPrinter({
+                    ...printer,
+                    receipt: {
+                      ...printer.receipt,
+                      logoSizeMm: Number(e.target.value) || 0,
+                    },
+                  })
+                }
+              />
+            </label>
+            <label className="check-field">
+              <input
+                type="checkbox"
+                checked={printer.receipt.logoEnabled}
+                onChange={(e) =>
+                  setPrinter({
+                    ...printer,
+                    receipt: { ...printer.receipt, logoEnabled: e.target.checked },
+                  })
+                }
+              />
+              Mostrar logo no cupom
+            </label>
+            <label className="check-field">
+              <input
+                type="checkbox"
+                checked={printer.receipt.compactMode}
+                onChange={(e) =>
+                  setPrinter({
+                    ...printer,
+                    receipt: { ...printer.receipt, compactMode: e.target.checked },
+                  })
+                }
+              />
+              Modo compacto para evitar segunda folha
             </label>
             <label className="check-field">
               <input
@@ -383,7 +519,11 @@ export default function SettingsManager() {
               Imprimir automaticamente ao fechar comanda
             </label>
           </div>
-          <button className="settings-save" onClick={saveDraft}>Salvar impressora</button>
+          <p className="settings-note">
+            No Edge/Chrome, desative cabecalhos e rodapes e use margens nenhuma ou minimas.
+            Se o papel ficar preso na serrilha, aumente o avanco final.
+          </p>
+          <button className="settings-save" onClick={savePrinterSettings}>Salvar impressora</button>
         </section>
       )}
 
