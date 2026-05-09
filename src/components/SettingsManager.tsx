@@ -448,7 +448,7 @@ export default function SettingsManager() {
                     ...printer,
                     receipt: {
                       ...printer.receipt,
-                      paperHeightMm: Number(e.target.value) || 135,
+                      paperHeightMm: Number(e.target.value) || 5,
                     },
                   })
                 }
