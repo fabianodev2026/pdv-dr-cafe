@@ -12,6 +12,11 @@ import {
   saveReceiptPrinterSettings,
   type ReceiptPrinterSettings,
 } from '../lib/printerSettings'
+import {
+  readNfceIssuerConfig,
+  saveNfceIssuerConfig,
+  type NfceIssuerConfig,
+} from '../lib/nfceService'
 import QrCodePrintManager from './QrCodePrintManager'
 import './SettingsManager.css'
 
@@ -115,6 +120,7 @@ export default function SettingsManager() {
     certificateName: '',
     certificatePassword: '',
   })
+  const [nfceConfig, setNfceConfig] = useState<NfceIssuerConfig>(() => readNfceIssuerConfig())
 
   useEffect(() => {
     async function fetchData() {
@@ -238,6 +244,11 @@ export default function SettingsManager() {
   const savePrinterSettings = () => {
     saveReceiptPrinterSettings(printer.receipt)
     setMessage('Configuracoes da impressora salvas com sucesso.')
+  }
+
+  const saveNfceSettings = () => {
+    saveNfceIssuerConfig(nfceConfig)
+    setMessage('Configuracoes NFC-e salvas como preparacao. A emissao real fica separada ate ligar o certificado/backend.')
   }
 
   const executeManualBackup = async () => {
@@ -580,11 +591,11 @@ export default function SettingsManager() {
             <label>
               Ambiente
               <select
-                value={certificate.environment}
+                value={nfceConfig.environment}
                 onChange={(e) =>
-                  setCertificate({
-                    ...certificate,
-                    environment: e.target.value as CertificateSettings['environment'],
+                  setNfceConfig({
+                    ...nfceConfig,
+                    environment: e.target.value as NfceIssuerConfig['environment'],
                   })
                 }
               >
@@ -595,17 +606,64 @@ export default function SettingsManager() {
             <label>
               CNPJ
               <input
-                value={certificate.cnpj}
-                onChange={(e) => setCertificate({ ...certificate, cnpj: e.target.value })}
+                value={nfceConfig.cnpj}
+                onChange={(e) => setNfceConfig({ ...nfceConfig, cnpj: e.target.value })}
               />
             </label>
             <label>
               Inscricao estadual
               <input
-                value={certificate.stateInscription}
+                value={nfceConfig.stateInscription}
                 onChange={(e) =>
-                  setCertificate({ ...certificate, stateInscription: e.target.value })
+                  setNfceConfig({ ...nfceConfig, stateInscription: e.target.value })
                 }
+              />
+            </label>
+            <label>
+              Razao social
+              <input
+                value={nfceConfig.corporateName}
+                onChange={(e) =>
+                  setNfceConfig({ ...nfceConfig, corporateName: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Nome fantasia
+              <input
+                value={nfceConfig.tradeName}
+                onChange={(e) => setNfceConfig({ ...nfceConfig, tradeName: e.target.value })}
+              />
+            </label>
+            <label>
+              Codigo IBGE do municipio
+              <input
+                value={nfceConfig.cityCodeIbge}
+                onChange={(e) =>
+                  setNfceConfig({ ...nfceConfig, cityCodeIbge: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              UF
+              <input
+                value={nfceConfig.state}
+                onChange={(e) => setNfceConfig({ ...nfceConfig, state: e.target.value.toUpperCase() })}
+                maxLength={2}
+              />
+            </label>
+            <label>
+              Serie NFC-e
+              <input
+                value={nfceConfig.series}
+                onChange={(e) => setNfceConfig({ ...nfceConfig, series: e.target.value })}
+              />
+            </label>
+            <label>
+              Proximo numero NFC-e
+              <input
+                value={nfceConfig.nextNumber}
+                onChange={(e) => setNfceConfig({ ...nfceConfig, nextNumber: e.target.value })}
               />
             </label>
             <label>
@@ -614,13 +672,20 @@ export default function SettingsManager() {
                 type="file"
                 accept=".pfx,.p12"
                 onChange={(e) =>
-                  setCertificate({
-                    ...certificate,
+                  setNfceConfig({
+                    ...nfceConfig,
                     certificateName: e.target.files?.[0]?.name ?? '',
+                    certificateReady: Boolean(e.target.files?.[0]),
                   })
                 }
               />
             </label>
+            {nfceConfig.certificateName && (
+              <label>
+                Certificado selecionado
+                <input value={nfceConfig.certificateName} readOnly />
+              </label>
+            )}
             <label>
               Senha do certificado
               <input
@@ -633,11 +698,12 @@ export default function SettingsManager() {
             </label>
           </div>
           <p className="settings-note">
-            A emissao NFC-e real precisa de um servico fiscal no backend para assinar e transmitir a
-            nota.
+            Pre-preparacao NFC-e separada do cupom nao fiscal. O arquivo e a senha do certificado
+            nao sao enviados daqui; a emissao real precisa de backend fiscal para assinar XML,
+            transmitir para SEFAZ-SP e devolver protocolo, XML autorizado e QR Code oficial.
           </p>
-          <button className="settings-save" onClick={saveDraft}>
-            Salvar certificado
+          <button className="settings-save" onClick={saveNfceSettings}>
+            Salvar configuracoes NFC-e
           </button>
         </section>
       )}

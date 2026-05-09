@@ -1,7 +1,8 @@
 import type { FiscalPayload } from './fiscalService'
+import type { NfceDraft } from './nfceService'
 
 interface FiscalBackendResult {
-  status: 'emitida' | 'erro' | 'pendente'
+  status: 'emitida' | 'autorizada' | 'erro' | 'pendente'
   protocol?: string
   qrCodeUrl?: string
   qrCodeText?: string
@@ -40,6 +41,30 @@ export async function submitFiscalToBackend(
 
   if (!response.ok) {
     throw new Error(result.message || 'Falha ao comunicar com backend fiscal.')
+  }
+
+  return result
+}
+
+export async function submitNfceToBackend(
+  payload: NfceDraft,
+): Promise<FiscalBackendResult> {
+  if (!fiscalApiUrl) {
+    throw new Error('Backend fiscal NFC-e nao configurado.')
+  }
+
+  const response = await fetch(`${fiscalApiUrl}/fiscal/nfce/emitir`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const result = (await response.json().catch(() => ({}))) as FiscalBackendResult
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Falha ao comunicar com backend NFC-e.')
   }
 
   return result
