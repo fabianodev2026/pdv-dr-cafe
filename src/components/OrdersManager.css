@@ -188,44 +188,95 @@
   cursor: pointer;
 }
 
+/* Recibo fica escondido na tela normal */
 .order-print-receipt {
   display: none;
 }
 
+/* Impressão do cupom */
 @media print {
   @page {
     size: 80mm 500mm;
     margin: 0;
   }
 
-  body.printing-order-receipt * {
-    visibility: hidden;
+  html,
+  body {
+    width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: hidden !important;
   }
 
+  body.printing-order-receipt {
+    width: 80mm !important;
+    min-width: 80mm !important;
+    max-width: 80mm !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body.printing-order-receipt .orders-manager {
+    width: 80mm !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #111 !important;
+    box-shadow: none !important;
+  }
+
+  body.printing-order-receipt .orders-heading,
+  body.printing-order-receipt .orders-refresh,
+  body.printing-order-receipt .orders-alert,
+  body.printing-order-receipt .orders-grid,
+  body.printing-order-receipt .orders-empty,
+  body.printing-order-receipt .order-card,
+  body.printing-order-receipt .order-print-modal,
   body.printing-order-receipt .no-print {
     display: none !important;
   }
 
-  body.printing-order-receipt .order-print-receipt,
-  body.printing-order-receipt .order-print-receipt * {
-    visibility: visible;
+  body.printing-order-receipt .order-print-receipt {
+    display: block !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+
+    width: 80mm !important;
+    max-width: 80mm !important;
+    min-height: 0 !important;
+    height: auto !important;
+
+    box-sizing: border-box !important;
+    padding: 1mm 3mm 2mm !important;
+    margin: 0 !important;
+
+    background: #fff !important;
+    color: #111 !important;
+    font-family: Arial, 'Helvetica Neue', sans-serif !important;
+    font-size: 9pt !important;
+    line-height: 1.15 !important;
+
+    overflow: visible !important;
+    box-shadow: none !important;
+
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-before: avoid !important;
+    break-after: avoid !important;
   }
 
-  body.printing-order-receipt .order-print-receipt {
-    display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 80mm;
-    max-width: 80mm;
-    box-sizing: border-box;
-    padding: 1mm 3mm 2mm;
-    margin: 0;
-    background: #fff;
-    color: #111;
-    font-family: Arial, 'Helvetica Neue', sans-serif;
-    font-size: 9pt;
-    line-height: 1.15;
+  body.printing-order-receipt .order-print-receipt * {
+    visibility: visible !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
 
@@ -252,20 +303,20 @@
 }
 
 .order-print-section {
-  margin: 6px 0;
-  padding: 6px 0;
+  margin: 5px 0;
+  padding: 5px 0;
   border-bottom: 1px dashed #444;
 }
 
 .order-print-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 5px 0;
+  margin: 4px 0;
   font-size: 0.95em;
 }
 
 .order-print-table td {
-  padding: 5px 0;
+  padding: 3px 0;
   border-bottom: 1px dotted #666;
   vertical-align: top;
 }
@@ -282,13 +333,13 @@
 
 .order-print-footer {
   text-align: center;
-  margin-top: 8px;
+  margin-top: 6px;
   border-top: 1px dashed #111;
-  padding-top: 8px;
+  padding-top: 6px;
 }
 
 .order-print-footer p {
-  margin: 5px 0;
+  margin: 4px 0;
 }
 
 .order-print-footer h3 {
@@ -300,8 +351,8 @@
 }
 
 .order-print-feed {
-  min-height: 18mm;
-  line-height: 6mm;
+  min-height: 2mm;
+  line-height: 2mm;
 }
 
 @media (max-width: 640px) {
