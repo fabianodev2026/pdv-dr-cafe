@@ -551,18 +551,41 @@
     margin: 0mm;
   }
 
-  body.printing-receipt {
+  html,
+  body.printing-receipt,
+  body.printing-receipt #root {
     width: var(--receipt-width, 80mm);
+    min-width: var(--receipt-width, 80mm);
+    max-width: var(--receipt-width, 80mm);
+    min-height: 0;
     height: auto;
     margin: 0;
     padding: 0;
     background: #fff;
+    overflow: visible;
   }
 
   body.printing-receipt * {
     visibility: hidden;
   }
 
+  body.printing-receipt .app-shell,
+  body.printing-receipt .app-content,
+  body.printing-receipt .pdv-container {
+    display: block !important;
+    width: var(--receipt-width, 80mm) !important;
+    min-width: var(--receipt-width, 80mm) !important;
+    max-width: var(--receipt-width, 80mm) !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  body.printing-receipt .app-sidebar,
+  body.printing-receipt .receipt-modal-overlay,
   body.printing-receipt .no-print {
     display: none !important;
   }
@@ -575,7 +598,7 @@
   body.printing-receipt .printable-receipt {
     display: block;
     page: receipt;
-    position: absolute;
+    position: static;
     top: 0;
     left: 0;
     background: white;

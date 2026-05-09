@@ -197,7 +197,7 @@ export default function OrdersManager() {
       <header className="orders-heading">
         <img src="/logo.jpeg" alt="Dr. Cafe" />
         <div>
-          <h1>Pedidos feitos</h1>
+          <h1>Ultimos pedidos feitos</h1>
           <p>{pendingCount} pedido(s) em aberto.</p>
         </div>
         <button onClick={fetchOrders} className="orders-refresh">

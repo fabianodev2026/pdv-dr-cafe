@@ -466,7 +466,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
               className="mode-btn"
               onClick={() => navigate('/pedidos')}
             >
-              Pedidos feitos
+              Ultimos pedidos feitos
             </button>
           </div>
 
