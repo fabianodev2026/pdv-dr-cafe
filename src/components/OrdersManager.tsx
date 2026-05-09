@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import './OrdersManager.css'
 
-type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'entregue'
+type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'entregue' | 'cancelado'
 type OrderSource = 'mesa' | 'quarto' | 'app'
 
 interface OrderItem {
@@ -31,14 +31,17 @@ const statusMessages: Record<OrderStatus, string> = {
   preparo: 'Seu pedido esta em preparo.',
   pronto: 'Seu pedido esta pronto para entrega.',
   entregue: 'Pedido entregue. Obrigado!',
+  cancelado: 'Pedido cancelado pelo cafe.',
 }
+
+const closedStatuses: OrderStatus[] = ['entregue', 'cancelado']
 
 export default function OrdersManager() {
   const [orders, setOrders] = useState<OrderTicket[]>([])
   const [message, setMessage] = useState('')
 
   const pendingCount = useMemo(
-    () => orders.filter((order) => order.status !== 'entregue').length,
+    () => orders.filter((order) => !closedStatuses.includes(order.status)).length,
     [orders],
   )
 
@@ -115,10 +118,12 @@ export default function OrdersManager() {
     }))
 
     setOrders(
-      [...roomOrders, ...serviceOrders, ...appOrders].filter((order) => order.status !== 'entregue').sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      ),
+      [...roomOrders, ...serviceOrders, ...appOrders]
+        .filter((order) => !closedStatuses.includes(order.status))
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        ),
     )
   }
 
@@ -145,6 +150,18 @@ export default function OrdersManager() {
     }
 
     fetchOrders()
+  }
+
+  const cancelOrder = async (order: OrderTicket) => {
+    const confirmed = window.confirm(
+      `Cancelar este pedido de ${order.source_type === 'app'
+        ? 'app cliente'
+        : `${order.source_type === 'mesa' ? 'mesa' : 'quarto'} ${order.service_number}`
+      }?`,
+    )
+
+    if (!confirmed) return
+    await updateStatus(order, 'cancelado')
   }
 
   return (
@@ -215,6 +232,12 @@ export default function OrdersManager() {
                   Entregue
                 </button>
               )}
+              <button
+                onClick={() => cancelOrder(order)}
+                className="btn-cancel-order"
+              >
+                Cancelar pedido
+              </button>
             </div>
           </article>
         ))}

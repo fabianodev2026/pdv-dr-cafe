@@ -10,17 +10,17 @@ export interface ReceiptPrinterSettings {
   showBrowserPrintTip: boolean
 }
 
-const PRINTER_SETTINGS_KEY = 'dr-cafe-printer-settings'
+const PRINTER_SETTINGS_KEY = 'dr-cafe-printer-settings-v2'
 
 export const defaultReceiptPrinterSettings: ReceiptPrinterSettings = {
   paperWidth: '80mm',
-  paperHeightMm: 180,
+  paperHeightMm: 220,
   fontSizePt: 10,
-  lineHeight: 1.45,
-  bottomFeedMm: 55,
+  lineHeight: 1.6,
+  bottomFeedMm: 80,
   logoEnabled: true,
   logoSizeMm: 14,
-  compactMode: true,
+  compactMode: false,
   showBrowserPrintTip: true,
 }
 

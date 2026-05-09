@@ -203,17 +203,6 @@ export default function ProductManager() {
             />
           </div>
           <div className="form-group">
-            <label>Link da Foto (URL da Imagem)</label>
-            <input
-              type="text"
-              value={newProduct.image_url}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, image_url: e.target.value })
-              }
-              placeholder="https://..."
-            />
-          </div>
-          <div className="form-group">
             <label>Categoria</label>
             <select
               value={newProduct.category}

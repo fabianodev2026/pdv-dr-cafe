@@ -541,8 +541,13 @@
 }
 
 @media print {
+  @page {
+    size: 80mm 220mm;
+    margin: 0mm;
+  }
+
   @page receipt {
-    size: 80mm 180mm;
+    size: 80mm 220mm;
     margin: 0mm;
   }
 
@@ -577,7 +582,7 @@
     box-sizing: border-box;
     width: var(--receipt-width, 80mm);
     max-width: var(--receipt-width, 80mm);
-    min-height: 0;
+    min-height: var(--receipt-height, 220mm);
     padding: 2mm 4mm 4mm;
     margin: 0;
     break-after: avoid;
@@ -643,7 +648,7 @@
 }
 
 .printable-receipt:not(.compact) .receipt-table td {
-  padding: 5px 0;
+  padding: 7px 0;
 }
 
 .receipt-table {
@@ -654,14 +659,14 @@
 }
 
 .receipt-section {
-  margin: 4px 0;
-  padding: 3px 0;
+  margin: 6px 0;
+  padding: 6px 0;
   border-bottom: 1px dashed #444;
 }
 
 .receipt-section h3,
 .receipt-section p {
-  margin: 2px 0;
+  margin: 4px 0;
   line-height: var(--receipt-line-height, 1.35);
 }
 
@@ -673,7 +678,7 @@
 }
 
 .receipt-table td {
-  padding: 3px 0;
+  padding: 5px 0;
   border-bottom: 1px dotted #666;
   vertical-align: top;
   line-height: var(--receipt-line-height, 1.35);
@@ -693,13 +698,13 @@
 
 .receipt-footer {
   text-align: center;
-  margin-top: 5px;
+  margin-top: 8px;
   border-top: 1px dashed #111;
-  padding-top: 5px;
+  padding-top: 8px;
 }
 
 .receipt-footer p {
-  margin: 3px 0;
+  margin: 5px 0;
   line-height: var(--receipt-line-height, 1.35);
 }
 
@@ -734,7 +739,10 @@
 
 .receipt-feed-space {
   display: block;
-  height: var(--receipt-feed-space, 28mm);
+  min-height: var(--receipt-feed-space, 80mm);
+  line-height: 10mm;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .receipt-fiscal__qr {

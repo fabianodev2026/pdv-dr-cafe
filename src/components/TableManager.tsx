@@ -809,7 +809,16 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                 <small>{receiptData.fiscal_qr_text}</small>
               </div>
             )}
-            <div className="receipt-feed-space" aria-hidden="true" />
+            <div className="receipt-feed-space" aria-hidden="true">
+              <span>&nbsp;</span>
+              <span>&nbsp;</span>
+              <span>&nbsp;</span>
+              <span>&nbsp;</span>
+              <span>&nbsp;</span>
+              <span>&nbsp;</span>
+              <span>&nbsp;</span>
+              <span>&nbsp;</span>
+            </div>
           </div>
         </>
       )}

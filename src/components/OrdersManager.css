@@ -84,6 +84,10 @@
   display: none;
 }
 
+.order-card.cancelado {
+  display: none;
+}
+
 .order-card__top {
   display: flex;
   justify-content: space-between;
@@ -133,6 +137,11 @@
 
 .status-actions .btn-delivered {
   background: #2f7d42;
+}
+
+.status-actions .btn-cancel-order {
+  background: #a5392f;
+  color: #fff7ec;
 }
 
 @media (max-width: 640px) {
