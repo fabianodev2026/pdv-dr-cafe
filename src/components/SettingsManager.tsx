@@ -240,7 +240,7 @@ export default function SettingsManager() {
 
   const savePrinterSettings = () => {
     saveReceiptPrinterSettings(printer.receipt)
-    setMessage('Configuracoes da impressora salvas neste computador.')
+    setMessage('Configuracoes da impressora salvas com sucesso.')
   }
 
   const executeManualBackup = async () => {

@@ -139,9 +139,168 @@
   background: #2f7d42;
 }
 
+.status-actions .btn-reprint-order {
+  background: #6d4c41;
+}
+
 .status-actions .btn-cancel-order {
   background: #a5392f;
   color: #fff7ec;
+}
+
+.order-print-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(43, 22, 13, 0.55);
+  padding: 20px;
+}
+
+.order-print-card {
+  width: min(360px, 100%);
+  border-radius: 8px;
+  background: #fffaf5;
+  border: 1px solid #ead4b9;
+  padding: 18px;
+  box-shadow: 0 18px 38px rgba(43, 22, 13, 0.28);
+}
+
+.order-print-card h2 {
+  margin: 0 0 8px;
+}
+
+.order-print-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.order-print-actions button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: #2b160d;
+  color: #f8dfbf;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.order-print-receipt {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: 80mm 120mm;
+    margin: 0;
+  }
+
+  body.printing-order-receipt * {
+    visibility: hidden;
+  }
+
+  body.printing-order-receipt .no-print {
+    display: none !important;
+  }
+
+  body.printing-order-receipt .order-print-receipt,
+  body.printing-order-receipt .order-print-receipt * {
+    visibility: visible;
+  }
+
+  body.printing-order-receipt .order-print-receipt {
+    display: block;
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 80mm;
+    max-width: 80mm;
+    box-sizing: border-box;
+    padding: 2mm 4mm 4mm;
+    margin: 0;
+    background: #fff;
+    color: #111;
+    font-family: Arial, 'Helvetica Neue', sans-serif;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+}
+
+.order-print-header {
+  text-align: center;
+  border-bottom: 1px dashed #111;
+  padding-bottom: 4px;
+}
+
+.order-print-header img {
+  display: block;
+  width: 14mm;
+  height: 14mm;
+  margin: 0 auto 2mm;
+  object-fit: contain;
+  filter: grayscale(1) contrast(1.15);
+}
+
+.order-print-header h2,
+.order-print-header p,
+.order-print-section h3,
+.order-print-section p {
+  margin: 3px 0;
+}
+
+.order-print-section {
+  margin: 6px 0;
+  padding: 6px 0;
+  border-bottom: 1px dashed #444;
+}
+
+.order-print-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 5px 0;
+  font-size: 0.95em;
+}
+
+.order-print-table td {
+  padding: 5px 0;
+  border-bottom: 1px dotted #666;
+  vertical-align: top;
+}
+
+.order-print-table td:first-child {
+  width: 13mm;
+  text-align: center;
+}
+
+.order-print-table td:last-child {
+  width: 22mm;
+  text-align: right;
+}
+
+.order-print-footer {
+  text-align: center;
+  margin-top: 8px;
+  border-top: 1px dashed #111;
+  padding-top: 8px;
+}
+
+.order-print-footer p {
+  margin: 5px 0;
+}
+
+.order-print-footer h3 {
+  margin: 5px 0 0;
+  padding: 4px 0;
+  border-top: 1px solid #111;
+  border-bottom: 1px solid #111;
+  font-size: 1.12em;
+}
+
+.order-print-feed {
+  min-height: 18mm;
+  line-height: 6mm;
 }
 
 @media (max-width: 640px) {

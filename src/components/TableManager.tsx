@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, type CSSProperties } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { createFiscalPayload, formatCpf, isCompleteCpf, queueFiscalPayload } from '../lib/fiscalService'
 import { logAppError } from '../lib/appLogger'
@@ -105,6 +106,7 @@ const createFiscalQrText = (receipt: Omit<ReceiptData, 'fiscal_qr_text'>) => {
 }
 
 export default function TableManager({ currentUser }: TableManagerProps) {
+  const navigate = useNavigate()
   const [viewMode, setViewMode] = useState<'salon' | 'hospital'>('salon')
   const [tables, setTables] = useState<TableItem[]>(initialTables)
   const [rooms, setRooms] = useState<TableItem[]>(initialRooms)
@@ -462,10 +464,9 @@ export default function TableManager({ currentUser }: TableManagerProps) {
             </button>
             <button
               className="mode-btn"
-              onClick={reprintLastReceipt}
-              disabled={!lastReceipt}
+              onClick={() => navigate('/pedidos')}
             >
-              Reimprimir ultimo cupom
+              Pedidos feitos
             </button>
           </div>
 

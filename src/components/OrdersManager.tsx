@@ -39,6 +39,7 @@ const closedStatuses: OrderStatus[] = ['entregue', 'cancelado']
 export default function OrdersManager() {
   const [orders, setOrders] = useState<OrderTicket[]>([])
   const [message, setMessage] = useState('')
+  const [printOrder, setPrintOrder] = useState<OrderTicket | null>(null)
 
   const pendingCount = useMemo(
     () => orders.filter((order) => !closedStatuses.includes(order.status)).length,
@@ -164,6 +165,33 @@ export default function OrdersManager() {
     await updateStatus(order, 'cancelado')
   }
 
+  const openReprint = (order: OrderTicket) => {
+    setPrintOrder(order)
+  }
+
+  const closeReprint = () => {
+    document.body.classList.remove('printing-order-receipt')
+    setPrintOrder(null)
+  }
+
+  const printSelectedOrder = () => {
+    document.body.classList.add('printing-order-receipt')
+    const clearPrintMode = () => {
+      document.body.classList.remove('printing-order-receipt')
+      window.removeEventListener('focus', clearPrintMode)
+    }
+
+    window.addEventListener('focus', clearPrintMode)
+    window.print()
+    window.setTimeout(clearPrintMode, 1200)
+  }
+
+  const getOrderTitle = (order: OrderTicket) => (
+    order.source_type === 'app'
+      ? 'App cliente'
+      : `${order.source_type === 'mesa' ? 'Mesa' : 'Quarto'} ${order.service_number}`
+  )
+
   return (
     <div className="orders-manager">
       <header className="orders-heading">
@@ -221,6 +249,12 @@ export default function OrdersManager() {
             </p>
 
             <div className="status-actions">
+              <button
+                onClick={() => openReprint(order)}
+                className="btn-reprint-order"
+              >
+                Reimprimir
+              </button>
               <button onClick={() => updateStatus(order, 'recebido')}>Recebido</button>
               <button onClick={() => updateStatus(order, 'preparo')}>Preparo</button>
               <button onClick={() => updateStatus(order, 'pronto')}>Pronto</button>
@@ -242,6 +276,57 @@ export default function OrdersManager() {
           </article>
         ))}
       </section>
+
+      {printOrder && (
+        <>
+          <div className="order-print-modal no-print">
+            <div className="order-print-card">
+              <h2>Reimprimir pedido</h2>
+              <p>{getOrderTitle(printOrder)}</p>
+              <div className="order-print-actions">
+                <button onClick={printSelectedOrder}>Imprimir</button>
+                <button onClick={closeReprint}>Fechar</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="order-print-receipt">
+            <div className="order-print-header">
+              <img src="/logo.jpeg" alt="Dr. Cafe" />
+              <h2>DR. CAFE</h2>
+              <p>
+                <strong>REIMPRESSAO DE PEDIDO</strong>
+              </p>
+            </div>
+            <div className="order-print-section">
+              <h3>{getOrderTitle(printOrder)}</h3>
+              <p>Pedido: #{printOrder.id}</p>
+              <p>Data: {new Date(printOrder.created_at).toLocaleString('pt-BR')}</p>
+              {printOrder.customer_name && <p>Cliente: {printOrder.customer_name}</p>}
+              {printOrder.customer_phone && <p>Telefone: {printOrder.customer_phone}</p>}
+            </div>
+            <table className="order-print-table">
+              <tbody>
+                {printOrder.items.map((item, index) => (
+                  <tr key={`${printOrder.tableName}-${printOrder.id}-print-${index}`}>
+                    <td>{item.quantity}</td>
+                    <td>{item.name}</td>
+                    <td>R$ {(Number(item.unit_price) * Number(item.quantity)).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="order-print-footer">
+              <p>Status: {printOrder.status}</p>
+              <h3>TOTAL: R$ {Number(printOrder.total_amount).toFixed(2)}</h3>
+            </div>
+            <div className="order-print-feed" aria-hidden="true">
+              <span>&nbsp;</span>
+              <span>&nbsp;</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
