@@ -812,12 +812,6 @@ export default function TableManager({ currentUser }: TableManagerProps) {
             <div className="receipt-feed-space" aria-hidden="true">
               <span>&nbsp;</span>
               <span>&nbsp;</span>
-              <span>&nbsp;</span>
-              <span>&nbsp;</span>
-              <span>&nbsp;</span>
-              <span>&nbsp;</span>
-              <span>&nbsp;</span>
-              <span>&nbsp;</span>
             </div>
           </div>
         </>
