@@ -13,7 +13,7 @@ interface Product {
   unit_price: number
   image_url?: string
   description?: string
-  category?: 'comida' | 'bebida'
+  category?: string
 }
 
 interface OrderItem {

@@ -7,6 +7,7 @@ import {
   runBackup,
   type BackupState,
 } from '../lib/backupService'
+import QrCodePrintManager from './QrCodePrintManager'
 import './SettingsManager.css'
 
 type SettingsTab =
@@ -15,6 +16,7 @@ type SettingsTab =
   | 'certificado'
   | 'balanco'
   | 'mais-vendidos'
+  | 'qrcodes'
   | 'backup'
 type SalesPeriod = 'dia' | 'mes' | 'ano' | 'todos'
 
@@ -271,6 +273,9 @@ export default function SettingsManager() {
         <button className={activeTab === 'mais-vendidos' ? 'active' : ''} onClick={() => setActiveTab('mais-vendidos')}>
           Produtos mais vendidos
         </button>
+        <button className={activeTab === 'qrcodes' ? 'active' : ''} onClick={() => setActiveTab('qrcodes')}>
+          QR Codes
+        </button>
         <button className={activeTab === 'backup' ? 'active' : ''} onClick={() => setActiveTab('backup')}>
           Backup automatico
         </button>
@@ -522,6 +527,12 @@ export default function SettingsManager() {
               </table>
             )}
           </div>
+        </section>
+      )}
+
+      {activeTab === 'qrcodes' && (
+        <section className="settings-panel settings-panel--print">
+          <QrCodePrintManager />
         </section>
       )}
 

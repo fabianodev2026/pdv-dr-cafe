@@ -9,7 +9,13 @@ interface Product {
   unit_price: number
   description?: string | null
   image_url?: string | null
+  category?: string | null
 }
+
+type MenuLocation =
+  | { type: 'room'; number: number; label: string }
+  | { type: 'table'; number: number; label: string }
+  | null
 
 interface CartItem {
   id: number
@@ -23,6 +29,28 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 })
 
+type MenuTab = 'bebidas' | 'comidas' | 'fitness'
+
+const menuTabs: Array<{ id: MenuTab; label: string }> = [
+  { id: 'bebidas', label: 'Bebidas' },
+  { id: 'comidas', label: 'Comidas' },
+  { id: 'fitness', label: 'Comida fitness' },
+]
+
+const fitnessKeywords = ['fitness', 'detox', 'natural', 'vitamina', 'salada', 'leve']
+
+const getProductGroup = (product: Product): MenuTab => {
+  const category = product.category?.toLowerCase() ?? ''
+  const text = `${product.name} ${product.description ?? ''} ${category}`.toLowerCase()
+
+  if (category.includes('bebida')) return 'bebidas'
+  if (category.includes('fitness') || fitnessKeywords.some((keyword) => text.includes(keyword))) {
+    return 'fitness'
+  }
+
+  return 'comidas'
+}
+
 export default function CustomerMenu() {
   const [searchParams] = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
@@ -34,19 +62,55 @@ export default function CustomerMenu() {
   const [message, setMessage] = useState('')
   const [lastOrderId, setLastOrderId] = useState<number | null>(null)
   const [orderStatusMessage, setOrderStatusMessage] = useState('')
+  const [productSearch, setProductSearch] = useState('')
+  const [activeMenuTab, setActiveMenuTab] = useState<MenuTab>('bebidas')
 
-  const roomNumber = useMemo(() => {
+  const menuLocation = useMemo<MenuLocation>(() => {
     const room = searchParams.get('room')?.trim()
-    const parsed = Number(room)
-    return Number.isInteger(parsed) && parsed >= 101 && parsed <= 315
-      ? parsed
-      : null
+    const table = searchParams.get('table')?.trim()
+    const parsedRoom = Number(room)
+    const parsedTable = Number(table)
+
+    if (Number.isInteger(parsedRoom) && parsedRoom >= 101 && parsedRoom <= 315) {
+      return { type: 'room', number: parsedRoom, label: `Quarto ${parsedRoom}` }
+    }
+
+    if (Number.isInteger(parsedTable) && parsedTable >= 1 && parsedTable <= 99) {
+      return { type: 'table', number: parsedTable, label: `Mesa ${parsedTable}` }
+    }
+
+    return null
   }, [searchParams])
 
   const total = useMemo(
     () => cart.reduce((sum, item) => sum + item.unit_price * item.quantity, 0),
     [cart],
   )
+
+  const filteredProducts = useMemo(() => {
+    const search = productSearch.trim().toLowerCase()
+    if (!search) return products
+
+    return products.filter((product) =>
+      [product.name, product.description, product.category]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search)),
+    )
+  }, [productSearch, products])
+
+  const productsByTab = useMemo(
+    () =>
+      menuTabs.reduce(
+        (groups, tab) => ({
+          ...groups,
+          [tab.id]: filteredProducts.filter((product) => getProductGroup(product) === tab.id),
+        }),
+        { bebidas: [], comidas: [], fitness: [] } as Record<MenuTab, Product[]>,
+      ),
+    [filteredProducts],
+  )
+
+  const visibleProducts = productsByTab[activeMenuTab]
 
   useEffect(() => {
     async function fetchProducts() {
@@ -55,7 +119,7 @@ export default function CustomerMenu() {
 
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, unit_price, description, image_url')
+        .select('id, name, unit_price, description, image_url, category')
         .order('name')
 
       if (error) {
@@ -118,13 +182,13 @@ export default function CustomerMenu() {
   }
 
   const sendOrder = async () => {
-    if (!roomNumber) {
-      setMessage('Abra o cardapio pelo QR Code do quarto.')
+    if (!menuLocation) {
+      setMessage('Abra o cardapio pelo QR Code da mesa ou quarto.')
       return
     }
 
     if (!patientName.trim() || !phone.trim()) {
-      setMessage('Informe nome do paciente e telefone.')
+      setMessage('Informe nome e telefone.')
       return
     }
 
@@ -134,17 +198,34 @@ export default function CustomerMenu() {
     }
 
     setIsSending(true)
-    const orderPayload = {
-      room_number: roomNumber,
-      patient_name: patientName.trim(),
-      phone: phone.trim(),
-      items: cart,
-      total_amount: total,
-      status: 'novo',
-      customer_message: 'Pedido enviado para o PDV.',
-    }
+    const orderPayload =
+      menuLocation.type === 'room'
+        ? {
+            room_number: menuLocation.number,
+            patient_name: patientName.trim(),
+            phone: phone.trim(),
+            items: cart,
+            total_amount: total,
+            status: 'novo',
+            customer_message: 'Pedido enviado para o PDV.',
+          }
+        : {
+            source_type: 'mesa',
+            service_number: menuLocation.number,
+            customer_name: patientName.trim(),
+            customer_phone: phone.trim(),
+            items: cart.map((item) => ({
+              name: item.name,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+            })),
+            total_amount: total,
+            status: 'recebido',
+            customer_message: 'Pedido enviado pelo QR Code da mesa.',
+          }
 
-    const { error } = await supabase.from('room_orders').insert([orderPayload])
+    const targetTable = menuLocation.type === 'room' ? 'room_orders' : 'service_orders'
+    const { error } = await supabase.from(targetTable).insert([orderPayload])
 
     if (error) {
       console.error('Erro ao enviar pedido:', error)
@@ -153,8 +234,8 @@ export default function CustomerMenu() {
       const { data: latestOrder } = await supabase
         .from('room_orders')
         .select('id')
-        .eq('room_number', roomNumber)
-        .eq('phone', orderPayload.phone)
+        .eq('room_number', menuLocation.type === 'room' ? menuLocation.number : 0)
+        .eq('phone', phone.trim())
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -173,12 +254,13 @@ export default function CustomerMenu() {
   return (
     <main className="customer-menu">
       <header className="customer-menu__header">
+        <img src="/logo.jpeg" alt="Dr. Cafe" />
         <div>
           <p className="customer-menu__eyebrow">Dr. Cafe</p>
           <h1>Cardapio</h1>
         </div>
         <span className="customer-menu__room">
-          {roomNumber ? `Quarto ${roomNumber}` : 'Quarto nao informado'}
+          {menuLocation ? menuLocation.label : 'Mesa/quarto nao informado'}
         </span>
       </header>
 
@@ -186,7 +268,7 @@ export default function CustomerMenu() {
         <input
           value={patientName}
           onChange={(e) => setPatientName(e.target.value)}
-          placeholder="Nome do paciente"
+          placeholder={menuLocation?.type === 'room' ? 'Nome do paciente' : 'Nome do cliente'}
           maxLength={40}
         />
         <input
@@ -195,6 +277,26 @@ export default function CustomerMenu() {
           placeholder="Telefone"
           maxLength={20}
         />
+      </section>
+
+      <section className="customer-menu__filters">
+        <input
+          value={productSearch}
+          onChange={(event) => setProductSearch(event.target.value)}
+          placeholder="Pesquisar produto"
+        />
+        <div className="customer-menu__tabs">
+          {menuTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={activeMenuTab === tab.id ? 'active' : ''}
+              onClick={() => setActiveMenuTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </section>
 
       {isLoading && <p className="customer-menu__state">Carregando cardapio...</p>}
@@ -206,14 +308,45 @@ export default function CustomerMenu() {
       )}
 
       <section className="customer-menu__layout">
+        <aside className="customer-menu__cart">
+          <div className="customer-menu__cart-heading">
+            <div>
+              <span>Seu pedido</span>
+              <h2>{currencyFormatter.format(total)}</h2>
+            </div>
+            <strong>{cart.length} item(ns)</strong>
+          </div>
+          {cart.length === 0 ? (
+            <p>Nenhum item adicionado.</p>
+          ) : (
+            cart.map((item) => (
+              <div className="customer-menu__cart-item" key={item.id}>
+                <span>{item.quantity}x {item.name}</span>
+                <button onClick={() => removeFromCart(item.id)}>Remover</button>
+              </div>
+            ))
+          )}
+          <button onClick={sendOrder} disabled={isSending}>
+            {isSending ? 'Enviando...' : 'Enviar pedido'}
+          </button>
+        </aside>
+
+        <section className="customer-menu__products-panel">
+          <div className="customer-menu__section-heading">
+            <h2>{menuTabs.find((tab) => tab.id === activeMenuTab)?.label}</h2>
+            <span>{visibleProducts.length} produto(s)</span>
+          </div>
         <div className="customer-menu__grid" aria-label="Produtos">
-          {products.map((product) => (
+          {visibleProducts.map((product) => (
             <article className="customer-menu__item" key={product.id}>
               {product.image_url ? (
                 <img src={product.image_url} alt={product.name} />
               ) : (
-                <div className="customer-menu__image-fallback" aria-hidden="true">
-                  Dr.
+                <div
+                  className={`customer-menu__image-fallback ${getProductGroup(product)}`}
+                  aria-hidden="true"
+                >
+                  {getProductGroup(product) === 'bebidas' ? 'Bebida' : 'Dr. Cafe'}
                 </div>
               )}
               <div className="customer-menu__info">
@@ -227,24 +360,10 @@ export default function CustomerMenu() {
             </article>
           ))}
         </div>
-
-        <aside className="customer-menu__cart">
-          <h2>Pedido</h2>
-          {cart.length === 0 ? (
-            <p>Nenhum item adicionado.</p>
-          ) : (
-            cart.map((item) => (
-              <div className="customer-menu__cart-item" key={item.id}>
-                <span>{item.quantity}x {item.name}</span>
-                <button onClick={() => removeFromCart(item.id)}>Remover</button>
-              </div>
-            ))
+          {visibleProducts.length === 0 && (
+            <p className="customer-menu__empty">Nenhum produto encontrado nesta aba.</p>
           )}
-          <strong>Total: {currencyFormatter.format(total)}</strong>
-          <button onClick={sendOrder} disabled={isSending}>
-            {isSending ? 'Enviando...' : 'Enviar pedido'}
-          </button>
-        </aside>
+        </section>
       </section>
     </main>
   )

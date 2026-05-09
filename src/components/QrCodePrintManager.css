@@ -1,0 +1,196 @@
+.qr-manager {
+  display: grid;
+  gap: 16px;
+}
+
+.qr-manager__toolbar,
+.qr-manager__controls,
+.qr-manager__print-title {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.qr-manager__toolbar h2,
+.qr-manager__toolbar p {
+  margin: 0;
+}
+
+.qr-manager__toolbar p {
+  margin-top: 6px;
+  color: #7b4a27;
+}
+
+.qr-manager__toolbar button {
+  border: 0;
+  border-radius: 8px;
+  background: #2b160d;
+  color: #f8dfbf;
+  padding: 11px 14px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.qr-manager__controls {
+  align-items: stretch;
+}
+
+.qr-manager__controls label {
+  display: grid;
+  flex: 1;
+  gap: 7px;
+  color: #5a2f17;
+  font-weight: 800;
+}
+
+.qr-manager__controls small {
+  color: #7b4a27;
+  font-weight: 700;
+}
+
+.qr-manager__controls input,
+.qr-manager__controls select {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #b98554;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #2b160d;
+}
+
+.qr-manager__print-title {
+  justify-content: flex-start;
+  padding: 12px;
+  border: 1px solid #ead4b9;
+  border-radius: 8px;
+  background: #fffaf5;
+}
+
+.qr-manager__print-title img {
+  width: 54px;
+  height: 54px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.qr-manager__print-title strong,
+.qr-manager__print-title span {
+  display: block;
+}
+
+.qr-manager__print-title strong {
+  font-size: 1.2rem;
+}
+
+.qr-manager__print-title span {
+  color: #7b4a27;
+}
+
+.qr-manager__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.qr-manager__card {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-height: 260px;
+  padding: 14px;
+  border: 1px solid #ead4b9;
+  border-radius: 8px;
+  background: #fffaf5;
+  text-align: center;
+  page-break-inside: avoid;
+}
+
+.qr-manager__logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.qr-manager__card h3,
+.qr-manager__card p {
+  margin: 0;
+}
+
+.qr-manager__card h3 {
+  font-size: 1.2rem;
+  color: #2b160d;
+}
+
+.qr-manager__code {
+  width: 132px;
+  height: 132px;
+}
+
+.qr-manager__card p {
+  color: #5a2f17;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.qr-manager__card small {
+  max-width: 100%;
+  color: #7b4a27;
+  font-size: 0.64rem;
+  overflow-wrap: anywhere;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .qr-manager,
+  .qr-manager * {
+    visibility: visible;
+  }
+
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  .qr-manager {
+    position: absolute;
+    inset: 0;
+    padding: 8mm;
+    background: #fff;
+    color: #2b160d;
+  }
+
+  .qr-manager__grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7mm;
+  }
+
+  .qr-manager__card {
+    min-height: 68mm;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .qr-manager__toolbar,
+  .qr-manager__controls {
+    display: grid;
+  }
+}

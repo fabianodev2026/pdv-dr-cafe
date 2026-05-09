@@ -8,15 +8,23 @@ interface Product {
   unit_price: number
   description?: string
   image_url?: string
-  category?: 'comida' | 'bebida'
+  category?: ProductCategory
 }
+
+type ProductCategory = 'comida' | 'bebida' | 'fitness'
 
 interface NewProduct {
   name: string
   price: string
   description: string
   image_url: string
-  category: 'comida' | 'bebida'
+  category: ProductCategory
+}
+
+const categoryLabels: Record<ProductCategory, string> = {
+  comida: 'Produtos do cafe',
+  bebida: 'Bebidas',
+  fitness: 'Comida fitness',
 }
 
 export default function ProductManager() {
@@ -186,12 +194,15 @@ export default function ProductManager() {
               onChange={(e) =>
                 setNewProduct({
                   ...newProduct,
-                  category: e.target.value as 'comida' | 'bebida',
+                  category: e.target.value as ProductCategory,
                 })
               }
             >
-              <option value="comida">Produtos do cafe</option>
-              <option value="bebida">Bebidas</option>
+              {Object.entries(categoryLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
           <div className="form-group full-width">
@@ -243,7 +254,7 @@ export default function ProductManager() {
                   <h3>{product.name}</h3>
                   <p className="price">R$ {product.unit_price.toFixed(2)}</p>
                   <span className="category-pill">
-                    {product.category === 'bebida' ? 'Bebida' : 'Produto'}
+                    {categoryLabels[product.category || 'comida']}
                   </span>
                   {product.description && (
                     <p className="description">{product.description}</p>

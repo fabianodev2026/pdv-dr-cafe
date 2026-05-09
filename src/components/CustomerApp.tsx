@@ -25,7 +25,7 @@ interface Product {
   unit_price: number
   description?: string
   image_url?: string
-  category?: 'comida' | 'bebida'
+  category?: string
 }
 
 interface DailyLunch {
@@ -80,6 +80,28 @@ const formatPhone = (value: string) => {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
 }
 
+type MenuTab = 'bebidas' | 'comidas' | 'fitness'
+
+const menuTabs: Array<{ id: MenuTab; label: string }> = [
+  { id: 'bebidas', label: 'Bebidas' },
+  { id: 'comidas', label: 'Comidas' },
+  { id: 'fitness', label: 'Comida fitness' },
+]
+
+const fitnessKeywords = ['fitness', 'detox', 'natural', 'vitamina', 'salada', 'leve']
+
+const getProductGroup = (product: Product): MenuTab => {
+  const category = product.category?.toLowerCase() ?? ''
+  const text = `${product.name} ${product.description ?? ''} ${category}`.toLowerCase()
+
+  if (category.includes('bebida')) return 'bebidas'
+  if (category.includes('fitness') || fitnessKeywords.some((keyword) => text.includes(keyword))) {
+    return 'fitness'
+  }
+
+  return 'comidas'
+}
+
 export default function CustomerApp() {
   const [customer, setCustomer] = useState<AppCustomer | null>(null)
   const [loginForm, setLoginForm] = useState({ login: '', password: '' })
@@ -91,6 +113,7 @@ export default function CustomerApp() {
   const [showPasswordReset, setShowPasswordReset] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [productSearch, setProductSearch] = useState('')
+  const [activeMenuTab, setActiveMenuTab] = useState<MenuTab>('bebidas')
   const [dailyLunch, setDailyLunch] = useState<DailyLunch | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [pendingTotal, setPendingTotal] = useState(0)
@@ -125,8 +148,19 @@ export default function CustomerApp() {
     )
   }, [products, productSearch])
 
-  const foods = filteredProducts.filter((product) => product.category !== 'bebida')
-  const drinks = filteredProducts.filter((product) => product.category === 'bebida')
+  const productsByTab = useMemo(
+    () =>
+      menuTabs.reduce(
+        (groups, tab) => ({
+          ...groups,
+          [tab.id]: filteredProducts.filter((product) => getProductGroup(product) === tab.id),
+        }),
+        { bebidas: [], comidas: [], fitness: [] } as Record<MenuTab, Product[]>,
+      ),
+    [filteredProducts],
+  )
+
+  const visibleProducts = productsByTab[activeMenuTab]
 
   const loadMenu = async () => {
     const productsResult = await supabase.from('products').select('*').order('name')
@@ -512,7 +546,22 @@ export default function CustomerApp() {
 
       {!customer && (
         <section className="customer-app__auth">
+          <div className="customer-app__auth-card customer-app__auth-card--brand">
+            <div className="customer-app__auth-brand">
+              <img src="/logo.jpeg" alt="Dr. Cafe" />
+              <div>
+                <span>Dr. Cafe</span>
+                <strong>Cuidando de voce</strong>
+              </div>
+            </div>
+            <div className="customer-app__auth-callout">
+              <span>Pedido pelo app</span>
+              <strong>Escolha, envie e acompanhe seu saldo.</strong>
+            </div>
+          </div>
+
           <div className="customer-app__panel">
+            <span className="customer-app__panel-kicker">Acesso</span>
             <h2>Entrar</h2>
             <input
               value={loginForm.login}
@@ -544,6 +593,7 @@ export default function CustomerApp() {
 
           {showPasswordReset && (
             <div className="customer-app__panel">
+              <span className="customer-app__panel-kicker">Seguranca</span>
               <h2>RECUPERAR SENHA</h2>
               <input
                 value={resetForm.login}
@@ -567,6 +617,7 @@ export default function CustomerApp() {
           )}
 
           <div className="customer-app__panel">
+            <span className="customer-app__panel-kicker">Primeiro acesso</span>
             <h2>NOVO CADASTRO</h2>
             <input
               value={form.name}
@@ -665,6 +716,45 @@ export default function CustomerApp() {
           )}
 
           <main className="customer-app__layout">
+            <aside className="customer-app__cart">
+              <div className="customer-app__cart-heading">
+                <div>
+                  <span>Seu pedido</span>
+                  <h2>{currencyFormatter.format(total)}</h2>
+                </div>
+                <strong>{cart.length} item(ns)</strong>
+              </div>
+              {cart.length === 0 ? (
+                <p>Nenhum item ainda.</p>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.id} className="customer-app__cart-item">
+                    <span>
+                      {item.quantity}x {item.name}
+                    </span>
+                    <strong>{currencyFormatter.format(item.quantity * item.unit_price)}</strong>
+                    <button onClick={() => removeFromCart(item.id)}>Remover</button>
+                  </div>
+                ))
+              )}
+              {customer && (
+                <p>
+                  Saldo depois deste pedido: {currencyFormatter.format(availableAfterCart)}
+                </p>
+              )}
+              <p>Pagamento: pagar depois, Pix ou dinheiro no dia combinado.</p>
+              <button
+                onClick={sendOrder}
+                disabled={
+                  customer.status !== 'ativo' ||
+                  isBlockedByDebt ||
+                  (creditLimit > 0 && total > availableCredit)
+                }
+              >
+                Enviar pedido
+              </button>
+            </aside>
+
             <section className="customer-app__menu">
               <div className="customer-app__section customer-app__search">
                 <input
@@ -672,9 +762,21 @@ export default function CustomerApp() {
                   onChange={(event) => setProductSearch(event.target.value)}
                   placeholder="Pesquisar produto"
                 />
+                <div className="customer-app__tabs" role="tablist" aria-label="Categorias do cardapio">
+                  {menuTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={activeMenuTab === tab.id ? 'active' : ''}
+                      onClick={() => setActiveMenuTab(tab.id)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {dailyLunch && (
+              {dailyLunch && activeMenuTab === 'comidas' && (
                 <div className="customer-app__section">
                   <h2>Almoco do dia</h2>
                   <article className="customer-app__item customer-app__item--lunch">
@@ -702,57 +804,20 @@ export default function CustomerApp() {
               )}
 
               <div className="customer-app__section">
-                <h2>Produtos do cafe</h2>
+                <div className="customer-app__section-heading">
+                  <h2>{menuTabs.find((tab) => tab.id === activeMenuTab)?.label}</h2>
+                  <span>{visibleProducts.length} produto(s)</span>
+                </div>
                 <div className="customer-app__grid">
-                  {foods.map((product) => (
+                  {visibleProducts.map((product) => (
                     <MenuItem key={product.id} product={product} onAdd={addToCart} />
                   ))}
                 </div>
-              </div>
-
-              <div className="customer-app__section">
-                <h2>Bebidas</h2>
-                <div className="customer-app__grid">
-                  {drinks.map((product) => (
-                    <MenuItem key={product.id} product={product} onAdd={addToCart} />
-                  ))}
-                </div>
+                {visibleProducts.length === 0 && (
+                  <p className="customer-app__empty">Nenhum produto encontrado nesta aba.</p>
+                )}
               </div>
             </section>
-
-            <aside className="customer-app__cart">
-              <h2>Pedido</h2>
-              {cart.length === 0 ? (
-                <p>Nenhum item ainda.</p>
-              ) : (
-                cart.map((item) => (
-                  <div key={item.id} className="customer-app__cart-item">
-                    <span>
-                      {item.quantity}x {item.name}
-                    </span>
-                    <strong>{currencyFormatter.format(item.quantity * item.unit_price)}</strong>
-                    <button onClick={() => removeFromCart(item.id)}>Remover</button>
-                  </div>
-                ))
-              )}
-              <strong>Total: {currencyFormatter.format(total)}</strong>
-              {customer && (
-                <p>
-                  Saldo depois deste pedido: {currencyFormatter.format(availableAfterCart)}
-                </p>
-              )}
-              <p>Pagamento: pagar depois, Pix ou dinheiro no dia combinado.</p>
-              <button
-                onClick={sendOrder}
-                disabled={
-                  customer.status !== 'ativo' ||
-                  isBlockedByDebt ||
-                  (creditLimit > 0 && total > availableCredit)
-                }
-              >
-                Enviar pedido
-              </button>
-            </aside>
           </main>
         </>
       )}
@@ -772,8 +837,8 @@ function MenuItem({
       {product.image_url ? (
         <img src={product.image_url} alt={product.name} />
       ) : (
-        <div className={`customer-app__fallback ${product.category === 'bebida' ? 'bebida' : 'comida'}`}>
-          {product.category === 'bebida' ? 'Bebida' : 'Dr. Cafe'}
+        <div className={`customer-app__fallback ${getProductGroup(product)}`}>
+          {getProductGroup(product) === 'bebidas' ? 'Bebida' : 'Dr. Cafe'}
         </div>
       )}
       <div>

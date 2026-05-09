@@ -66,17 +66,83 @@
 
 .customer-app__auth {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: minmax(220px, 0.85fr) minmax(280px, 1fr);
   gap: 14px;
-  max-width: 900px;
+  align-items: start;
+  max-width: 980px;
   margin: 0 auto;
+}
+
+.customer-app__auth-card {
+  min-height: 360px;
+  border-radius: 18px;
+  border: 1px solid rgba(245, 190, 125, 0.25);
+  background:
+    linear-gradient(rgba(20, 12, 8, 0.22), rgba(20, 12, 8, 0.78)),
+    url('/fundo.jpg');
+  background-size: cover;
+  background-position: center;
+  padding: 18px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.25);
+}
+
+.customer-app__auth-card--brand {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  align-content: space-between;
+}
+
+.customer-app__auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.customer-app__auth-brand img {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 1px solid rgba(245, 190, 125, 0.38);
+}
+
+.customer-app__auth-brand span,
+.customer-app__auth-brand strong,
+.customer-app__auth-callout span,
+.customer-app__auth-callout strong,
+.customer-app__panel-kicker {
+  display: block;
+}
+
+.customer-app__auth-brand span,
+.customer-app__auth-callout span,
+.customer-app__panel-kicker {
+  color: #f5be7d;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.customer-app__auth-brand strong {
+  color: #fff8ef;
+}
+
+.customer-app__auth-callout {
+  max-width: 260px;
+}
+
+.customer-app__auth-callout strong {
+  margin-top: 8px;
+  font-size: 1.75rem;
+  line-height: 1.05;
 }
 
 .customer-app__panel,
 .customer-app__account,
 .customer-app__cart,
 .customer-app__section {
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 248, 239, 0.1);
   border: 1px solid rgba(245, 190, 125, 0.25);
   backdrop-filter: blur(10px);
@@ -86,6 +152,11 @@
   display: grid;
   gap: 10px;
   padding: 16px;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.2);
+}
+
+.customer-app__auth > .customer-app__panel {
+  grid-column: 2;
 }
 
 .customer-app__panel h2,
@@ -161,7 +232,7 @@
 
 .customer-app__layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: 310px minmax(0, 1fr);
   gap: 14px;
   max-width: 1080px;
   margin: 0 auto;
@@ -176,37 +247,83 @@
   padding: 14px;
 }
 
+.customer-app__search {
+  display: grid;
+  gap: 12px;
+}
+
 .customer-app__search input {
   width: 100%;
   box-sizing: border-box;
 }
 
+.customer-app__tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.customer-app__tabs button {
+  min-height: 38px;
+  border: 1px solid rgba(245, 190, 125, 0.22);
+  background: rgba(255, 248, 239, 0.08);
+  color: #f9ead6;
+  padding: 8px;
+}
+
+.customer-app__tabs button.active {
+  background: #f5be7d;
+  color: #24140d;
+  box-shadow: 0 8px 18px rgba(245, 190, 125, 0.2);
+}
+
+.customer-app__section-heading,
+.customer-app__cart-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.customer-app__section-heading span,
+.customer-app__cart-heading span,
+.customer-app__cart-heading strong {
+  color: #d8c7b6;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.customer-app__cart-heading h2 {
+  margin-top: 3px;
+}
+
 .customer-app__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
   margin-top: 12px;
 }
 
 .customer-app__item {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
+  grid-template-rows: 96px minmax(0, 1fr);
   overflow: hidden;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(255, 248, 239, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .customer-app__item--lunch {
   margin-top: 12px;
-  grid-template-columns: 150px minmax(0, 1fr);
+  grid-template-columns: 130px minmax(0, 1fr);
+  grid-template-rows: auto;
 }
 
 .customer-app__item img,
 .customer-app__fallback {
   width: 100%;
   height: 100%;
-  min-height: 112px;
+  min-height: 96px;
   object-fit: cover;
 }
 
@@ -219,30 +336,51 @@
   text-align: center;
 }
 
-.customer-app__fallback.bebida {
+.customer-app__fallback.bebidas {
   background: linear-gradient(135deg, #17384a, #4c8baa);
   color: #eef8ff;
 }
 
+.customer-app__fallback.fitness {
+  background: linear-gradient(135deg, #203a25, #7ca36a);
+  color: #f1ffe9;
+}
+
 .customer-app__item > div:last-child {
   display: grid;
-  gap: 7px;
-  padding: 12px;
+  align-content: start;
+  gap: 6px;
+  padding: 10px;
 }
 
 .customer-app__item strong {
   color: #fff8ef;
+  font-size: 0.9rem;
+  line-height: 1.15;
 }
 
 .customer-app__item p {
   margin: 0;
   color: #d8c7b6;
-  font-size: 0.9rem;
+  font-size: 0.76rem;
+  line-height: 1.25;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .customer-app__item span {
   color: #f5be7d;
   font-weight: 900;
+  font-size: 0.9rem;
+}
+
+.customer-app__item button {
+  min-height: 32px;
+  border-radius: 9px;
+  padding: 7px 8px;
+  font-size: 0.78rem;
 }
 
 .customer-app__cart {
@@ -266,22 +404,45 @@
   color: #d8c7b6;
 }
 
+.customer-app__empty {
+  margin: 12px 0 0;
+  color: #d8c7b6;
+}
+
 @media (max-width: 760px) {
   .customer-app {
     padding: 14px;
   }
 
   .customer-app__layout,
-  .customer-app__account {
+  .customer-app__account,
+  .customer-app__auth {
     grid-template-columns: 1fr;
+  }
+
+  .customer-app__auth-card--brand,
+  .customer-app__auth > .customer-app__panel {
+    position: static;
+    grid-column: auto;
+  }
+
+  .customer-app__auth-card {
+    min-height: 260px;
   }
 
   .customer-app__cart {
     position: static;
   }
 
-  .customer-app__item,
+  .customer-app__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .customer-app__item--lunch {
-    grid-template-columns: 92px minmax(0, 1fr);
+    grid-template-columns: 100px minmax(0, 1fr);
+  }
+
+  .customer-app__tabs {
+    grid-template-columns: 1fr;
   }
 }
