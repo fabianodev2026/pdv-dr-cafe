@@ -541,25 +541,25 @@
 }
 
 @media print {
-  @page {
+  @page receipt {
     size: 80mm auto;
     margin: 0;
   }
 
-  html,
-  body {
+  body.printing-receipt {
     width: 80mm;
     margin: 0;
     padding: 0;
     background: #fff;
   }
 
-  .no-print {
+  body.printing-receipt .no-print {
     display: none !important;
   }
 
-  .printable-receipt {
+  body.printing-receipt .printable-receipt {
     display: block;
+    page: receipt;
     background: white;
     box-sizing: border-box;
     width: 80mm;
@@ -573,10 +573,14 @@
     line-height: 1.45;
   }
 
-  .pdv-container {
+  body.printing-receipt .pdv-container {
     min-height: 0;
     padding: 0;
     background: #fff;
+  }
+
+  body:not(.printing-receipt) .printable-receipt {
+    display: none !important;
   }
 }
 

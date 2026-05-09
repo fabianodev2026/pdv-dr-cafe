@@ -234,7 +234,15 @@ export default function TableManager({ currentUser }: TableManagerProps) {
   }
 
   const printReceipt = () => {
+    document.body.classList.add('printing-receipt')
+    const clearPrintMode = () => {
+      document.body.classList.remove('printing-receipt')
+      window.removeEventListener('afterprint', clearPrintMode)
+    }
+
+    window.addEventListener('afterprint', clearPrintMode)
     window.print()
+    window.setTimeout(clearPrintMode, 1000)
   }
 
   const finalizePayment = async () => {

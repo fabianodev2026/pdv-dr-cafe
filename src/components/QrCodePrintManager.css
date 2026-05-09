@@ -142,47 +142,47 @@
 }
 
 @media print {
-  @page {
+  @page qr-codes {
     size: A4;
     margin: 8mm;
   }
 
-  html,
-  body {
+  body.printing-qr {
     width: auto !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
   }
 
-  body * {
+  body.printing-qr * {
     visibility: hidden;
   }
 
-  .qr-manager,
-  .qr-manager * {
+  body.printing-qr .qr-manager,
+  body.printing-qr .qr-manager * {
     visibility: visible;
   }
 
-  .no-print,
-  .no-print * {
+  body.printing-qr .no-print,
+  body.printing-qr .no-print * {
     display: none !important;
   }
 
-  .qr-manager {
+  body.printing-qr .qr-manager {
     position: absolute;
+    page: qr-codes;
     inset: 0;
     padding: 8mm;
     background: #fff;
     color: #2b160d;
   }
 
-  .qr-manager__grid {
+  body.printing-qr .qr-manager__grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 7mm;
   }
 
-  .qr-manager__card {
+  body.printing-qr .qr-manager__card {
     min-height: 68mm;
     box-shadow: none;
   }

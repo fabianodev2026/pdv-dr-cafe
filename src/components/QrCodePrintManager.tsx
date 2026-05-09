@@ -90,6 +90,18 @@ export default function QrCodePrintManager() {
     }
   }, [targets])
 
+  const printQrCodes = () => {
+    document.body.classList.add('printing-qr')
+    const clearPrintMode = () => {
+      document.body.classList.remove('printing-qr')
+      window.removeEventListener('afterprint', clearPrintMode)
+    }
+
+    window.addEventListener('afterprint', clearPrintMode)
+    window.print()
+    window.setTimeout(clearPrintMode, 1000)
+  }
+
   return (
     <section className="qr-manager">
       <div className="qr-manager__toolbar no-print">
@@ -97,7 +109,7 @@ export default function QrCodePrintManager() {
           <h2>QR Code do cardapio</h2>
           <p>Imprima os codigos das mesas e quartos para abrir o cardapio Dr. Cafe.</p>
         </div>
-        <button onClick={() => window.print()}>Imprimir QR Codes</button>
+        <button onClick={printQrCodes}>Imprimir QR Codes</button>
       </div>
 
       <div className="qr-manager__controls no-print">
