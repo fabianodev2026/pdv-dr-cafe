@@ -542,12 +542,13 @@
 
 @media print {
   @page receipt {
-    size: 80mm auto;
-    margin: 0;
+    size: 80mm 135mm;
+    margin: 0mm;
   }
 
   body.printing-receipt {
     width: 80mm;
+    height: auto;
     margin: 0;
     padding: 0;
     background: #fff;
@@ -576,13 +577,14 @@
     box-sizing: border-box;
     width: 80mm;
     max-width: 80mm;
-    min-height: 100%;
-    padding: 4mm 4mm 6mm;
+    min-height: 0;
+    padding: 2mm 4mm 4mm;
     margin: 0;
     color: #111;
     font-family: Arial, 'Helvetica Neue', sans-serif;
-    font-size: 11.5pt;
-    line-height: 1.45;
+    font-size: 10pt;
+    line-height: 1.18;
+    overflow: hidden;
   }
 
   body.printing-receipt .pdv-container {
@@ -598,50 +600,54 @@
 
 .receipt-header {
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 5px;
   border-bottom: 1px dashed #111;
-  padding-bottom: 10px;
-}
-
-.receipt-logo {
-  display: block;
-  width: 28mm;
-  height: 28mm;
-  margin: 0 auto 6px;
-  object-fit: contain;
-  filter: grayscale(1) contrast(1.2);
+  padding-bottom: 4px;
 }
 
 .receipt-header h2 {
-  margin: 0 0 4px;
-  font-size: 1.35em;
+  margin: 0 0 2px;
+  font-size: 1.1em;
   line-height: 1.1;
   letter-spacing: 0;
 }
 
 .receipt-header p {
-  margin: 4px 0;
+  margin: 2px 0;
   font-size: 0.9em;
-  line-height: 1.35;
+  line-height: 1.1;
+}
+
+.receipt-header hr {
+  display: none;
+}
+
+.receipt-logo {
+  display: block;
+  width: 14mm;
+  height: 14mm;
+  margin: 0 auto 2mm;
+  object-fit: contain;
+  filter: grayscale(1) contrast(1.15);
 }
 
 .receipt-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 12px 0;
+  margin: 5px 0;
   font-size: 0.95em;
 }
 
 .receipt-section {
-  margin: 10px 0;
-  padding: 8px 0;
+  margin: 4px 0;
+  padding: 3px 0;
   border-bottom: 1px dashed #444;
 }
 
 .receipt-section h3,
 .receipt-section p {
-  margin: 6px 0;
-  line-height: 1.4;
+  margin: 2px 0;
+  line-height: 1.15;
 }
 
 .receipt-table th {
@@ -652,10 +658,10 @@
 }
 
 .receipt-table td {
-  padding: 8px 0;
+  padding: 3px 0;
   border-bottom: 1px dotted #666;
   vertical-align: top;
-  line-height: 1.35;
+  line-height: 1.15;
 }
 
 .receipt-table th:first-child,
@@ -672,28 +678,28 @@
 
 .receipt-footer {
   text-align: center;
-  margin-top: 12px;
+  margin-top: 5px;
   border-top: 1px dashed #111;
-  padding-top: 10px;
+  padding-top: 5px;
 }
 
 .receipt-footer p {
-  margin: 7px 0;
-  line-height: 1.4;
+  margin: 3px 0;
+  line-height: 1.15;
 }
 
 .receipt-footer h3 {
-  margin: 10px 0 0;
-  padding: 8px 0;
+  margin: 5px 0 0;
+  padding: 4px 0;
   border-top: 1px solid #111;
   border-bottom: 1px solid #111;
-  font-size: 1.35em;
-  line-height: 1.2;
+  font-size: 1.12em;
+  line-height: 1.1;
 }
 
 .receipt-fiscal {
-  margin-top: 18px;
-  padding-top: 12px;
+  margin-top: 7px;
+  padding-top: 6px;
   border-top: 1px dashed #111;
   text-align: center;
 }

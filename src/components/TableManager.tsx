@@ -238,11 +238,20 @@ export default function TableManager({ currentUser }: TableManagerProps) {
     const clearPrintMode = () => {
       document.body.classList.remove('printing-receipt')
       window.removeEventListener('afterprint', clearPrintMode)
+      window.removeEventListener('focus', clearPrintMode)
     }
 
     window.addEventListener('afterprint', clearPrintMode)
-    window.print()
-    window.setTimeout(clearPrintMode, 1000)
+    window.addEventListener('focus', clearPrintMode)
+    window.setTimeout(() => {
+      window.print()
+      window.setTimeout(clearPrintMode, 2500)
+    }, 50)
+  }
+
+  const closeReceiptPreview = () => {
+    document.body.classList.remove('printing-receipt')
+    setShowReceipt(false)
   }
 
   const finalizePayment = async () => {
@@ -673,6 +682,9 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                 <button onClick={printReceipt} className="btn-print">
                   🖨️ Imprimir Recibo
                 </button>
+                <button onClick={closeReceiptPreview} className="btn-close-receipt">
+                  Fechar recibo
+                </button>
                 <button onClick={finalizePayment} className="btn-close-receipt">
                   Confirmar no Sistema
                 </button>
@@ -701,13 +713,6 @@ export default function TableManager({ currentUser }: TableManagerProps) {
               <p>Data: {receiptData?.date}</p>
             </div>
             <table className="receipt-table">
-              <thead>
-                <tr>
-                  <th>Qtd</th>
-                  <th>Item</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
               <tbody>
                 {receiptData?.items.map((item) => (
                   <tr key={item.id}>
