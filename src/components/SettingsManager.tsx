@@ -261,9 +261,7 @@ export default function SettingsManager() {
           <p>Fiscal, impressoras, certificado digital e balancos.</p>
         </div>
       </header>
-
       {message && <div className="settings-alert">{message}</div>}
-
       <div className="settings-tabs">
         <button
           className={activeTab === 'fiscal' ? 'active' : ''}
@@ -308,7 +306,6 @@ export default function SettingsManager() {
           Backup automatico
         </button>
       </div>
-
       {activeTab === 'fiscal' && (
         <section className="settings-panel">
           <h2>Dados fiscais do produto</h2>
@@ -393,7 +390,7 @@ export default function SettingsManager() {
           </button>
         </section>
       )}
-
+      //**impressoras*//
       {activeTab === 'impressoras' && (
         <section className="settings-panel">
           <h2>Impressoras</h2>
@@ -444,7 +441,7 @@ export default function SettingsManager() {
               <input
                 type="number"
                 min="80"
-                max="240"
+                max="auto" //*modifiquei para aceirar qualquer valor.
                 value={printer.receipt.paperHeightMm}
                 onChange={(e) =>
                   setPrinter({
@@ -575,7 +572,6 @@ export default function SettingsManager() {
           </button>
         </section>
       )}
-
       {activeTab === 'certificado' && (
         <section className="settings-panel">
           <h2>Certificado digital NFC-e</h2>
@@ -644,7 +640,6 @@ export default function SettingsManager() {
           </button>
         </section>
       )}
-
       {activeTab === 'balanco' && (
         <section className="settings-panel">
           <h2>Balancos</h2>
@@ -687,7 +682,6 @@ export default function SettingsManager() {
           </div>
         </section>
       )}
-
       {activeTab === 'mais-vendidos' && (
         <section className="settings-panel">
           <div className="settings-panel-heading">
@@ -754,13 +748,11 @@ export default function SettingsManager() {
           </div>
         </section>
       )}
-
       {activeTab === 'qrcodes' && (
         <section className="settings-panel settings-panel--print">
           <QrCodePrintManager />
         </section>
       )}
-
       {activeTab === 'backup' && (
         <section className="settings-panel">
           <div className="settings-panel-heading">
