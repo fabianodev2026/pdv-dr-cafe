@@ -553,13 +553,25 @@
     background: #fff;
   }
 
+  body.printing-receipt * {
+    visibility: hidden;
+  }
+
   body.printing-receipt .no-print {
     display: none !important;
+  }
+
+  body.printing-receipt .printable-receipt,
+  body.printing-receipt .printable-receipt * {
+    visibility: visible;
   }
 
   body.printing-receipt .printable-receipt {
     display: block;
     page: receipt;
+    position: absolute;
+    top: 0;
+    left: 0;
     background: white;
     box-sizing: border-box;
     width: 80mm;

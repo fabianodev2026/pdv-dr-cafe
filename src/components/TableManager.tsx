@@ -687,7 +687,6 @@ export default function TableManager({ currentUser }: TableManagerProps) {
               <p>
                 <strong>CUPOM NAO FISCAL</strong>
               </p>
-              <p>Impressora: TRPSX88V0011CB0X</p>
               <hr />
             </div>
             <div className="receipt-section">
