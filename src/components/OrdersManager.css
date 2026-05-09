@@ -194,7 +194,7 @@
 
 @media print {
   @page {
-    size: 80mm 120mm;
+    size: 80mm 300mm;
     margin: 0;
   }
 
@@ -214,17 +214,18 @@
   body.printing-order-receipt .order-print-receipt {
     display: block;
     position: absolute;
-    inset: 0 auto auto 0;
+    top: 0;
+    left: 0;
     width: 80mm;
     max-width: 80mm;
     box-sizing: border-box;
-    padding: 2mm 4mm 4mm;
+    padding: 1mm 3mm 2mm;
     margin: 0;
     background: #fff;
     color: #111;
     font-family: Arial, 'Helvetica Neue', sans-serif;
-    font-size: 10pt;
-    line-height: 1.35;
+    font-size: 9pt;
+    line-height: 1.15;
   }
 }
 
