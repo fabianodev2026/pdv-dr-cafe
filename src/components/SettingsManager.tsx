@@ -390,7 +390,7 @@ export default function SettingsManager() {
           </button>
         </section>
       )}
-      //**impressoras*//
+      {/* impressoras */}
       {activeTab === 'impressoras' && (
         <section className="settings-panel">
           <h2>Impressoras</h2>
@@ -440,15 +440,16 @@ export default function SettingsManager() {
               Altura da folha do cupom (mm)
               <input
                 type="number"
-                min="80"
-                max="auto" //*modifiquei para aceirar qualquer valor.
+                min="120"
+                max="1000"
+                step="10"
                 value={printer.receipt.paperHeightMm}
                 onChange={(e) =>
                   setPrinter({
                     ...printer,
                     receipt: {
                       ...printer.receipt,
-                      paperHeightMm: Number(e.target.value) || 5,
+                      paperHeightMm: Number(e.target.value) || 300,
                     },
                   })
                 }
