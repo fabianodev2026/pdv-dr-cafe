@@ -542,7 +542,7 @@
 
 @media print {
   @page receipt {
-    size: 80mm 135mm;
+    size: 80mm 180mm;
     margin: 0mm;
   }
 
@@ -580,11 +580,13 @@
     min-height: 0;
     padding: 2mm 4mm 4mm;
     margin: 0;
+    break-after: avoid;
+    page-break-after: avoid;
     color: #111;
     font-family: Arial, 'Helvetica Neue', sans-serif;
     font-size: var(--receipt-font-size, 10pt);
     line-height: var(--receipt-line-height, 1.35);
-    overflow: hidden;
+    overflow: visible;
   }
 
   body.printing-receipt .pdv-container {

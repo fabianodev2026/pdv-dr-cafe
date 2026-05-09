@@ -14,10 +14,10 @@ const PRINTER_SETTINGS_KEY = 'dr-cafe-printer-settings'
 
 export const defaultReceiptPrinterSettings: ReceiptPrinterSettings = {
   paperWidth: '80mm',
-  paperHeightMm: 135,
+  paperHeightMm: 180,
   fontSizePt: 10,
-  lineHeight: 1.35,
-  bottomFeedMm: 28,
+  lineHeight: 1.45,
+  bottomFeedMm: 55,
   logoEnabled: true,
   logoSizeMm: 14,
   compactMode: true,
