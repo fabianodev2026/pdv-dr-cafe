@@ -14,6 +14,8 @@ interface Product {
   image_url?: string
   description?: string
   category?: string
+  stock_quantity?: number
+  low_stock_threshold?: number
 }
 
 interface OrderItem {
@@ -480,7 +482,13 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                 {filteredProducts.map((product) => (
                   <div
                     key={product.id}
-                    className="product-item-card"
+                    className={`product-item-card ${
+                      Number(product.low_stock_threshold || 0) > 0 &&
+                      Number(product.stock_quantity || 0) <=
+                        Number(product.low_stock_threshold || 0)
+                        ? 'low-stock'
+                        : ''
+                    }`}
                     onClick={() => addProductToTable(product)}
                   >
                     <div className="img-wrapper">
@@ -497,6 +505,11 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                       <span className="p-price">
                         R$ {product.unit_price.toFixed(2)}
                       </span>
+                      {Number(product.low_stock_threshold || 0) > 0 &&
+                        Number(product.stock_quantity || 0) <=
+                          Number(product.low_stock_threshold || 0) && (
+                          <span className="p-stock-warning">Estoque baixo</span>
+                        )}
                     </div>
                   </div>
                 ))}

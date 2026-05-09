@@ -170,8 +170,8 @@
 
 .customer-menu__item {
   display: grid;
-  grid-template-rows: 96px minmax(0, 1fr);
-  min-height: 0;
+  grid-template-rows: 96px 1fr;
+  min-height: 300px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -207,6 +207,7 @@
 .customer-menu__info {
   display: grid;
   align-content: start;
+  grid-template-rows: auto auto minmax(34px, auto) 1fr auto;
   gap: 6px;
   min-width: 0;
   padding: 10px;
@@ -221,7 +222,12 @@
   color: #fffaf5;
   font-size: 0.9rem;
   line-height: 1.15;
+  min-height: 42px;
+  display: -webkit-box;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .customer-menu__line strong {
@@ -235,6 +241,7 @@
   display: -webkit-box;
   overflow: hidden;
   margin: 0;
+  min-height: 34px;
   color: #d8c7b6;
   font-size: 0.76rem;
   line-height: 1.25;
@@ -252,6 +259,11 @@
   padding: 8px 10px;
   font-weight: 800;
   cursor: pointer;
+}
+
+.customer-menu__info button {
+  align-self: end;
+  width: 100%;
 }
 
 .customer-menu__cart {

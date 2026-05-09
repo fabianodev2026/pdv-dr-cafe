@@ -306,7 +306,8 @@
 
 .customer-app__item {
   display: grid;
-  grid-template-rows: 96px minmax(0, 1fr);
+  grid-template-rows: 96px 1fr;
+  min-height: 300px;
   overflow: hidden;
   border-radius: 12px;
   background: rgba(255, 248, 239, 0.1);
@@ -349,6 +350,7 @@
 .customer-app__item > div:last-child {
   display: grid;
   align-content: start;
+  grid-template-rows: auto minmax(34px, auto) auto 1fr auto;
   gap: 6px;
   padding: 10px;
 }
@@ -357,10 +359,16 @@
   color: #fff8ef;
   font-size: 0.9rem;
   line-height: 1.15;
+  min-height: 42px;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .customer-app__item p {
   margin: 0;
+  min-height: 34px;
   color: #d8c7b6;
   font-size: 0.76rem;
   line-height: 1.25;
@@ -377,6 +385,8 @@
 }
 
 .customer-app__item button {
+  align-self: end;
+  width: 100%;
   min-height: 32px;
   border-radius: 9px;
   padding: 7px 8px;

@@ -9,6 +9,8 @@ interface Product {
   description?: string
   image_url?: string
   category?: ProductCategory
+  stock_quantity?: number
+  low_stock_threshold?: number
 }
 
 type ProductCategory = 'comida' | 'bebida' | 'fitness'
@@ -19,6 +21,8 @@ interface NewProduct {
   description: string
   image_url: string
   category: ProductCategory
+  stock_quantity: string
+  low_stock_threshold: string
 }
 
 const categoryLabels: Record<ProductCategory, string> = {
@@ -35,6 +39,8 @@ export default function ProductManager() {
     description: '',
     image_url: '',
     category: 'comida',
+    stock_quantity: '0',
+    low_stock_threshold: '0',
   })
   const [editingId, setEditingId] = useState<number | null>(null)
 
@@ -71,6 +77,15 @@ export default function ProductManager() {
       return
     }
 
+    const stockQuantity = Math.max(
+      0,
+      Number.parseInt(newProduct.stock_quantity || '0', 10) || 0,
+    )
+    const lowStockThreshold = Math.max(
+      0,
+      Number.parseInt(newProduct.low_stock_threshold || '0', 10) || 0,
+    )
+
     try {
       const productData = {
         name: newProduct.name,
@@ -78,6 +93,8 @@ export default function ProductManager() {
         description: newProduct.description,
         image_url: newProduct.image_url,
         category: newProduct.category,
+        stock_quantity: stockQuantity,
+        low_stock_threshold: lowStockThreshold,
       }
 
       if (editingId) {
@@ -108,6 +125,8 @@ export default function ProductManager() {
       description: product.description || '',
       image_url: product.image_url || '',
       category: product.category || 'comida',
+      stock_quantity: String(product.stock_quantity ?? 0),
+      low_stock_threshold: String(product.low_stock_threshold ?? 0),
     })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -120,6 +139,8 @@ export default function ProductManager() {
       description: '',
       image_url: '',
       category: 'comida',
+      stock_quantity: '0',
+      low_stock_threshold: '0',
     })
   }
 
@@ -136,6 +157,11 @@ export default function ProductManager() {
       alert('Erro ao apagar produto: ' + (err as Error).message)
     }
   }
+
+  const lowStockProducts = products.filter((product) => {
+    const threshold = Number(product.low_stock_threshold || 0)
+    return threshold > 0 && Number(product.stock_quantity || 0) <= threshold
+  })
 
   return (
     <div className="product-manager">
@@ -205,6 +231,35 @@ export default function ProductManager() {
               ))}
             </select>
           </div>
+          <div className="form-group">
+            <label>Estoque atual</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={newProduct.stock_quantity}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, stock_quantity: e.target.value })
+              }
+              placeholder="Ex: 30"
+            />
+          </div>
+          <div className="form-group">
+            <label>Avisar estoque baixo em</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={newProduct.low_stock_threshold}
+              onChange={(e) =>
+                setNewProduct({
+                  ...newProduct,
+                  low_stock_threshold: e.target.value,
+                })
+              }
+              placeholder="Ex: 5"
+            />
+          </div>
           <div className="form-group full-width">
             <label>Descrição do produto ({newProduct.description.length}/80)</label>
             <textarea
@@ -231,13 +286,38 @@ export default function ProductManager() {
       </section>
 
       <section className="products-section">
-        <h2>Produtos Cadastrados</h2>
+        <div className="products-section-heading">
+          <div>
+            <h2>Produtos Cadastrados</h2>
+            <p>Controle estoque atual e limite de aviso baixo.</p>
+          </div>
+          {lowStockProducts.length > 0 && (
+            <strong className="stock-alert-count">
+              {lowStockProducts.length} em estoque baixo
+            </strong>
+          )}
+        </div>
+        {lowStockProducts.length > 0 && (
+          <div className="stock-warning-panel">
+            <strong>Estoque baixo</strong>
+            <span>{lowStockProducts.map((product) => product.name).join(', ')}</span>
+          </div>
+        )}
         {products.length === 0 ? (
           <p className="no-products">Nenhum produto cadastrado ainda.</p>
         ) : (
           <div className="products-grid">
             {products.map((product) => (
-              <div key={product.id} className="product-card">
+              <div
+                key={product.id}
+                className={`product-card ${
+                  Number(product.low_stock_threshold || 0) > 0 &&
+                  Number(product.stock_quantity || 0) <=
+                    Number(product.low_stock_threshold || 0)
+                    ? 'low-stock'
+                    : ''
+                }`}
+              >
                 {product.image_url && (
                   <div className="product-image">
                     <img
@@ -256,6 +336,15 @@ export default function ProductManager() {
                   <span className="category-pill">
                     {categoryLabels[product.category || 'comida']}
                   </span>
+                  <div className="stock-line">
+                    <span>Estoque: {Number(product.stock_quantity || 0)}</span>
+                    <span>Aviso: {Number(product.low_stock_threshold || 0)}</span>
+                  </div>
+                  {Number(product.low_stock_threshold || 0) > 0 &&
+                    Number(product.stock_quantity || 0) <=
+                      Number(product.low_stock_threshold || 0) && (
+                      <strong className="low-stock-badge">Estoque baixo</strong>
+                    )}
                   {product.description && (
                     <p className="description">{product.description}</p>
                   )}
