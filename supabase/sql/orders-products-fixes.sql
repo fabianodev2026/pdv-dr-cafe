@@ -3,6 +3,9 @@
 
 alter table public.products enable row level security;
 
+alter table public.products
+  add column if not exists barcode text;
+
 drop policy if exists "products app read" on public.products;
 create policy "products app read"
 on public.products
@@ -35,7 +38,7 @@ using (true);
 create table if not exists public.service_orders (
   id bigserial primary key,
   created_at timestamptz not null default now(),
-  source_type text not null check (source_type in ('mesa', 'quarto')),
+  source_type text not null check (source_type in ('mesa', 'quarto', 'comanda')),
   service_number int not null,
   customer_name text,
   customer_phone text,

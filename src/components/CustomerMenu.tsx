@@ -29,12 +29,13 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 })
 
-type MenuTab = 'bebidas' | 'comidas' | 'fitness'
+type MenuTab = 'bebidas' | 'comidas' | 'fitness' | 'presentes'
 
 const menuTabs: Array<{ id: MenuTab; label: string }> = [
   { id: 'bebidas', label: 'Bebidas' },
   { id: 'comidas', label: 'Comidas' },
   { id: 'fitness', label: 'Comida fitness' },
+  { id: 'presentes', label: 'Presentes' },
 ]
 
 const fitnessKeywords = ['fitness', 'detox', 'natural', 'vitamina', 'salada', 'leve']
@@ -44,6 +45,7 @@ const getProductGroup = (product: Product): MenuTab => {
   const text = `${product.name} ${product.description ?? ''} ${category}`.toLowerCase()
 
   if (category.includes('bebida')) return 'bebidas'
+  if (category.includes('presente')) return 'presentes'
   if (category.includes('fitness') || fitnessKeywords.some((keyword) => text.includes(keyword))) {
     return 'fitness'
   }
@@ -105,7 +107,7 @@ export default function CustomerMenu() {
           ...groups,
           [tab.id]: filteredProducts.filter((product) => getProductGroup(product) === tab.id),
         }),
-        { bebidas: [], comidas: [], fitness: [] } as Record<MenuTab, Product[]>,
+        { bebidas: [], comidas: [], fitness: [], presentes: [] } as Record<MenuTab, Product[]>,
       ),
     [filteredProducts],
   )
@@ -346,7 +348,11 @@ export default function CustomerMenu() {
                   className={`customer-menu__image-fallback ${getProductGroup(product)}`}
                   aria-hidden="true"
                 >
-                  {getProductGroup(product) === 'bebidas' ? 'Bebida' : 'Dr. Cafe'}
+                  {getProductGroup(product) === 'bebidas'
+                    ? 'Bebida'
+                    : getProductGroup(product) === 'presentes'
+                      ? 'Presente'
+                      : 'Dr. Cafe'}
                 </div>
               )}
               <div className="customer-menu__info">

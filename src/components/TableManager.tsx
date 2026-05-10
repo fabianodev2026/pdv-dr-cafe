@@ -14,6 +14,7 @@ interface Product {
   name: string
   unit_price: number
   image_url?: string
+  barcode?: string
   description?: string
   category?: string
   stock_quantity?: number
@@ -28,10 +29,14 @@ interface OrderItem {
   total: number
 }
 
+type ServiceType = 'table' | 'room' | 'command'
+type ViewMode = 'salon' | 'hospital' | 'commands'
+type ProductTab = 'todos' | 'bebidas' | 'comidas' | 'presentes'
+
 interface TableItem {
   id: number
   number: number
-  type: 'table' | 'room'
+  type: ServiceType
   status: 'Livre' | 'Ocupada'
   total: number
   items: OrderItem[]
@@ -40,7 +45,7 @@ interface TableItem {
 }
 
 interface ReceiptData {
-  type: 'table' | 'room'
+  type: ServiceType
   number: number
   items: OrderItem[]
   total: number
@@ -61,12 +66,13 @@ interface CurrentUser {
 
 interface TableManagerProps {
   currentUser?: CurrentUser
+  initialViewMode?: ViewMode
 }
 
 const LAST_RECEIPT_KEY = 'dr-cafe-last-receipt'
 
-const createServiceItem = (number: number, type: 'table' | 'room'): TableItem => ({
-  id: type === 'table' ? number : 1000 + number,
+const createServiceItem = (number: number, type: ServiceType): TableItem => ({
+  id: type === 'table' ? number : type === 'room' ? 1000 + number : 2000 + number,
   number,
   type,
   status: 'Livre',
@@ -90,6 +96,33 @@ const initialRooms: TableItem[] = roomNumbers.map((number) =>
   createServiceItem(number, 'room'),
 )
 
+const initialCommands: TableItem[] = Array.from({ length: 12 }, (_, index) =>
+  createServiceItem(index + 1, 'command'),
+)
+
+const getServiceLabel = (item: Pick<TableItem | ReceiptData, 'type' | 'number'>) => {
+  if (item.type === 'room') return `Quarto ${item.number}`
+  if (item.type === 'command') return `Comanda ${item.number}`
+  return `Mesa ${item.number}`
+}
+
+const getServiceSource = (type: ServiceType) => {
+  if (type === 'room') return 'quarto'
+  if (type === 'command') return 'comanda'
+  return 'mesa'
+}
+
+const getItemReset = (item: TableItem): TableItem => ({
+  ...item,
+  items: [],
+  total: 0,
+  status: 'Livre',
+  customer_name: '',
+  customer_phone: '',
+})
+
+const toMoney = (value: number) => Number(value.toFixed(2))
+
 const createFiscalQrText = (receipt: Omit<ReceiptData, 'fiscal_qr_text'>) => {
   if (!receipt.fiscal_cpf || !isCompleteCpf(receipt.fiscal_cpf)) return ''
 
@@ -105,11 +138,15 @@ const createFiscalQrText = (receipt: Omit<ReceiptData, 'fiscal_qr_text'>) => {
   ].join('|')
 }
 
-export default function TableManager({ currentUser }: TableManagerProps) {
+export default function TableManager({
+  currentUser,
+  initialViewMode = 'salon',
+}: TableManagerProps) {
   const navigate = useNavigate()
-  const [viewMode, setViewMode] = useState<'salon' | 'hospital'>('salon')
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode)
   const [tables, setTables] = useState<TableItem[]>(initialTables)
   const [rooms, setRooms] = useState<TableItem[]>(initialRooms)
+  const [commands, setCommands] = useState<TableItem[]>(initialCommands)
   const [activeItem, setActiveItem] = useState<TableItem | null>(null)
   const [availableProducts, setAvailableProducts] = useState<Product[]>([])
   const [showReceipt, setShowReceipt] = useState(false)
@@ -132,6 +169,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
   const [selectedFloor, setSelectedFloor] = useState('todos')
   const [roomSearch, setRoomSearch] = useState('')
   const [productSearch, setProductSearch] = useState('')
+  const [productTab, setProductTab] = useState<ProductTab>('todos')
   const [orderMessage, setOrderMessage] = useState('')
 
   const fetchProducts = async () => {
@@ -143,6 +181,22 @@ export default function TableManager({ currentUser }: TableManagerProps) {
     fetchProducts()
   }, [])
 
+  const persistServiceItem = (item: TableItem) => {
+    if (item.type === 'table') {
+      setTables((current) => current.map((table) => (table.id === item.id ? item : table)))
+      return
+    }
+
+    if (item.type === 'room') {
+      setRooms((current) => current.map((room) => (room.id === item.id ? item : room)))
+      return
+    }
+
+    setCommands((current) =>
+      current.map((command) => (command.id === item.id ? item : command)),
+    )
+  }
+
   const openItem = (item: TableItem) => {
     const updatedItem = { ...item }
     if (updatedItem.status === 'Livre') {
@@ -153,6 +207,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
     setFiscalCpf('')
     setOrderMessage('')
     setActiveItem(updatedItem)
+    persistServiceItem(updatedItem)
   }
 
   const closeItem = () => {
@@ -175,8 +230,9 @@ export default function TableManager({ currentUser }: TableManagerProps) {
       items: [...activeItem.items, newItem],
     }
 
-    updatedItem.total = updatedItem.items.reduce((sum, i) => sum + i.total, 0)
+    updatedItem.total = toMoney(updatedItem.items.reduce((sum, i) => sum + i.total, 0))
     setActiveItem(updatedItem)
+    persistServiceItem(updatedItem)
   }
 
   const sendToPreparation = async () => {
@@ -184,7 +240,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
     const { error } = await supabase.from('service_orders').insert([
       {
-        source_type: activeItem.type === 'table' ? 'mesa' : 'quarto',
+        source_type: getServiceSource(activeItem.type),
         service_number: activeItem.number,
         customer_name: activeItem.customer_name,
         customer_phone: activeItem.customer_phone,
@@ -218,8 +274,9 @@ export default function TableManager({ currentUser }: TableManagerProps) {
       items: activeItem.items.filter((item) => item.id !== itemId),
     }
 
-    updatedItem.total = updatedItem.items.reduce((sum, i) => sum + i.total, 0)
+    updatedItem.total = toMoney(updatedItem.items.reduce((sum, i) => sum + i.total, 0))
     setActiveItem(updatedItem)
+    persistServiceItem(updatedItem)
   }
 
   const payCommand = () => {
@@ -331,7 +388,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
         const pendingPayload = {
           customer_name: receiptData.customer_name,
           phone: receiptData.customer_phone,
-          position: activeItem.type === 'room' ? `Quarto ${activeItem.number}` : `Mesa ${activeItem.number}`,
+          position: getServiceLabel(activeItem),
           description: `Venda registrada em ${receiptData.date}`,
           items_detail: itemsDetail,
           total_amount: receiptData.total,
@@ -359,35 +416,18 @@ export default function TableManager({ currentUser }: TableManagerProps) {
         }
       }
 
-      // Atualizar o estado da mesa/quarto
+      // Atualizar o estado do atendimento fechado.
       if (activeItem.type === 'table') {
-        const updatedTables = tables.map((t) =>
-          t.id === activeItem.id
-            ? {
-                ...t,
-                items: [],
-                total: 0,
-                status: 'Livre' as const,
-                customer_name: '',
-                customer_phone: '',
-              }
-            : t
-        )
+        const updatedTables = tables.map((t) => (t.id === activeItem.id ? getItemReset(t) : t))
         setTables(updatedTables)
-      } else {
-        const updatedRooms = rooms.map((r) =>
-          r.id === activeItem.id
-            ? {
-                ...r,
-                items: [],
-                total: 0,
-                status: 'Livre' as const,
-                customer_name: '',
-                customer_phone: '',
-              }
-            : r
-        )
+      } else if (activeItem.type === 'room') {
+        const updatedRooms = rooms.map((r) => (r.id === activeItem.id ? getItemReset(r) : r))
         setRooms(updatedRooms)
+      } else {
+        const updatedCommands = commands.map((command) =>
+          command.id === activeItem.id ? getItemReset(command) : command,
+        )
+        setCommands(updatedCommands)
       }
 
       setActiveItem(null)
@@ -409,7 +449,9 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
   const updateActiveItemField = (field: string, value: string) => {
     if (!activeItem) return
-    setActiveItem({ ...activeItem, [field]: value })
+    const updatedItem = { ...activeItem, [field]: value }
+    setActiveItem(updatedItem)
+    persistServiceItem(updatedItem)
   }
 
   const canPayLater = Boolean(
@@ -422,6 +464,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
   const currentList = useMemo(() => {
     if (viewMode === 'salon') return tables
+    if (viewMode === 'commands') return commands
 
     return rooms.filter((room) => {
       const matchesFloor =
@@ -432,18 +475,37 @@ export default function TableManager({ currentUser }: TableManagerProps) {
 
       return matchesFloor && matchesSearch
     })
-  }, [rooms, roomSearch, selectedFloor, tables, viewMode])
+  }, [commands, rooms, roomSearch, selectedFloor, tables, viewMode])
 
   const filteredProducts = useMemo(() => {
     const search = productSearch.trim().toLowerCase()
-    if (!search) return availableProducts
+    const byTab = availableProducts.filter((product) => {
+      if (productTab === 'todos') return true
+      const category = String(product.category || '').toLowerCase()
+      const isDrink = category.includes('bebida')
+      const isGift = category.includes('presente')
+      if (productTab === 'bebidas') return isDrink
+      if (productTab === 'presentes') return isGift
+      return !isDrink && !isGift
+    })
+    if (!search) return byTab
 
-    return availableProducts.filter((product) =>
-      [product.name, product.description, product.category]
+    return byTab.filter((product) =>
+      [product.name, product.description, product.category, product.barcode]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(search)),
     )
-  }, [availableProducts, productSearch])
+  }, [availableProducts, productSearch, productTab])
+
+  const openNewCommand = () => {
+    const nextNumber = Math.max(0, ...commands.map((command) => command.number)) + 1
+    const newCommand = {
+      ...createServiceItem(nextNumber, 'command'),
+      status: 'Ocupada' as const,
+    }
+    setCommands((current) => [...current, newCommand])
+    setActiveItem(newCommand)
+  }
 
   return (
     <div className="pdv-container">
@@ -454,18 +516,21 @@ export default function TableManager({ currentUser }: TableManagerProps) {
               className={`mode-btn ${viewMode === 'salon' ? 'active' : ''}`}
               onClick={() => setViewMode('salon')}
             >
-              ☕ Salão (Mesas)
+              Salao (Mesas)
             </button>
             <button
               className={`mode-btn ${viewMode === 'hospital' ? 'active' : ''}`}
               onClick={() => setViewMode('hospital')}
             >
-              🏥 Hospital (Quartos)
+              Hospital (Quartos)
             </button>
             <button
-              className="mode-btn"
-              onClick={() => navigate('/pedidos')}
+              className={`mode-btn ${viewMode === 'commands' ? 'active' : ''}`}
+              onClick={() => setViewMode('commands')}
             >
+              Comandas
+            </button>
+            <button className="mode-btn" onClick={() => navigate('/pedidos')}>
               Ultimos pedidos feitos
             </button>
           </div>
@@ -491,6 +556,14 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                 />
               </div>
             )}
+            {viewMode === 'commands' && (
+              <div className="commands-toolbar">
+                <button onClick={openNewCommand} className="btn-new-command">
+                  Abrir nova comanda
+                </button>
+                <span>Pedidos por telefone ou direto no caixa, identificados pelo nome.</span>
+              </div>
+            )}
             <div className="cards-grid">
               {currentList.map((item) => (
                 <div
@@ -498,12 +571,10 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                   className={`item-card ${item.status === 'Livre' ? 'free' : 'occupied'}`}
                   onClick={() => openItem(item)}
                 >
-                  <h3>
-                    {viewMode === 'salon' ? 'Mesa' : 'Quarto'} {item.number}
-                  </h3>
+                  <h3>{getServiceLabel(item)}</h3>
                   <p className="status">{item.status}</p>
                   {item.customer_name && (
-                    <p className="customer-info">👤 {item.customer_name}</p>
+                    <p className="customer-info">{item.customer_name}</p>
                   )}
                   {item.status === 'Ocupada' && (
                     <p className="total-tag">R$ {item.total.toFixed(2)}</p>
@@ -519,11 +590,9 @@ export default function TableManager({ currentUser }: TableManagerProps) {
         <div className="command-view no-print">
           <header className="command-header">
             <button onClick={closeItem} className="btn-back">
-              ⬅ Voltar
+              Voltar
             </button>
-            <h2>
-              {activeItem.type === 'table' ? 'Mesa' : 'Quarto'} {activeItem.number}
-            </h2>
+            <h2>{getServiceLabel(activeItem)}</h2>
             <div className="total-badge">R$ {activeItem.total.toFixed(2)}</div>
           </header>
 
@@ -536,6 +605,32 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                   onChange={(event) => setProductSearch(event.target.value)}
                   placeholder="Pesquisar produto"
                 />
+              </div>
+              <div className="product-tabs" aria-label="Filtro de produtos">
+                <button
+                  className={productTab === 'todos' ? 'active' : ''}
+                  onClick={() => setProductTab('todos')}
+                >
+                  Todos
+                </button>
+                <button
+                  className={productTab === 'bebidas' ? 'active' : ''}
+                  onClick={() => setProductTab('bebidas')}
+                >
+                  Bebidas
+                </button>
+                <button
+                  className={productTab === 'comidas' ? 'active' : ''}
+                  onClick={() => setProductTab('comidas')}
+                >
+                  Comidas
+                </button>
+                <button
+                  className={productTab === 'presentes' ? 'active' : ''}
+                  onClick={() => setProductTab('presentes')}
+                >
+                  Presentes
+                </button>
               </div>
               <div className="visual-menu">
                 {filteredProducts.map((product) => (
@@ -600,7 +695,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                 </div>
               )}
 
-              {activeItem.type === 'table' && (
+              {activeItem.type !== 'room' && (
                 <div className="glass-panel hospital-fields">
                   <input
                     type="text"
@@ -608,7 +703,11 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                     onChange={(e) =>
                       updateActiveItemField('customer_name', e.target.value)
                     }
-                    placeholder="Nome do cliente"
+                    placeholder={
+                      activeItem.type === 'command'
+                        ? 'Nome da pessoa na comanda'
+                        : 'Nome do cliente'
+                    }
                   />
                   <input
                     type="text"
@@ -616,13 +715,15 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                     onChange={(e) =>
                       updateActiveItemField('customer_phone', e.target.value)
                     }
-                    placeholder="Telefone"
+                    placeholder={
+                      activeItem.type === 'command' ? 'Telefone do pedido' : 'Telefone'
+                    }
                   />
                 </div>
               )}
 
               <div className="glass-panel items-list-panel">
-                <h3>📝 Itens na Comanda</h3>
+                <h3>Itens na Comanda</h3>
                 {orderMessage && <p className="order-message">{orderMessage}</p>}
                 {activeItem.items.length === 0 ? (
                   <p className="empty-state">
@@ -724,6 +825,11 @@ export default function TableManager({ currentUser }: TableManagerProps) {
                 <button onClick={printReceipt} className="btn-print">
                   🖨️ Imprimir Recibo
                 </button>
+                {!isReprint && (
+                  <button onClick={closeReceiptPreview} className="btn-close-receipt">
+                    Acrescentar produtos
+                  </button>
+                )}
                 <button onClick={closeReceiptPreview} className="btn-close-receipt">
                   Fechar recibo
                 </button>
@@ -763,10 +869,7 @@ export default function TableManager({ currentUser }: TableManagerProps) {
             </div>
             <div className="receipt-section">
               <h3>Atendimento</h3>
-              <p>
-                {receiptData?.type === 'table' ? 'Mesa' : 'Quarto'}:{' '}
-                {receiptData?.number}
-              </p>
+              {receiptData && <p>{getServiceLabel(receiptData)}</p>}
               {receiptData?.customer_name && <p>Cliente: {receiptData.customer_name}</p>}
               {receiptData?.customer_phone && <p>Telefone: {receiptData.customer_phone}</p>}
               {receiptData?.fiscal_cpf && <p>CPF NFP: {receiptData.fiscal_cpf}</p>}

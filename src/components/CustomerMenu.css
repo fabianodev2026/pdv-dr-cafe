@@ -204,6 +204,11 @@
   color: #f1ffe9;
 }
 
+.customer-menu__image-fallback.presentes {
+  background: linear-gradient(135deg, #4a2331, #a46b82);
+  color: #fff4f8;
+}
+
 .customer-menu__info {
   display: grid;
   align-content: start;

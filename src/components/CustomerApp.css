@@ -347,6 +347,11 @@
   color: #f1ffe9;
 }
 
+.customer-app__fallback.presentes {
+  background: linear-gradient(135deg, #4a2331, #a46b82);
+  color: #fff4f8;
+}
+
 .customer-app__item > div:last-child {
   display: grid;
   align-content: start;

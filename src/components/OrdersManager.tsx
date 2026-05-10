@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import './OrdersManager.css'
 
 type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'entregue' | 'cancelado'
-type OrderSource = 'mesa' | 'quarto' | 'app'
+type OrderSource = 'mesa' | 'quarto' | 'comanda' | 'app'
 
 interface OrderItem {
   name: string
@@ -157,7 +157,7 @@ export default function OrdersManager() {
     const confirmed = window.confirm(
       `Cancelar este pedido de ${order.source_type === 'app'
         ? 'app cliente'
-        : `${order.source_type === 'mesa' ? 'mesa' : 'quarto'} ${order.service_number}`
+        : `${order.source_type === 'mesa' ? 'mesa' : order.source_type === 'comanda' ? 'comanda' : 'quarto'} ${order.service_number}`
       }?`,
     )
 
@@ -189,7 +189,7 @@ export default function OrdersManager() {
   const getOrderTitle = (order: OrderTicket) => (
     order.source_type === 'app'
       ? 'App cliente'
-      : `${order.source_type === 'mesa' ? 'Mesa' : 'Quarto'} ${order.service_number}`
+      : `${order.source_type === 'mesa' ? 'Mesa' : order.source_type === 'comanda' ? 'Comanda' : 'Quarto'} ${order.service_number}`
   )
 
   return (
@@ -221,7 +221,7 @@ export default function OrdersManager() {
                 <h2>
                   {order.source_type === 'app'
                     ? 'App cliente'
-                    : `${order.source_type === 'mesa' ? 'Mesa' : 'Quarto'} ${order.service_number}`}
+                    : `${order.source_type === 'mesa' ? 'Mesa' : order.source_type === 'comanda' ? 'Comanda' : 'Quarto'} ${order.service_number}`}
                 </h2>
                 <span>{new Date(order.created_at).toLocaleString('pt-BR')}</span>
               </div>

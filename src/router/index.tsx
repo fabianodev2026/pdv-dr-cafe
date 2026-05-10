@@ -80,6 +80,13 @@ export default function AppRouter() {
               )}
             />
             <Route
+              path="/comandas"
+              element={requireRole(
+                <TableManager currentUser={currentUser} initialViewMode="commands" />,
+                OPERATION_ROLES,
+              )}
+            />
+            <Route
               path="/pedidos"
               element={requireRole(<OrdersManager />, OPERATION_ROLES)}
             />

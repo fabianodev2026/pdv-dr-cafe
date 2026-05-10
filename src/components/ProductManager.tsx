@@ -8,18 +8,20 @@ interface Product {
   unit_price: number
   description?: string
   image_url?: string
+  barcode?: string
   category?: ProductCategory
   stock_quantity?: number
   low_stock_threshold?: number
 }
 
-type ProductCategory = 'comida' | 'bebida' | 'fitness'
+type ProductCategory = 'comida' | 'bebida' | 'fitness' | 'presente'
 
 interface NewProduct {
   name: string
   price: string
   description: string
   image_url: string
+  barcode: string
   category: ProductCategory
   stock_quantity: string
   low_stock_threshold: string
@@ -29,6 +31,7 @@ const categoryLabels: Record<ProductCategory, string> = {
   comida: 'Produtos do cafe',
   bebida: 'Bebidas',
   fitness: 'Comida fitness',
+  presente: 'Presentes e lembrancinhas',
 }
 
 export default function ProductManager() {
@@ -38,6 +41,7 @@ export default function ProductManager() {
     price: '',
     description: '',
     image_url: '',
+    barcode: '',
     category: 'comida',
     stock_quantity: '0',
     low_stock_threshold: '0',
@@ -77,6 +81,12 @@ export default function ProductManager() {
       return
     }
 
+    const barcode = newProduct.barcode.replace(/\D/g, '')
+    if (barcode && (barcode.length < 6 || barcode.length > 20)) {
+      alert('O codigo de barras deve ter entre 6 e 20 numeros.')
+      return
+    }
+
     const stockQuantity = Math.max(
       0,
       Number.parseInt(newProduct.stock_quantity || '0', 10) || 0,
@@ -92,6 +102,7 @@ export default function ProductManager() {
         unit_price: parseFloat(newProduct.price),
         description: newProduct.description,
         image_url: newProduct.image_url,
+        barcode: barcode || null,
         category: newProduct.category,
         stock_quantity: stockQuantity,
         low_stock_threshold: lowStockThreshold,
@@ -124,6 +135,7 @@ export default function ProductManager() {
       price: product.unit_price.toString(),
       description: product.description || '',
       image_url: product.image_url || '',
+      barcode: product.barcode || '',
       category: product.category || 'comida',
       stock_quantity: String(product.stock_quantity ?? 0),
       low_stock_threshold: String(product.low_stock_threshold ?? 0),
@@ -138,6 +150,7 @@ export default function ProductManager() {
       price: '',
       description: '',
       image_url: '',
+      barcode: '',
       category: 'comida',
       stock_quantity: '0',
       low_stock_threshold: '0',
@@ -219,6 +232,22 @@ export default function ProductManager() {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="form-group">
+            <label>Codigo de barras</label>
+            <input
+              type="text"
+              value={newProduct.barcode}
+              onChange={(e) =>
+                setNewProduct({
+                  ...newProduct,
+                  barcode: e.target.value.replace(/\D/g, ''),
+                })
+              }
+              placeholder="Escaneie ou digite"
+              inputMode="numeric"
+              maxLength={20}
+            />
           </div>
           <div className="form-group">
             <label>Estoque atual</label>
@@ -325,6 +354,11 @@ export default function ProductManager() {
                   <span className="category-pill">
                     {categoryLabels[product.category || 'comida']}
                   </span>
+                  {product.barcode && (
+                    <span className="barcode-pill">
+                      Cod. barras: {product.barcode}
+                    </span>
+                  )}
                   <div className="stock-line">
                     <span>Estoque: {Number(product.stock_quantity || 0)}</span>
                     <span>Aviso: {Number(product.low_stock_threshold || 0)}</span>

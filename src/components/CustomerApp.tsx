@@ -48,6 +48,8 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 })
 
+const toMoney = (value: number) => Number(value.toFixed(2))
+
 const getFifthBusinessDay = () => {
   const now = new Date()
   const targetMonth = now.getMonth() + 1
@@ -80,12 +82,13 @@ const formatPhone = (value: string) => {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
 }
 
-type MenuTab = 'bebidas' | 'comidas' | 'fitness'
+type MenuTab = 'bebidas' | 'comidas' | 'fitness' | 'presentes'
 
 const menuTabs: Array<{ id: MenuTab; label: string }> = [
   { id: 'bebidas', label: 'Bebidas' },
   { id: 'comidas', label: 'Comidas' },
   { id: 'fitness', label: 'Comida fitness' },
+  { id: 'presentes', label: 'Presentes' },
 ]
 
 const fitnessKeywords = ['fitness', 'detox', 'natural', 'vitamina', 'salada', 'leve']
@@ -95,6 +98,7 @@ const getProductGroup = (product: Product): MenuTab => {
   const text = `${product.name} ${product.description ?? ''} ${category}`.toLowerCase()
 
   if (category.includes('bebida')) return 'bebidas'
+  if (category.includes('presente')) return 'presentes'
   if (category.includes('fitness') || fitnessKeywords.some((keyword) => text.includes(keyword))) {
     return 'fitness'
   }
@@ -136,7 +140,8 @@ export default function CustomerApp() {
   })
 
   const total = useMemo(
-    () => cart.reduce((sum, item) => sum + item.quantity * item.unit_price, 0),
+    () =>
+      toMoney(cart.reduce((sum, item) => sum + item.quantity * item.unit_price, 0)),
     [cart],
   )
   const creditLimit = Number(customer?.credit_limit || 0)
@@ -161,7 +166,7 @@ export default function CustomerApp() {
           ...groups,
           [tab.id]: filteredProducts.filter((product) => getProductGroup(product) === tab.id),
         }),
-        { bebidas: [], comidas: [], fitness: [] } as Record<MenuTab, Product[]>,
+        { bebidas: [], comidas: [], fitness: [], presentes: [] } as Record<MenuTab, Product[]>,
       ),
     [filteredProducts],
   )
@@ -225,7 +230,9 @@ export default function CustomerApp() {
     }
 
     const payments = data ?? []
-    const totalDebt = payments.reduce((sum, payment) => sum + Number(payment.total_amount), 0)
+    const totalDebt = toMoney(
+      payments.reduce((sum, payment) => sum + Number(payment.total_amount), 0),
+    )
     const overdue = payments.some((payment) => dateDiffInDays(payment.due_date) < -3)
     const closestDue = payments
       .map((payment) => payment.due_date)
@@ -554,6 +561,7 @@ export default function CustomerApp() {
       quantity: item.quantity,
       unit_price: item.unit_price,
     }))
+    const orderTotal = toMoney(total)
 
     const { error: orderError } = await supabase.from('app_orders').insert([
       {
@@ -561,7 +569,7 @@ export default function CustomerApp() {
         customer_name: customer.name,
         customer_phone: customer.phone,
         items: orderItems,
-        total_amount: total,
+        total_amount: orderTotal,
         status: 'novo',
         customer_message: 'Pedido enviado pelo app.',
       },
@@ -572,7 +580,7 @@ export default function CustomerApp() {
         source: 'CustomerApp',
         action: 'sendOrder.appOrder',
         error: orderError,
-        details: { table: 'app_orders', itemCount: cart.length, total },
+        details: { table: 'app_orders', itemCount: cart.length, total: orderTotal },
       })
       setMessage('Nao foi possivel enviar o pedido agora. Tente novamente em instantes.')
       return
@@ -592,7 +600,7 @@ export default function CustomerApp() {
         position: customer.position,
         description: 'Compra pelo app Dr. Cafe',
         items_detail: itemsDetail,
-        total_amount: total,
+        total_amount: orderTotal,
         purchase_date: new Date().toISOString().slice(0, 10),
         due_date: dueDate,
         status: 'pendente',
@@ -604,7 +612,7 @@ export default function CustomerApp() {
         source: 'CustomerApp',
         action: 'sendOrder.pendingPayment',
         error: pendingError,
-        details: { table: 'pending_payments', itemCount: cart.length, total },
+        details: { table: 'pending_payments', itemCount: cart.length, total: orderTotal },
       })
       setMessage('Pedido enviado. O cafe vai conferir seu consumo no sistema.')
       return
@@ -955,7 +963,11 @@ function MenuItem({
         <img src={product.image_url} alt={product.name} />
       ) : (
         <div className={`customer-app__fallback ${getProductGroup(product)}`}>
-          {getProductGroup(product) === 'bebidas' ? 'Bebida' : 'Dr. Cafe'}
+          {getProductGroup(product) === 'bebidas'
+            ? 'Bebida'
+            : getProductGroup(product) === 'presentes'
+              ? 'Presente'
+              : 'Dr. Cafe'}
         </div>
       )}
       <div>

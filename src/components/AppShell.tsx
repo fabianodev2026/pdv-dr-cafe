@@ -43,7 +43,8 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
         </div>
 
         <nav className="app-tabs" aria-label="Abas do PDV">
-          {canOperate && <NavLink to="/mesas">PDV</NavLink>}
+          {canOperate && <NavLink to="/mesas">Mesas e quartos</NavLink>}
+          {canOperate && <NavLink to="/comandas">Comandas</NavLink>}
           {canOperate && <NavLink to="/pedidos">Ultimos pedidos feitos</NavLink>}
           {canUseCashier && <NavLink to="/pendencias">Pagar depois</NavLink>}
           {canManage && <NavLink to="/almoco-do-dia">Almoco do dia</NavLink>}

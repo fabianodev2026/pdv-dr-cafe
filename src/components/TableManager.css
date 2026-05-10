@@ -61,6 +61,28 @@
   font: inherit;
 }
 
+.commands-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #5d4037;
+  font-weight: 700;
+  flex-wrap: wrap;
+}
+
+.btn-new-command {
+  border: 0;
+  border-radius: 8px;
+  background: #2e7d32;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  min-height: 44px;
+  padding: 10px 16px;
+}
+
 .item-card {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(5px);
@@ -202,6 +224,30 @@
   color: #3e2723;
   padding: 10px;
   font: inherit;
+}
+
+.product-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.product-tabs button {
+  border: 1px solid #8d6e63;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #5d4037;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 8px 14px;
+}
+
+.product-tabs button.active {
+  background: #5d4037;
+  color: white;
 }
 
 .visual-menu {
@@ -816,6 +862,15 @@
     grid-template-columns: 1fr;
   }
 
+  .commands-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .btn-new-command {
+    width: 100%;
+  }
+
   .cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
@@ -868,6 +923,11 @@
 
   .products-showcase-header {
     grid-template-columns: 1fr;
+  }
+
+  .product-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .active-command-panel {
