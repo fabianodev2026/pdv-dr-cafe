@@ -111,6 +111,12 @@ export default function CustomerApp() {
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [showRegisterPassword, setShowRegisterPassword] = useState(false)
   const [showPasswordReset, setShowPasswordReset] = useState(false)
+  const [tokenResetForm, setTokenResetForm] = useState({
+    token: '',
+    password: '',
+    confirmPassword: '',
+  })
+  const [showTokenPasswordReset, setShowTokenPasswordReset] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [productSearch, setProductSearch] = useState('')
   const [activeMenuTab, setActiveMenuTab] = useState<MenuTab>('bebidas')
@@ -236,6 +242,46 @@ export default function CustomerApp() {
     if (savedLogin) {
       setLoginForm((current) => ({ ...current, login: savedLogin }))
     }
+
+    const params = new URLSearchParams(window.location.search)
+    const verifyToken = params.get('verify_email')
+    const resetToken = params.get('reset_password')
+
+    if (verifyToken) {
+      const verifyEmail = async () => {
+        try {
+          const { data, error } = await supabase.rpc('app_customer_verify_email', {
+            p_token: verifyToken,
+          })
+
+          if (error || data !== true) {
+            setMessage('Nao foi possivel confirmar este email. Solicite um novo cadastro ou fale com o cafe.')
+            return
+          }
+
+          setMessage('Email confirmado com sucesso. Aguarde o cafe liberar seu acesso.')
+        } catch (error) {
+          logAppError({
+            source: 'CustomerApp',
+            action: 'verifyEmailToken',
+            error,
+            details: { hasToken: true },
+          })
+          setMessage('Nao foi possivel confirmar este email agora.')
+        }
+      }
+
+      verifyEmail()
+      window.history.replaceState({}, '', '/app')
+    }
+
+    if (resetToken) {
+      setTokenResetForm((current) => ({ ...current, token: resetToken }))
+      setShowTokenPasswordReset(true)
+      setShowPasswordReset(false)
+      setMessage('Digite sua nova senha para concluir a recuperacao.')
+      window.history.replaceState({}, '', '/app')
+    }
   }, [])
 
   const loginCustomer = async () => {
@@ -359,7 +405,7 @@ export default function CustomerApp() {
         },
       })
       if (error.code === '23505') {
-        setMessage('Este telefone ou login ja tem cadastro. Use outro ou fale com o cafe.')
+        setMessage('Este login ou email ja tem cadastro. Use outro ou fale com o cafe.')
         return
       }
 
@@ -376,7 +422,7 @@ export default function CustomerApp() {
 
     setLoginForm({ login: form.login, password: '' })
     setMessage(
-      'Cadastro enviado com sucesso. O cafe precisa liberar seu acesso antes do primeiro pedido.',
+      'Cadastro enviado. Enviamos um email de verificacao; confirme o email e aguarde o cafe liberar seu acesso.',
     )
   }
 
@@ -420,7 +466,51 @@ export default function CustomerApp() {
 
     setResetForm({ login: '', email: '' })
     setShowPasswordReset(false)
-    setMessage('Solicitacao enviada. O cafe vai conferir o email cadastrado e liberar a troca.')
+    setMessage('Se o login e email estiverem corretos, enviamos um link para trocar a senha.')
+  }
+
+  const resetCustomerPasswordWithToken = async () => {
+    const token = tokenResetForm.token.trim()
+    const password = tokenResetForm.password.trim()
+    const confirmPassword = tokenResetForm.confirmPassword.trim()
+
+    if (!token || !password || !confirmPassword) {
+      setMessage('Preencha a nova senha e a confirmacao.')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setMessage('A nova senha e a confirmacao precisam ser iguais.')
+      return
+    }
+
+    if (password.length > customerFieldLimits.password) {
+      setMessage(`Senha ate ${customerFieldLimits.password} caracteres.`)
+      return
+    }
+
+    const { data, error } = await supabase.rpc('app_customer_reset_password_with_token', {
+      p_token: token,
+      p_new_password: password,
+    })
+
+    if (error || data !== true) {
+      const normalized = error ? normalizeError(error) : { code: 'RESET-TOKEN' }
+      logAppError({
+        source: 'CustomerApp',
+        action: 'resetCustomerPasswordWithToken',
+        error: error ?? new Error('Token reset returned false'),
+        details: { hasToken: Boolean(token) },
+      })
+      setMessage(
+        `Nao foi possivel trocar a senha. Codigo suporte: ${normalized.code || 'RESET-TOKEN'}.`,
+      )
+      return
+    }
+
+    setTokenResetForm({ token: '', password: '', confirmPassword: '' })
+    setShowTokenPasswordReset(false)
+    setMessage('Senha alterada com sucesso. Entre com sua nova senha.')
   }
 
   const addToCart = (item: { id: string; name: string; unit_price: number }) => {
@@ -610,9 +700,36 @@ export default function CustomerApp() {
               />
               <button onClick={requestCustomerPasswordReset}>Solicitar recuperacao</button>
               <small>
-                O email precisa ser o mesmo do cadastro. A troca automatica por email sera ligada
-                quando configurarmos o envio de emails.
+                O email precisa ser o mesmo do cadastro. O link de troca sera enviado para esse
+                email.
               </small>
+            </div>
+          )}
+
+          {showTokenPasswordReset && (
+            <div className="customer-app__panel">
+              <span className="customer-app__panel-kicker">Recuperacao</span>
+              <h2>NOVA SENHA</h2>
+              <input
+                type="password"
+                value={tokenResetForm.password}
+                onChange={(e) =>
+                  setTokenResetForm({ ...tokenResetForm, password: e.target.value })
+                }
+                placeholder="Nova senha"
+                maxLength={customerFieldLimits.password}
+              />
+              <input
+                type="password"
+                value={tokenResetForm.confirmPassword}
+                onChange={(e) =>
+                  setTokenResetForm({ ...tokenResetForm, confirmPassword: e.target.value })
+                }
+                placeholder="Confirmar nova senha"
+                maxLength={customerFieldLimits.password}
+              />
+              <button onClick={resetCustomerPasswordWithToken}>Salvar nova senha</button>
+              <small>Este link de seguranca vence automaticamente.</small>
             </div>
           )}
 

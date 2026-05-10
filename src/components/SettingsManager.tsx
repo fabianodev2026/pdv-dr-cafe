@@ -17,7 +17,9 @@ import {
   saveNfceIssuerConfig,
   type NfceIssuerConfig,
 } from '../lib/nfceService'
+import DiagnosticsManager from './DiagnosticsManager'
 import QrCodePrintManager from './QrCodePrintManager'
+import SupportAiManager from './SupportAiManager'
 import './SettingsManager.css'
 
 type SettingsTab =
@@ -28,6 +30,7 @@ type SettingsTab =
   | 'mais-vendidos'
   | 'qrcodes'
   | 'backup'
+  | 'suporte'
 type SalesPeriod = 'dia' | 'mes' | 'ano' | 'todos'
 
 interface Product {
@@ -106,6 +109,8 @@ export default function SettingsManager() {
   const [products, setProducts] = useState<Product[]>([])
   const [sales, setSales] = useState<Sale[]>([])
   const [message, setMessage] = useState('')
+  const [supportUnlocked, setSupportUnlocked] = useState(false)
+  const [supportPassword, setSupportPassword] = useState('')
   const [fiscalData, setFiscalData] = useState<FiscalProductData>(initialFiscalData)
   const [printer, setPrinter] = useState<PrinterSettings>({
     connectionType: 'usb',
@@ -260,6 +265,26 @@ export default function SettingsManager() {
     setMessage(result.message || 'Backup finalizado.')
   }
 
+  const unlockSupport = async () => {
+    if (!supportPassword.trim()) {
+      setMessage('Informe a senha de suporte.')
+      return
+    }
+
+    const { data, error } = await supabase.rpc('verify_pdv_support_access', {
+      p_password: supportPassword,
+    })
+
+    if (error || data !== true) {
+      setMessage(error?.message || 'Senha de suporte incorreta.')
+      return
+    }
+
+    setSupportUnlocked(true)
+    setSupportPassword('')
+    setMessage('Suporte liberado com sucesso.')
+  }
+
   const schedule = getBackupSchedule()
   const lastSnapshot = getLastBackupSnapshot()
 
@@ -315,6 +340,12 @@ export default function SettingsManager() {
           onClick={() => setActiveTab('backup')}
         >
           Backup automatico
+        </button>
+        <button
+          className={activeTab === 'suporte' ? 'active' : ''}
+          onClick={() => setActiveTab('suporte')}
+        >
+          Suporte
         </button>
       </div>
       {activeTab === 'fiscal' && (
@@ -875,6 +906,40 @@ export default function SettingsManager() {
               </p>
             )}
           </div>
+        </section>
+      )}
+      {activeTab === 'suporte' && (
+        <section className="settings-panel settings-support-panel">
+          <h2>Suporte</h2>
+          {!supportUnlocked ? (
+            <div className="settings-form">
+              <label>
+                Senha de acesso ao suporte
+                <input
+                  type="password"
+                  value={supportPassword}
+                  onChange={(event) => setSupportPassword(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      unlockSupport()
+                    }
+                  }}
+                />
+              </label>
+              <button className="settings-save" onClick={unlockSupport}>
+                Acessar suporte
+              </button>
+              <p className="settings-note">
+                Esta area concentra diagnostico, ultimos erros, fila offline, fila fiscal e
+                manutencao tecnica.
+              </p>
+            </div>
+          ) : (
+            <div className="support-tools-stack">
+              <DiagnosticsManager />
+              <SupportAiManager />
+            </div>
+          )}
         </section>
       )}
     </div>

@@ -41,13 +41,18 @@ alter table public.app_customers
 
 alter table public.app_customers
   drop constraint if exists app_customers_email_length,
-  add constraint app_customers_email_length check (char_length(email) <= 30) not valid;
+  add constraint app_customers_email_length check (char_length(email) <= 35) not valid;
 
 alter table public.app_customers
   drop constraint if exists app_customers_credit_limit_positive,
   add constraint app_customers_credit_limit_positive check (credit_limit >= 0) not valid;
 
-create unique index if not exists app_customers_phone_key
+alter table public.app_customers
+  drop constraint if exists app_customers_phone_key;
+
+drop index if exists public.app_customers_phone_key;
+
+create index if not exists app_customers_phone_idx
 on public.app_customers (phone);
 
 create unique index if not exists app_customers_login_key
@@ -80,6 +85,7 @@ declare
   v_phone text := trim(p_phone);
   v_position text := trim(p_position);
   v_email text := lower(trim(p_email));
+  v_phone_accounts int := 0;
 begin
   if v_name = '' or v_login = '' or v_password = '' or v_phone = '' or v_position = '' or v_email = '' then
     raise exception 'Preencha todos os campos do cadastro.';
@@ -105,8 +111,26 @@ begin
     raise exception 'Telefone deve ter ate 15 caracteres.';
   end if;
 
-  if char_length(v_email) > 30 then
-    raise exception 'Email deve ter ate 30 caracteres.';
+  if char_length(v_email) > 35 then
+    raise exception 'Email deve ter ate 35 caracteres.';
+  end if;
+
+  if exists (
+    select 1
+    from public.app_customers as c
+    where c.phone = v_phone
+      and lower(c.email) = v_email
+  ) then
+    raise exception 'Este telefone ja possui cadastro com este email.';
+  end if;
+
+  select count(*)
+  into v_phone_accounts
+  from public.app_customers as c
+  where c.phone = v_phone;
+
+  if v_phone_accounts >= 3 then
+    raise exception 'Este telefone ja atingiu o limite de 3 contas.';
   end if;
 
   return query
@@ -205,8 +229,8 @@ begin
     raise exception 'Login deve ter ate 20 caracteres.';
   end if;
 
-  if char_length(v_email) > 30 then
-    raise exception 'Email deve ter ate 30 caracteres.';
+  if char_length(v_email) > 35 then
+    raise exception 'Email deve ter ate 35 caracteres.';
   end if;
 
   select c.id

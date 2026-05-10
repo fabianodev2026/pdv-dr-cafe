@@ -3,10 +3,8 @@ import { useEffect } from 'react'
 import {
   ADMIN_ROLES,
   CASHIER_ROLES,
-  DIAGNOSTIC_ROLES,
   MANAGER_ROLES,
   OPERATION_ROLES,
-  SUPPORT_ROLES,
   hasRole,
 } from '../lib/rolePermissions'
 import { startBackupScheduler } from '../lib/backupService'
@@ -27,8 +25,6 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
   const canUseCashier = hasRole(currentUser, CASHIER_ROLES)
   const canManage = hasRole(currentUser, MANAGER_ROLES)
   const canAdmin = hasRole(currentUser, ADMIN_ROLES)
-  const canDiagnose = hasRole(currentUser, DIAGNOSTIC_ROLES)
-  const canUseSupportAi = hasRole(currentUser, SUPPORT_ROLES)
 
   useEffect(() => {
     const intervalId = startBackupScheduler()
@@ -52,8 +48,6 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
           {canUseCashier && <NavLink to="/pendencias">Pagar depois</NavLink>}
           {canManage && <NavLink to="/almoco-do-dia">Almoco do dia</NavLink>}
           {canManage && <NavLink to="/clientes-app">Clientes app</NavLink>}
-          {canDiagnose && <NavLink to="/diagnostico">Diagnostico</NavLink>}
-          {canUseSupportAi && <NavLink to="/suporte-ia">Suporte IA</NavLink>}
           {canManage && <NavLink to="/produtos">Produtos</NavLink>}
           {canAdmin && <NavLink to="/configuracoes">Usuarios</NavLink>}
           {canAdmin && (

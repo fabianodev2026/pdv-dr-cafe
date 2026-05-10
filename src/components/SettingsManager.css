@@ -240,6 +240,18 @@
   margin: 6px 0;
 }
 
+.settings-support-panel .diagnostics-page,
+.settings-support-panel .support-ai-page {
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+}
+
+.support-tools-stack {
+  display: grid;
+  gap: 22px;
+}
+
 .history-section {
   margin-top: 22px;
   overflow-x: auto;

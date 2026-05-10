@@ -3,7 +3,7 @@ export const customerFieldLimits = {
   login: 20,
   password: 20,
   position: 20,
-  email: 30,
+  email: 35,
   phone: 15,
 }
 

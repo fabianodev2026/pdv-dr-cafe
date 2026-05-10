@@ -41,7 +41,7 @@ alter table public.app_customers
 
 alter table public.app_customers
   add constraint app_customers_email_length
-  check (char_length(email) <= 30) not valid;
+  check (char_length(email) <= 35) not valid;
 
 alter table public.app_customers
   add constraint app_customers_status_check
