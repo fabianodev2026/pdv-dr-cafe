@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type CSSProperties } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { createFiscalPayload, formatCpf, isCompleteCpf, queueFiscalPayload } from '../lib/fiscalService'
 import { logAppError } from '../lib/appLogger'
@@ -68,6 +68,19 @@ interface CurrentUser {
 interface TableManagerProps {
   currentUser?: CurrentUser
   initialViewMode?: ViewMode
+}
+
+interface ReopenCommandState {
+  reopenCommand?: {
+    number: number
+    customer_name?: string
+    customer_phone?: string
+    items?: Array<{
+      name: string
+      quantity: number
+      unit_price: number
+    }>
+  }
 }
 
 const LAST_RECEIPT_KEY = 'dr-cafe-last-receipt'
@@ -144,6 +157,7 @@ export default function TableManager({
   initialViewMode = 'salon',
 }: TableManagerProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode)
   const [tables, setTables] = useState<TableItem[]>(initialTables)
   const [rooms, setRooms] = useState<TableItem[]>(initialRooms)
@@ -181,6 +195,56 @@ export default function TableManager({
   useEffect(() => {
     fetchProducts()
   }, [])
+
+  useEffect(() => {
+    const state = location.state as ReopenCommandState | null
+    const commandToReopen = state?.reopenCommand
+    if (!commandToReopen) return
+
+    const reopenedCommand: TableItem = {
+      ...createServiceItem(commandToReopen.number, 'command'),
+      status: 'Ocupada',
+      customer_name: commandToReopen.customer_name || '',
+      customer_phone: commandToReopen.customer_phone || '',
+      items: (commandToReopen.items ?? []).map((item, index) => {
+        const quantity = Number(item.quantity || 1)
+        const price = Number(item.unit_price || 0)
+        return {
+          id: Date.now() + index,
+          name: item.name,
+          price,
+          quantity,
+          total: toMoney(price * quantity),
+          sent_to_preparation: true,
+        }
+      }),
+      total: toMoney(
+        (commandToReopen.items ?? []).reduce(
+          (sum, item) => sum + Number(item.unit_price || 0) * Number(item.quantity || 1),
+          0,
+        ),
+      ),
+    }
+
+    setViewMode('commands')
+    setCommands((current) => {
+      const exists = current.some((command) => command.number === reopenedCommand.number)
+      if (exists) {
+        return current.map((command) =>
+          command.number === reopenedCommand.number ? reopenedCommand : command,
+        )
+      }
+      return [...current, reopenedCommand]
+    })
+    setActiveItem(reopenedCommand)
+    setPaymentMethod('pix')
+    setPayLaterDueDate('')
+    setFiscalCpf('')
+    setOrderMessage(
+      'Comanda reaberta. Os itens anteriores ja estao marcados como enviados; adicione novos produtos para enviar o acrescimo.',
+    )
+    navigate('/comandas', { replace: true, state: null })
+  }, [location.state, navigate])
 
   const persistServiceItem = (item: TableItem) => {
     if (item.type === 'table') {

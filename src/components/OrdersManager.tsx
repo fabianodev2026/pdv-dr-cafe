@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import './OrdersManager.css'
 
@@ -37,6 +38,7 @@ const statusMessages: Record<OrderStatus, string> = {
 const closedStatuses: OrderStatus[] = ['entregue', 'cancelado']
 
 export default function OrdersManager() {
+  const navigate = useNavigate()
   const [orders, setOrders] = useState<OrderTicket[]>([])
   const [message, setMessage] = useState('')
   const [printOrder, setPrintOrder] = useState<OrderTicket | null>(null)
@@ -169,6 +171,19 @@ export default function OrdersManager() {
     setPrintOrder(order)
   }
 
+  const addItemsToCommand = (order: OrderTicket) => {
+    navigate('/comandas', {
+      state: {
+        reopenCommand: {
+          number: order.service_number,
+          customer_name: order.customer_name,
+          customer_phone: order.customer_phone,
+          items: order.items,
+        },
+      },
+    })
+  }
+
   const closeReprint = () => {
     document.body.classList.remove('printing-order-receipt')
     setPrintOrder(null)
@@ -255,6 +270,14 @@ export default function OrdersManager() {
               >
                 Reimprimir
               </button>
+              {order.source_type === 'comanda' && (
+                <button
+                  onClick={() => addItemsToCommand(order)}
+                  className="btn-add-command-items"
+                >
+                  Adicionar itens
+                </button>
+              )}
               <button onClick={() => updateStatus(order, 'recebido')}>Recebido</button>
               <button onClick={() => updateStatus(order, 'preparo')}>Preparo</button>
               <button onClick={() => updateStatus(order, 'pronto')}>Pronto</button>

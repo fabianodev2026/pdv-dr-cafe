@@ -143,6 +143,11 @@
   background: #6d4c41;
 }
 
+.status-actions .btn-add-command-items {
+  background: #2f7d42;
+  color: #fffaf5;
+}
+
 .status-actions .btn-cancel-order {
   background: #a5392f;
   color: #fff7ec;
