@@ -70,8 +70,9 @@ interface TableManagerProps {
   initialViewMode?: ViewMode
 }
 
-interface ReopenCommandState {
-  reopenCommand?: {
+interface ReopenServiceState {
+  reopenService?: {
+    type: ServiceType
     number: number
     customer_name?: string
     customer_phone?: string
@@ -197,16 +198,16 @@ export default function TableManager({
   }, [])
 
   useEffect(() => {
-    const state = location.state as ReopenCommandState | null
-    const commandToReopen = state?.reopenCommand
-    if (!commandToReopen) return
+    const state = location.state as ReopenServiceState | null
+    const serviceToReopen = state?.reopenService
+    if (!serviceToReopen) return
 
-    const reopenedCommand: TableItem = {
-      ...createServiceItem(commandToReopen.number, 'command'),
+    const reopenedItem: TableItem = {
+      ...createServiceItem(serviceToReopen.number, serviceToReopen.type),
       status: 'Ocupada',
-      customer_name: commandToReopen.customer_name || '',
-      customer_phone: commandToReopen.customer_phone || '',
-      items: (commandToReopen.items ?? []).map((item, index) => {
+      customer_name: serviceToReopen.customer_name || '',
+      customer_phone: serviceToReopen.customer_phone || '',
+      items: (serviceToReopen.items ?? []).map((item, index) => {
         const quantity = Number(item.quantity || 1)
         const price = Number(item.unit_price || 0)
         return {
@@ -219,31 +220,44 @@ export default function TableManager({
         }
       }),
       total: toMoney(
-        (commandToReopen.items ?? []).reduce(
+        (serviceToReopen.items ?? []).reduce(
           (sum, item) => sum + Number(item.unit_price || 0) * Number(item.quantity || 1),
           0,
         ),
       ),
     }
 
-    setViewMode('commands')
-    setCommands((current) => {
-      const exists = current.some((command) => command.number === reopenedCommand.number)
+    const nextViewMode =
+      serviceToReopen.type === 'command'
+        ? 'commands'
+        : serviceToReopen.type === 'room'
+          ? 'hospital'
+          : 'salon'
+
+    setViewMode(nextViewMode)
+    const updateList = (current: TableItem[]) => {
+      const exists = current.some((item) => item.id === reopenedItem.id)
       if (exists) {
-        return current.map((command) =>
-          command.number === reopenedCommand.number ? reopenedCommand : command,
-        )
+        return current.map((item) => (item.id === reopenedItem.id ? reopenedItem : item))
       }
-      return [...current, reopenedCommand]
-    })
-    setActiveItem(reopenedCommand)
+      return [...current, reopenedItem]
+    }
+
+    if (serviceToReopen.type === 'command') setCommands(updateList)
+    if (serviceToReopen.type === 'table') setTables(updateList)
+    if (serviceToReopen.type === 'room') setRooms(updateList)
+
+    setActiveItem(reopenedItem)
     setPaymentMethod('pix')
     setPayLaterDueDate('')
     setFiscalCpf('')
     setOrderMessage(
-      'Comanda reaberta. Os itens anteriores ja estao marcados como enviados; adicione novos produtos para enviar o acrescimo.',
+      `${getServiceLabel(reopenedItem)} reaberto. Os itens anteriores ja estao marcados como enviados; adicione novos produtos para enviar o acrescimo.`,
     )
-    navigate('/comandas', { replace: true, state: null })
+    navigate(serviceToReopen.type === 'command' ? '/comandas' : '/mesas', {
+      replace: true,
+      state: null,
+    })
   }, [location.state, navigate])
 
   const persistServiceItem = (item: TableItem) => {

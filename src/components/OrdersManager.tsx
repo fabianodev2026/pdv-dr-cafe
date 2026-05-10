@@ -171,10 +171,18 @@ export default function OrdersManager() {
     setPrintOrder(order)
   }
 
-  const addItemsToCommand = (order: OrderTicket) => {
-    navigate('/comandas', {
+  const addItemsToService = (order: OrderTicket) => {
+    const serviceType =
+      order.source_type === 'comanda'
+        ? 'command'
+        : order.source_type === 'mesa'
+          ? 'table'
+          : 'room'
+
+    navigate(serviceType === 'command' ? '/comandas' : '/mesas', {
       state: {
-        reopenCommand: {
+        reopenService: {
+          type: serviceType,
           number: order.service_number,
           customer_name: order.customer_name,
           customer_phone: order.customer_phone,
@@ -270,9 +278,9 @@ export default function OrdersManager() {
               >
                 Reimprimir
               </button>
-              {order.source_type === 'comanda' && (
+              {order.source_type !== 'app' && (
                 <button
-                  onClick={() => addItemsToCommand(order)}
+                  onClick={() => addItemsToService(order)}
                   className="btn-add-command-items"
                 >
                   Adicionar itens
