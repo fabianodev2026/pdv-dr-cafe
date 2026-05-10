@@ -434,6 +434,25 @@
   font-weight: 600;
 }
 
+.item-prep-status {
+  width: fit-content;
+  margin-top: 6px;
+  border-radius: 8px;
+  padding: 3px 7px;
+  font-size: 0.75em;
+  font-weight: 900;
+}
+
+.item-prep-status.pending {
+  background: #fff2df;
+  color: #7b4a27;
+}
+
+.item-prep-status.sent {
+  background: #e7f3e7;
+  color: #2e7d32;
+}
+
 .btn-remove-item {
   background: transparent;
   border: none;
@@ -486,6 +505,16 @@
   border-radius: 8px;
   background: #fff8ef;
   color: #6d4c41;
+  font-weight: 700;
+}
+
+.preparation-hint {
+  margin: 10px 0 0;
+  border-radius: 8px;
+  background: #fff8ef;
+  color: #6d4c41;
+  padding: 10px;
+  font-size: 0.9em;
   font-weight: 700;
 }
 

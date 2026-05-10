@@ -27,6 +27,7 @@ interface OrderItem {
   price: number
   quantity: number
   total: number
+  sent_to_preparation?: boolean
 }
 
 type ServiceType = 'table' | 'room' | 'command'
@@ -237,6 +238,12 @@ export default function TableManager({
 
   const sendToPreparation = async () => {
     if (!activeItem || activeItem.items.length === 0) return
+    const pendingItems = activeItem.items.filter((item) => !item.sent_to_preparation)
+    if (pendingItems.length === 0) {
+      setOrderMessage('Todos os itens ja foram enviados. Adicione mais produtos para enviar um novo acrescimo.')
+      return
+    }
+    const pendingTotal = toMoney(pendingItems.reduce((sum, item) => sum + item.total, 0))
 
     const { error } = await supabase.from('service_orders').insert([
       {
@@ -244,12 +251,12 @@ export default function TableManager({
         service_number: activeItem.number,
         customer_name: activeItem.customer_name,
         customer_phone: activeItem.customer_phone,
-        items: activeItem.items.map((item) => ({
+        items: pendingItems.map((item) => ({
           name: item.name,
           quantity: item.quantity,
           unit_price: item.price,
         })),
-        total_amount: activeItem.total,
+        total_amount: pendingTotal,
         status: 'recebido',
         customer_message: 'Pedido recebido pelo PDV.',
       },
@@ -263,7 +270,16 @@ export default function TableManager({
       return
     }
 
-    setOrderMessage('Pedido enviado para a aba Pedidos feitos.')
+    const updatedItem = {
+      ...activeItem,
+      items: activeItem.items.map((item) => ({
+        ...item,
+        sent_to_preparation: true,
+      })),
+    }
+    setActiveItem(updatedItem)
+    persistServiceItem(updatedItem)
+    setOrderMessage('Itens enviados para a aba Pedidos feitos. Se o cliente pedir mais, adicione novos produtos e envie o acrescimo.')
   }
 
   const removeItem = (itemId: number) => {
@@ -457,6 +473,8 @@ export default function TableManager({
   const canPayLater = Boolean(
     activeItem?.customer_name.trim() && activeItem?.customer_phone.trim(),
   )
+  const pendingPreparationCount =
+    activeItem?.items.filter((item) => !item.sent_to_preparation).length ?? 0
 
   const roomFloors = useMemo(() => {
     return Array.from(new Set(rooms.map((room) => Math.floor(room.number / 100))))
@@ -738,13 +756,22 @@ export default function TableManager({
                           <span className="item-price">
                             R$ {item.price.toFixed(2)}
                           </span>
+                          <span
+                            className={`item-prep-status ${
+                              item.sent_to_preparation ? 'sent' : 'pending'
+                            }`}
+                          >
+                            {item.sent_to_preparation ? 'Enviado' : 'Novo item'}
+                          </span>
                         </div>
-                        <button
-                          onClick={() => removeItem(item.id)}
-                          className="btn-remove-item"
-                        >
-                          ❌
-                        </button>
+                        {!item.sent_to_preparation && (
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            className="btn-remove-item"
+                          >
+                            Remover
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -753,8 +780,16 @@ export default function TableManager({
                 {activeItem.items.length > 0 && (
                   <>
                     <button onClick={sendToPreparation} className="btn-send-order">
-                      Enviar para preparo
+                      {pendingPreparationCount > 0
+                        ? `Enviar ${pendingPreparationCount} novo(s) item(ns)`
+                        : 'Adicionar mais itens'}
                     </button>
+                    {pendingPreparationCount === 0 && (
+                      <p className="preparation-hint">
+                        Todos os itens desta comanda ja foram enviados. Toque em um produto
+                        para acrescentar e enviar de novo.
+                      </p>
+                    )}
                     {currentUser?.role !== 'garcom' ? (
                       <>
                         <div className="payment-methods">
