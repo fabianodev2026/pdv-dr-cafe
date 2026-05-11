@@ -27,6 +27,16 @@ interface OrderTicket {
   customer_message?: string | null
 }
 
+interface AppCustomer {
+  id: number
+  name: string
+  phone: string
+  position: string
+  status: 'pendente' | 'ativo' | 'bloqueado'
+  credit_limit: number
+  pending_total?: number
+}
+
 const statusMessages: Record<OrderStatus, string> = {
   novo: 'Pedido enviado para o PDV.',
   recebido: 'Seu pedido foi recebido.',
@@ -37,6 +47,28 @@ const statusMessages: Record<OrderStatus, string> = {
 }
 
 const closedStatuses: OrderStatus[] = ['entregue', 'cancelado']
+
+const currencyFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+})
+
+const toMoney = (value: number) => Number(value.toFixed(2))
+
+const getFifthBusinessDay = () => {
+  const now = new Date()
+  const targetMonth = now.getMonth() + 1
+  const date = new Date(now.getFullYear(), targetMonth, 1)
+  let businessDays = 0
+
+  while (businessDays < 5) {
+    const weekDay = date.getDay()
+    if (weekDay !== 0 && weekDay !== 6) businessDays += 1
+    if (businessDays < 5) date.setDate(date.getDate() + 1)
+  }
+
+  return date.toISOString().slice(0, 10)
+}
 
 const mergeOpenOrders = (orders: OrderTicket[]) => {
   const groupedOrders = new Map<string, OrderTicket>()
@@ -71,6 +103,9 @@ const mergeOpenOrders = (orders: OrderTicket[]) => {
 export default function OrdersManager() {
   const navigate = useNavigate()
   const [orders, setOrders] = useState<OrderTicket[]>([])
+  const [appCustomers, setAppCustomers] = useState<AppCustomer[]>([])
+  const [selectedAppCustomerByOrder, setSelectedAppCustomerByOrder] = useState<Record<string, string>>({})
+  const [sendingToAppOrderId, setSendingToAppOrderId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [printOrder, setPrintOrder] = useState<OrderTicket | null>(null)
 
@@ -166,8 +201,42 @@ export default function OrdersManager() {
     )
   }
 
+  const fetchAppCustomers = async () => {
+    const customersResult = await supabase
+      .from('app_customers')
+      .select('id, name, phone, position, status, credit_limit')
+      .eq('status', 'ativo')
+      .order('name')
+
+    if (customersResult.error) return
+
+    const pendingResult = await supabase
+      .from('pending_payments')
+      .select('phone, total_amount')
+      .eq('status', 'pendente')
+
+    const pendingByPhone = (pendingResult.data ?? []).reduce<Record<string, number>>(
+      (totals, payment) => {
+        const phone = String(payment.phone || '')
+        return {
+          ...totals,
+          [phone]: toMoney((totals[phone] ?? 0) + Number(payment.total_amount || 0)),
+        }
+      },
+      {},
+    )
+
+    setAppCustomers(
+      (customersResult.data ?? []).map((customer) => ({
+        ...customer,
+        pending_total: pendingByPhone[customer.phone] ?? 0,
+      })),
+    )
+  }
+
   useEffect(() => {
     fetchOrders()
+    fetchAppCustomers()
     const interval = window.setInterval(fetchOrders, 10000)
 
     return () => window.clearInterval(interval)
@@ -230,6 +299,79 @@ export default function OrdersManager() {
         },
       },
     })
+  }
+
+  const sendOrderToAppCustomer = async (order: OrderTicket) => {
+    const orderKey = `${order.tableName}-${order.id}`
+    const selectedCustomerId = selectedAppCustomerByOrder[orderKey]
+    const customer = appCustomers.find((appCustomer) => String(appCustomer.id) === selectedCustomerId)
+
+    if (!customer) {
+      setMessage('Escolha o cliente app para lancar esta compra.')
+      return
+    }
+
+    const creditLimit = Number(customer.credit_limit || 0)
+    const pendingTotal = Number(customer.pending_total || 0)
+    const availableCredit = Math.max(creditLimit - pendingTotal, 0)
+    const orderTotal = Number(order.total_amount || 0)
+
+    if (creditLimit > 0 && orderTotal > availableCredit) {
+      setMessage('Compra acima do saldo disponivel deste cliente app.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Lancar ${currencyFormatter.format(orderTotal)} no app de ${customer.name}?`,
+    )
+    if (!confirmed) return
+
+    setSendingToAppOrderId(orderKey)
+
+    const itemsDetail = order.items
+      .map(
+        (item) =>
+          `${item.quantity}x ${item.name} - R$ ${(Number(item.unit_price) * Number(item.quantity)).toFixed(2)}`,
+      )
+      .join('; ')
+
+    const { error: pendingError } = await supabase.from('pending_payments').insert([
+      {
+        customer_name: customer.name,
+        phone: customer.phone,
+        position: customer.position,
+        description: `Compra lancada pelo caixa em ${getOrderTitle(order)}`,
+        items_detail: itemsDetail,
+        total_amount: orderTotal,
+        purchase_date: new Date().toISOString().slice(0, 10),
+        due_date: getFifthBusinessDay(),
+        status: 'pendente',
+      },
+    ])
+
+    if (pendingError) {
+      setSendingToAppOrderId(null)
+      setMessage(`Nao foi possivel enviar para o app: ${pendingError.message}`)
+      return
+    }
+
+    const targetIds = order.ids.length > 0 ? order.ids : [order.id]
+    await supabase
+      .from(order.tableName)
+      .update({
+        status: 'entregue',
+        customer_message: `Compra lancada no app de ${customer.name}.`,
+      })
+      .in('id', targetIds)
+
+    setSelectedAppCustomerByOrder((current) => ({
+      ...current,
+      [orderKey]: '',
+    }))
+    setSendingToAppOrderId(null)
+    setMessage(`Compra lancada no app de ${customer.name}.`)
+    fetchAppCustomers()
+    fetchOrders()
   }
 
   const closeReprint = () => {
@@ -325,6 +467,44 @@ export default function OrdersManager() {
                 >
                   Adicionar itens
                 </button>
+              )}
+              {order.source_type !== 'app' && (
+                <div className="send-to-app-control">
+                  <select
+                    value={selectedAppCustomerByOrder[`${order.tableName}-${order.id}`] ?? ''}
+                    onChange={(event) =>
+                      setSelectedAppCustomerByOrder((current) => ({
+                        ...current,
+                        [`${order.tableName}-${order.id}`]: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Cliente app</option>
+                    {appCustomers.map((customer) => {
+                      const available = Math.max(
+                        Number(customer.credit_limit || 0) -
+                          Number(customer.pending_total || 0),
+                        0,
+                      )
+
+                      return (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.name} - {currencyFormatter.format(available)}
+                        </option>
+                      )
+                    })}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-send-to-app"
+                    onClick={() => sendOrderToAppCustomer(order)}
+                    disabled={sendingToAppOrderId === `${order.tableName}-${order.id}`}
+                  >
+                    {sendingToAppOrderId === `${order.tableName}-${order.id}`
+                      ? 'Enviando...'
+                      : 'Enviar para app'}
+                  </button>
+                </div>
               )}
               <button onClick={() => updateStatus(order, 'recebido')}>Recebido</button>
               <button onClick={() => updateStatus(order, 'preparo')}>Preparo</button>

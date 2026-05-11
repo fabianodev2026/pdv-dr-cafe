@@ -148,6 +148,33 @@
   color: #fffaf5;
 }
 
+.send-to-app-control {
+  display: grid;
+  grid-column: span 2;
+  gap: 6px;
+}
+
+.send-to-app-control select {
+  min-height: 40px;
+  border: 1px solid #b98554;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #2b160d;
+  font: inherit;
+  font-weight: 800;
+  padding: 8px;
+}
+
+.status-actions .btn-send-to-app {
+  background: #006c67;
+  color: #fffaf5;
+}
+
+.status-actions .btn-send-to-app:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .status-actions .btn-cancel-order {
   background: #a5392f;
   color: #fff7ec;
