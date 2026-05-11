@@ -416,6 +416,22 @@ export default function CustomerApp() {
         return
       }
 
+      if (
+        error.message.includes('Preencha') ||
+        error.message.includes('Login') ||
+        error.message.includes('login') ||
+        error.message.includes('Telefone') ||
+        error.message.includes('telefone') ||
+        error.message.includes('Email') ||
+        error.message.includes('email') ||
+        error.message.includes('Nome') ||
+        error.message.includes('Senha') ||
+        error.message.includes('Cargo')
+      ) {
+        setMessage(error.message)
+        return
+      }
+
       if (error.code === '42P01' || error.message.includes('schema cache')) {
         setMessage('Cadastro do app ainda esta sendo configurado. Avise o cafe.')
         return
