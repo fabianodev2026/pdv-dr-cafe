@@ -49,6 +49,7 @@ const denominations: Denomination[] = [
 ]
 
 const initialCounts = Object.fromEntries(denominations.map((item) => [item.key, '']))
+const CASH_CLOSING_DRAFT_KEY = 'dr-cafe-cash-closing-draft'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -68,6 +69,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [counts, setCounts] = useState<Record<string, string>>(initialCounts)
   const [closings, setClosings] = useState<CashClosing[]>([])
   const [message, setMessage] = useState('')
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false)
 
   const notes = denominations.filter((item) => item.group === 'notas')
   const coins = denominations.filter((item) => item.group === 'moedas')
@@ -105,8 +107,69 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   }
 
   useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(CASH_CLOSING_DRAFT_KEY)
+      if (!savedDraft) return
+
+      const draft = JSON.parse(savedDraft)
+      setClosingDate(draft.closingDate || today())
+      setOpeningCashierName(draft.openingCashierName || currentUser?.username || '')
+      setOpeningCash(draft.openingCash || '')
+      setCardTotal(draft.cardTotal || '')
+      setPixTotal(draft.pixTotal || '')
+      setCounts({ ...initialCounts, ...(draft.counts || {}) })
+    } catch {
+      localStorage.removeItem(CASH_CLOSING_DRAFT_KEY)
+    } finally {
+      setIsDraftLoaded(true)
+    }
+  }, [currentUser?.username])
+
+  useEffect(() => {
     fetchClosings()
   }, [])
+
+  useEffect(() => {
+    if (!isDraftLoaded) return
+
+    localStorage.setItem(
+      CASH_CLOSING_DRAFT_KEY,
+      JSON.stringify({
+        closingDate,
+        openingCashierName,
+        openingCash,
+        cardTotal,
+        pixTotal,
+        counts,
+      }),
+    )
+  }, [
+    cardTotal,
+    closingDate,
+    counts,
+    isDraftLoaded,
+    openingCash,
+    openingCashierName,
+    pixTotal,
+  ])
+
+  useEffect(() => {
+    const latestForDate = closings.find((closing) => closing.closing_date === closingDate)
+    if (!latestForDate) return
+
+    const nextCounts = denominations.reduce<Record<string, string>>((detail, item) => {
+      const source =
+        item.group === 'notas' ? latestForDate.notes_detail : latestForDate.coins_detail
+      detail[item.key] = source?.[item.key] ? String(source[item.key]) : ''
+      return detail
+    }, {})
+
+    setOpeningCashierName(latestForDate.opening_cashier_name || currentUser?.username || '')
+    setOpeningCash(String(Number(latestForDate.opening_cash || 0)))
+    setCardTotal(String(Number(latestForDate.card_total || 0)))
+    setPixTotal(String(Number(latestForDate.pix_total || 0)))
+    setCounts({ ...initialCounts, ...nextCounts })
+  }, [closingDate, closings, currentUser?.username])
 
   const updateCount = (key: string, value: string) => {
     setCounts((current) => ({
@@ -148,11 +211,6 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     }
 
     setMessage('Fechamento de caixa salvo com sucesso.')
-    setCounts(initialCounts)
-    setOpeningCashierName(currentUser?.username || '')
-    setOpeningCash('')
-    setCardTotal('')
-    setPixTotal('')
     fetchClosings()
   }
 
