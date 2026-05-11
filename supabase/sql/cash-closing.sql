@@ -36,7 +36,18 @@ for insert
 to anon, authenticated
 with check (true);
 
+drop policy if exists "cash closings app update" on public.cash_closings;
+create policy "cash closings app update"
+on public.cash_closings
+for update
+to anon, authenticated
+using (true)
+with check (true);
+
 create index if not exists cash_closings_closing_date_idx
 on public.cash_closings (closing_date desc);
+
+create unique index if not exists cash_closings_closing_date_key
+on public.cash_closings (closing_date);
 
 notify pgrst, 'reload schema';

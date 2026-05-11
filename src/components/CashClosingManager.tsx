@@ -100,6 +100,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
 
     if (error) {
       console.error('Erro ao buscar fechamentos de caixa:', error)
+      setMessage('Execute o SQL de fechamento de caixa no Supabase antes de usar esta aba.')
       return
     }
 
@@ -186,7 +187,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         return detail
       }, {})
 
-  const saveClosing = async () => {
+  const saveClosing = async (successMessage = 'Fechamento de caixa salvo com sucesso.') => {
     const notesDetail = buildDetail('notas')
     const coinsDetail = buildDetail('moedas')
     const payload = {
@@ -203,15 +204,21 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       coins_detail: coinsDetail,
     }
 
-    const { error } = await supabase.from('cash_closings').insert([payload])
+    const { error } = await supabase
+      .from('cash_closings')
+      .upsert([payload], { onConflict: 'closing_date' })
 
     if (error) {
       setMessage(`Nao foi possivel salvar o fechamento: ${error.message}`)
       return
     }
 
-    setMessage('Fechamento de caixa salvo com sucesso.')
+    setMessage(successMessage)
     fetchClosings()
+  }
+
+  const saveOpening = () => {
+    saveClosing('Abertura do caixa salva com sucesso.')
   }
 
   const renderDenomination = (item: Denomination) => {
@@ -344,7 +351,8 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       </section>
 
       <section className="cash-closing-actions">
-        <button onClick={saveClosing}>Fechar o dia</button>
+        <button onClick={saveOpening}>Salvar abertura</button>
+        <button onClick={() => saveClosing()}>Fechar o dia</button>
         <button onClick={printClosing} className="cash-print-button">
           Imprimir / salvar PDF
         </button>
