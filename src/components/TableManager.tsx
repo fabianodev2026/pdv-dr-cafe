@@ -456,8 +456,78 @@ export default function TableManager({
     setOrderMessage('Itens enviados para a aba Pedidos feitos. Se o cliente pedir mais, adicione novos produtos e envie o acrescimo.')
   }
 
-  const removeItem = (itemId: number) => {
+  const syncPreparationOrder = async (item: TableItem) => {
+    if (!item.preparation_order_id || !item.preparation_order_table) return
+
+    const itemsPayload = item.items.map((orderItem) => ({
+      name: orderItem.name,
+      quantity: orderItem.quantity,
+      unit_price: orderItem.price,
+    }))
+    const hasItems = itemsPayload.length > 0
+
+    if (item.preparation_order_table === 'room_orders') {
+      const roomUpdate: {
+        patient_name: string
+        phone: string
+        items: typeof itemsPayload
+        total_amount: number
+        customer_message: string
+        status?: string
+      } = {
+        patient_name: item.customer_name,
+        phone: item.customer_phone,
+        items: itemsPayload,
+        total_amount: item.total,
+        customer_message: hasItems
+          ? 'Pedido atualizado pelo PDV.'
+          : 'Pedido cancelado pelo PDV.',
+      }
+
+      if (!hasItems) roomUpdate.status = 'cancelado'
+
+      await supabase
+        .from('room_orders')
+        .update(roomUpdate)
+        .eq('id', item.preparation_order_id)
+      return
+    }
+
+    const serviceUpdate: {
+      customer_name: string
+      customer_phone: string
+      items: typeof itemsPayload
+      total_amount: number
+      customer_message: string
+      status?: string
+    } = {
+      customer_name: item.customer_name,
+      customer_phone: item.customer_phone,
+      items: itemsPayload,
+      total_amount: item.total,
+      customer_message: hasItems
+        ? 'Pedido atualizado pelo PDV.'
+        : 'Pedido cancelado pelo PDV.',
+    }
+
+    if (!hasItems) serviceUpdate.status = 'cancelado'
+
+    await supabase
+      .from('service_orders')
+      .update(serviceUpdate)
+      .eq('id', item.preparation_order_id)
+  }
+
+  const removeItem = async (itemId: number) => {
     if (!activeItem) return
+    const removedItem = activeItem.items.find((item) => item.id === itemId)
+
+    if (
+      removedItem?.sent_to_preparation &&
+      !window.confirm('Excluir este item que ja foi enviado para pedidos?')
+    ) {
+      return
+    }
 
     const updatedItem = {
       ...activeItem,
@@ -467,6 +537,15 @@ export default function TableManager({
     updatedItem.total = toMoney(updatedItem.items.reduce((sum, i) => sum + i.total, 0))
     setActiveItem(updatedItem)
     persistServiceItem(updatedItem)
+
+    if (removedItem?.sent_to_preparation) {
+      await syncPreparationOrder(updatedItem)
+      setOrderMessage(
+        updatedItem.items.length > 0
+          ? 'Item excluido e pedido atualizado.'
+          : 'Item excluido e pedido cancelado.',
+      )
+    }
   }
 
   const payCommand = () => {
@@ -938,14 +1017,12 @@ export default function TableManager({
                             {item.sent_to_preparation ? 'Enviado' : 'Novo item'}
                           </span>
                         </div>
-                        {!item.sent_to_preparation && (
-                          <button
-                            onClick={() => removeItem(item.id)}
-                            className="btn-remove-item"
-                          >
-                            Remover
-                          </button>
-                        )}
+                        <button
+                          onClick={() => removeItem(item.id)}
+                          className="btn-remove-item"
+                        >
+                          Excluir
+                        </button>
                       </div>
                     ))}
                   </div>
