@@ -1,11 +1,11 @@
 # Retomar Projeto - PDV Dr. Cafe
 
-## Projeto correto
+## Projeto salvo
 
-Pasta:
+Pasta local:
 
 ```txt
-C:\Users\Oem\Documents\Codex\2026-04-28\https-chatgpt-com-share-69f15d35-a5e8\pdv-dr-cafe
+C:\Users\ADM\Documents\Codex\2026-05-10\puxar-o-git-do-dr-cafe\pdv-dr-cafe
 ```
 
 Repositorio GitHub:
@@ -14,80 +14,79 @@ Repositorio GitHub:
 https://github.com/fabianodev2026/pdv-dr-cafe.git
 ```
 
-Ultimo ponto salvo antes deste arquivo:
+Branch:
 
 ```txt
-dcb01ec Add diagnostics and bcrypt password security
+main
 ```
 
-## URLs locais
-
-App do cliente:
+Ultimo commit enviado:
 
 ```txt
-http://127.0.0.1:5177/app
+05cd478 Add item shortcut for table and room orders
 ```
 
-Sistema interno:
+## O que ficou implementado
+
+- Aba lateral `PDV` mantida com o nome original.
+- Nova aba lateral `Comandas`.
+- Comandas para pedidos fora de mesa/quarto, direto no caixa ou por telefone.
+- Campo de nome e telefone para comandas.
+- Separacao de produtos por `Todos`, `Bebidas`, `Comidas` e `Presentes`.
+- Categoria nova `presente` para lembrancinhas.
+- Cadastro de produtos com `Codigo de barras`.
+- Busca de produtos no PDV tambem pelo codigo de barras.
+- SQL modelo para cadastrar produtos em lote.
+- Botao `Adicionar itens` na tela `Ultimos pedidos feitos` para comanda, mesa e quarto.
+- Ao adicionar itens depois de enviar pedido, os itens antigos ficam como `Enviado` e so o acrescimo novo e enviado.
+- Arredondamento de valores do app cliente para salvar em centavos corretamente.
+
+## SQLs novos/importantes
+
+Executar no Supabase SQL Editor quando necessario:
 
 ```txt
-http://127.0.0.1:5177/
+supabase/sql/product-barcodes.sql
+supabase/sql/product-insert-template.sql
+supabase/sql/service-orders-comandas.sql
 ```
 
-Diagnostico:
+Para liberar codigo de barras:
 
-```txt
-http://127.0.0.1:5177/diagnostico
+```sql
+alter table public.products
+  add column if not exists barcode text;
+
+create index if not exists products_barcode_idx
+on public.products (barcode)
+where barcode is not null and barcode <> '';
+
+notify pgrst, 'reload schema';
 ```
 
-## O que foi implementado
+Para liberar pedidos do tipo comanda:
 
-- App do cliente com cadastro, login e senha.
-- Login do app usando bcrypt via `bcryptjs`.
-- Login do sistema interno preparado para bcrypt via Supabase `pgcrypto`.
-- Tela de diagnostico para logs locais do app.
-- Mascara de telefone no cadastro: `(11) 99999-9999`.
-- Nome, login e cargo em maiusculas no cadastro.
-- Limites centralizados em `src/lib/customerLimits.ts`.
+```sql
+alter table public.service_orders
+  drop constraint if exists service_orders_source_type_check;
 
-## Arquivos importantes
+alter table public.service_orders
+  add constraint service_orders_source_type_check
+  check (source_type in ('mesa', 'quarto', 'comanda'));
 
-```txt
-src/components/CustomerApp.tsx
-src/components/LoginScreen.tsx
-src/components/ConfigManager.tsx
-src/components/DiagnosticsManager.tsx
-src/lib/passwordSecurity.ts
-src/lib/appLogger.ts
-src/lib/customerLimits.ts
-supabase/sql/app-customer-features.sql
-supabase/sql/pdv-users-bcrypt-migration.sql
+notify pgrst, 'reload schema';
 ```
-
-## Pendencias para executar no Supabase
-
-Executar no SQL Editor:
-
-```txt
-supabase/sql/app-customer-features.sql
-supabase/sql/pdv-users-bcrypt-migration.sql
-```
-
-Depois testar:
-
-```txt
-usuario: admin
-senha: admin123
-```
-
-Em seguida, criar/trocar os usuarios reais pelo painel `Usuarios`.
 
 ## Validacoes feitas
 
 ```txt
-node node_modules\typescript\bin\tsc
-node scripts\test-blocks.mjs
-node node_modules\vite\bin\vite.js build
+npm.cmd run build
 ```
 
-Todas passaram no ultimo ciclo.
+Build passou. O Vite mostrou apenas aviso de bundle acima de 500 kB, sem quebrar a compilacao.
+
+## Observacoes para continuar
+
+- Se o Supabase reclamar que `barcode` nao existe, rodar `supabase/sql/product-barcodes.sql`.
+- Se a comanda nao enviar para `Ultimos pedidos feitos`, rodar `supabase/sql/service-orders-comandas.sql`.
+- O leitor de codigo de barras comum USB/Bluetooth deve funcionar como teclado, sem instalar nada.
