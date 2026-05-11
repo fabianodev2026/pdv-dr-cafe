@@ -35,9 +35,11 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
   const [customers, setCustomers] = useState<AppCustomer[]>([])
   const [creditInputs, setCreditInputs] = useState<Record<number, string>>({})
   const [message, setMessage] = useState('')
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const isAdmin = currentUser.role === 'admin'
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (showSuccessMessage = false) => {
+    setIsRefreshing(true)
     const { data, error } = await supabase
       .from('app_customers')
       .select('*')
@@ -45,10 +47,11 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
 
     if (error) {
       setMessage('Execute o SQL do app para criar app_customers.')
+      setIsRefreshing(false)
       return
     }
 
-    setMessage('')
+    setMessage(showSuccessMessage ? 'Clientes do app atualizados.' : '')
     const nextCustomers = data ?? []
     setCustomers(nextCustomers)
     setCreditInputs(
@@ -56,6 +59,7 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
         nextCustomers.map((customer) => [customer.id, String(Number(customer.credit_limit || 0))]),
       ),
     )
+    setIsRefreshing(false)
   }
 
   useEffect(() => {
@@ -101,8 +105,8 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
       return
     }
 
+    await fetchCustomers()
     setMessage('Saldo adicionado com sucesso.')
-    fetchCustomers()
   }
 
   const deleteCustomer = async (customer: AppCustomer) => {
@@ -130,8 +134,8 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
       return
     }
 
+    await fetchCustomers()
     setMessage(`Conta do app de ${customer.name} excluida.`)
-    fetchCustomers()
   }
 
   return (
@@ -147,6 +151,14 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
             </p>
           )}
         </div>
+        <button
+          type="button"
+          className="app-customers-refresh"
+          onClick={() => fetchCustomers(true)}
+          disabled={isRefreshing}
+        >
+          {isRefreshing ? 'Atualizando...' : 'Atualizar'}
+        </button>
       </header>
 
       {message && <div className="app-customers-alert">{message}</div>}

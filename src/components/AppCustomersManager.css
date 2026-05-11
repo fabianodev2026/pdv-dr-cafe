@@ -12,6 +12,10 @@
   margin-bottom: 20px;
 }
 
+.app-customers-heading > div {
+  flex: 1;
+}
+
 .app-customers-heading img {
   width: 86px;
   height: 86px;
@@ -32,6 +36,22 @@
 .app-customers-note {
   margin-top: 6px;
   font-size: 0.9rem;
+}
+
+.app-customers-refresh {
+  border: 0;
+  border-radius: 8px;
+  background: #2b160d;
+  color: #f8dfbf;
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 44px;
+  padding: 0 18px;
+}
+
+.app-customers-refresh:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .app-customers-alert,
@@ -138,6 +158,15 @@
 }
 
 @media (max-width: 620px) {
+  .app-customers-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .app-customers-refresh {
+    width: 100%;
+  }
+
   .app-customer-admin-actions {
     grid-template-columns: 1fr;
   }
