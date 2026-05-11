@@ -105,6 +105,7 @@ export default function OrdersManager() {
   const [orders, setOrders] = useState<OrderTicket[]>([])
   const [appCustomers, setAppCustomers] = useState<AppCustomer[]>([])
   const [selectedAppCustomerByOrder, setSelectedAppCustomerByOrder] = useState<Record<string, string>>({})
+  const [selectedAppItemIndexesByOrder, setSelectedAppItemIndexesByOrder] = useState<Record<string, number[]>>({})
   const [sendingToAppOrderId, setSendingToAppOrderId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [printOrder, setPrintOrder] = useState<OrderTicket | null>(null)
@@ -305,30 +306,50 @@ export default function OrdersManager() {
     const orderKey = `${order.tableName}-${order.id}`
     const selectedCustomerId = selectedAppCustomerByOrder[orderKey]
     const customer = appCustomers.find((appCustomer) => String(appCustomer.id) === selectedCustomerId)
+    const selectedIndexes =
+      selectedAppItemIndexesByOrder[orderKey] ?? order.items.map((_, index) => index)
+    const selectedItems = order.items.filter((_, index) => selectedIndexes.includes(index))
+    const remainingItems = order.items.filter((_, index) => !selectedIndexes.includes(index))
 
     if (!customer) {
       setMessage('Escolha o cliente app para lancar esta compra.')
       return
     }
 
+    if (selectedItems.length === 0) {
+      setMessage('Escolha pelo menos um item para enviar ao cliente app.')
+      return
+    }
+
     const creditLimit = Number(customer.credit_limit || 0)
     const pendingTotal = Number(customer.pending_total || 0)
     const availableCredit = Math.max(creditLimit - pendingTotal, 0)
-    const orderTotal = Number(order.total_amount || 0)
+    const selectedTotal = toMoney(
+      selectedItems.reduce(
+        (sum, item) => sum + Number(item.unit_price || 0) * Number(item.quantity || 0),
+        0,
+      ),
+    )
+    const remainingTotal = toMoney(
+      remainingItems.reduce(
+        (sum, item) => sum + Number(item.unit_price || 0) * Number(item.quantity || 0),
+        0,
+      ),
+    )
 
-    if (creditLimit > 0 && orderTotal > availableCredit) {
+    if (creditLimit > 0 && selectedTotal > availableCredit) {
       setMessage('Compra acima do saldo disponivel deste cliente app.')
       return
     }
 
     const confirmed = window.confirm(
-      `Lancar ${currencyFormatter.format(orderTotal)} no app de ${customer.name}?`,
+      `Lancar ${currencyFormatter.format(selectedTotal)} no app de ${customer.name}?`,
     )
     if (!confirmed) return
 
     setSendingToAppOrderId(orderKey)
 
-    const itemsDetail = order.items
+    const itemsDetail = selectedItems
       .map(
         (item) =>
           `${item.quantity}x ${item.name} - R$ ${(Number(item.unit_price) * Number(item.quantity)).toFixed(2)}`,
@@ -342,7 +363,7 @@ export default function OrdersManager() {
         position: customer.position,
         description: `Compra lancada pelo caixa em ${getOrderTitle(order)}`,
         items_detail: itemsDetail,
-        total_amount: orderTotal,
+        total_amount: selectedTotal,
         purchase_date: new Date().toISOString().slice(0, 10),
         due_date: getFifthBusinessDay(),
         status: 'pendente',
@@ -356,20 +377,50 @@ export default function OrdersManager() {
     }
 
     const targetIds = order.ids.length > 0 ? order.ids : [order.id]
-    await supabase
-      .from(order.tableName)
-      .update({
-        status: 'entregue',
-        customer_message: `Compra lancada no app de ${customer.name}.`,
-      })
-      .in('id', targetIds)
+    if (remainingItems.length > 0) {
+      await supabase
+        .from(order.tableName)
+        .update({
+          items: remainingItems,
+          total_amount: remainingTotal,
+          customer_message: `Parte da compra foi lancada no app de ${customer.name}.`,
+        })
+        .eq('id', order.id)
+
+      const duplicateIds = targetIds.filter((id) => id !== order.id)
+      if (duplicateIds.length > 0) {
+        await supabase
+          .from(order.tableName)
+          .update({
+            status: 'cancelado',
+            customer_message: 'Pedido unificado no lancamento parcial.',
+          })
+          .in('id', duplicateIds)
+      }
+    } else {
+      await supabase
+        .from(order.tableName)
+        .update({
+          status: 'entregue',
+          customer_message: `Compra lancada no app de ${customer.name}.`,
+        })
+        .in('id', targetIds)
+    }
 
     setSelectedAppCustomerByOrder((current) => ({
       ...current,
       [orderKey]: '',
     }))
+    setSelectedAppItemIndexesByOrder((current) => ({
+      ...current,
+      [orderKey]: remainingItems.map((_, index) => index),
+    }))
     setSendingToAppOrderId(null)
-    setMessage(`Compra lancada no app de ${customer.name}.`)
+    setMessage(
+      remainingItems.length > 0
+        ? `Itens selecionados lancados no app de ${customer.name}. O restante continua na comanda.`
+        : `Compra lancada no app de ${customer.name}.`,
+    )
     fetchAppCustomers()
     fetchOrders()
   }
@@ -470,6 +521,45 @@ export default function OrdersManager() {
               )}
               {order.source_type !== 'app' && (
                 <div className="send-to-app-control">
+                  <div className="send-to-app-items">
+                    <strong>Enviar quais itens?</strong>
+                    {order.items.map((item, index) => {
+                      const orderKey = `${order.tableName}-${order.id}`
+                      const selectedIndexes =
+                        selectedAppItemIndexesByOrder[orderKey] ??
+                        order.items.map((_, itemIndex) => itemIndex)
+
+                      return (
+                        <label key={`${orderKey}-app-item-${index}`}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIndexes.includes(index)}
+                            onChange={(event) =>
+                              setSelectedAppItemIndexesByOrder((current) => {
+                                const currentIndexes =
+                                  current[orderKey] ??
+                                  order.items.map((_, itemIndex) => itemIndex)
+                                const nextIndexes = event.target.checked
+                                  ? [...currentIndexes, index]
+                                  : currentIndexes.filter((itemIndex) => itemIndex !== index)
+
+                                return {
+                                  ...current,
+                                  [orderKey]: Array.from(new Set(nextIndexes)).sort(
+                                    (a, b) => a - b,
+                                  ),
+                                }
+                              })
+                            }
+                          />
+                          <span>
+                            {item.quantity}x {item.name} - R${' '}
+                            {(Number(item.unit_price) * Number(item.quantity)).toFixed(2)}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
                   <select
                     value={selectedAppCustomerByOrder[`${order.tableName}-${order.id}`] ?? ''}
                     onChange={(event) =>

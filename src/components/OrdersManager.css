@@ -154,6 +154,34 @@
   gap: 6px;
 }
 
+.send-to-app-items {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #ead4b9;
+  border-radius: 8px;
+  background: #fff4e7;
+  padding: 8px;
+}
+
+.send-to-app-items strong {
+  color: #5a2f17;
+}
+
+.send-to-app-items label {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  color: #2b160d;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.send-to-app-items input {
+  width: 18px;
+  height: 18px;
+}
+
 .send-to-app-control select {
   min-height: 40px;
   border: 1px solid #b98554;
