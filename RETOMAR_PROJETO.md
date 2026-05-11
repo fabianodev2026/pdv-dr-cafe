@@ -52,6 +52,7 @@ supabase/sql/product-insert-template.sql
 supabase/sql/service-orders-comandas.sql
 supabase/sql/cash-closing.sql
 supabase/sql/fix-pdv-users-password-hash.sql
+supabase/sql/reset-test-movements-before-opening.sql
 ```
 
 Para liberar codigo de barras:
@@ -100,4 +101,5 @@ Build passou. O Vite mostrou apenas aviso de bundle acima de 500 kB, sem quebrar
 - Se a comanda nao enviar para `Ultimos pedidos feitos`, rodar `supabase/sql/service-orders-comandas.sql`.
 - Se o fechamento nao salvar, rodar `supabase/sql/cash-closing.sql`.
 - Se salvar saldo/limite do cliente app mostrar `column u.password_hash does not exist`, rodar `supabase/sql/fix-pdv-users-password-hash.sql`.
+- Para zerar vendas/testes antes da inauguracao mantendo cadastros, rodar `supabase/sql/reset-test-movements-before-opening.sql`.
 - O leitor de codigo de barras comum USB/Bluetooth deve funcionar como teclado, sem instalar nada.
