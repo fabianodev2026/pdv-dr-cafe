@@ -95,7 +95,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       .limit(10)
 
     if (error) {
-      setMessage('Execute o SQL de fechamento de caixa antes de salvar.')
+      console.error('Erro ao buscar fechamentos de caixa:', error)
       return
     }
 
