@@ -297,35 +297,90 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
           <img src="/logo.jpeg" alt="Dr. Cafe" />
           <div>
             <h1>Fechamento de caixa</h1>
-            <p>Data: {new Date(`${closingDate}T12:00:00`).toLocaleDateString('pt-BR')}</p>
+            <p>Dr. Cafe</p>
+            <span>Data: {new Date(`${closingDate}T12:00:00`).toLocaleDateString('pt-BR')}</span>
           </div>
         </div>
-        <div className="cash-print-summary">
-          <p>Aberto por: {openingCashierName || '-'}</p>
-          <p>Fechado por: {currentUser?.username || 'Desconhecido'}</p>
-          <p>Abertura em dinheiro: {currencyFormatter.format(openingCashValue)}</p>
-          <p>Dinheiro contado: {currencyFormatter.format(countedCash)}</p>
-          <p>Cartao: {currencyFormatter.format(cardTotalValue)}</p>
-          <p>Pix: {currencyFormatter.format(pixTotalValue)}</p>
-          <p>Diferenca do dinheiro: {currencyFormatter.format(cashDifference)}</p>
-          <h2>Total geral: {currencyFormatter.format(grandTotal)}</h2>
+        <div className="cash-print-meta">
+          <span>Aberto por: <strong>{openingCashierName || '-'}</strong></span>
+          <span>Fechado por: <strong>{currentUser?.username || 'Desconhecido'}</strong></span>
+          <span>Emitido em: <strong>{new Date().toLocaleString('pt-BR')}</strong></span>
+        </div>
+        <div className="cash-print-kpis">
+          <div>
+            <span>Abertura</span>
+            <strong>{currencyFormatter.format(openingCashValue)}</strong>
+          </div>
+          <div>
+            <span>Dinheiro contado</span>
+            <strong>{currencyFormatter.format(countedCash)}</strong>
+          </div>
+          <div>
+            <span>Cartao</span>
+            <strong>{currencyFormatter.format(cardTotalValue)}</strong>
+          </div>
+          <div>
+            <span>Pix</span>
+            <strong>{currencyFormatter.format(pixTotalValue)}</strong>
+          </div>
+          <div>
+            <span>Diferenca</span>
+            <strong>{currencyFormatter.format(cashDifference)}</strong>
+          </div>
+          <div className="cash-print-total">
+            <span>Total geral</span>
+            <strong>{currencyFormatter.format(grandTotal)}</strong>
+          </div>
         </div>
         <div className="cash-print-grid">
-          <div>
+          <div className="cash-print-panel">
             <h3>Notas</h3>
             {notes.map((item) => (
-              <p key={item.key}>
-                {item.label}: {Number.parseInt(counts[item.key] || '0', 10) || 0}
-              </p>
+              <div key={item.key} className="cash-print-row">
+                <span>{item.label}</span>
+                <strong>{Number.parseInt(counts[item.key] || '0', 10) || 0}</strong>
+                <b>
+                  {currencyFormatter.format(
+                    toMoney((Number.parseInt(counts[item.key] || '0', 10) || 0) * item.value),
+                  )}
+                </b>
+              </div>
             ))}
           </div>
-          <div>
+          <div className="cash-print-panel">
             <h3>Moedas</h3>
             {coins.map((item) => (
-              <p key={item.key}>
-                {item.label}: {Number.parseInt(counts[item.key] || '0', 10) || 0}
-              </p>
+              <div key={item.key} className="cash-print-row">
+                <span>{item.label}</span>
+                <strong>{Number.parseInt(counts[item.key] || '0', 10) || 0}</strong>
+                <b>
+                  {currencyFormatter.format(
+                    toMoney((Number.parseInt(counts[item.key] || '0', 10) || 0) * item.value),
+                  )}
+                </b>
+              </div>
             ))}
+          </div>
+          <div className="cash-print-panel">
+            <h3>Conferencia</h3>
+            <div className="cash-print-row">
+              <span>Dinheiro esperado</span>
+              <strong />
+              <b>{currencyFormatter.format(openingCashValue)}</b>
+            </div>
+            <div className="cash-print-row">
+              <span>Dinheiro contado</span>
+              <strong />
+              <b>{currencyFormatter.format(countedCash)}</b>
+            </div>
+            <div className="cash-print-row">
+              <span>Diferenca</span>
+              <strong />
+              <b>{currencyFormatter.format(cashDifference)}</b>
+            </div>
+            <div className="cash-print-signature">
+              <span>Assinatura do responsavel</span>
+            </div>
           </div>
         </div>
       </section>

@@ -214,6 +214,11 @@
 }
 
 @media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
   body.printing-cash-closing * {
     visibility: hidden;
   }
@@ -249,43 +254,152 @@
     display: block;
     color: #111;
     font-family: Arial, 'Helvetica Neue', sans-serif;
-    padding: 14mm;
+    padding: 0;
   }
 
   .cash-print-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    border-bottom: 1px solid #111;
-    padding-bottom: 10px;
-    margin-bottom: 12px;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 2px solid #2b160d;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
   }
 
   .cash-print-header img {
-    width: 22mm;
-    height: 22mm;
+    width: 26mm;
+    height: 26mm;
     object-fit: contain;
-    filter: grayscale(1) contrast(1.15);
   }
 
-  .cash-print-header h1,
-  .cash-print-header p,
-  .cash-print-summary p,
-  .cash-print-summary h2,
-  .cash-print-grid h3,
-  .cash-print-grid p {
-    margin: 5px 0;
+  .cash-print-header div {
+    flex: 1;
+    text-align: right;
   }
 
-  .cash-print-summary {
-    border-bottom: 1px dashed #333;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
+  .cash-print-header h1 {
+    margin: 0;
+    color: #2b160d;
+    font-size: 22pt;
+    line-height: 1.05;
+  }
+
+  .cash-print-header p {
+    margin: 4px 0;
+    color: #7b4a27;
+    font-size: 12pt;
+    font-weight: 700;
+  }
+
+  .cash-print-header span {
+    color: #333;
+    font-size: 9pt;
+  }
+
+  .cash-print-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .cash-print-meta span,
+  .cash-print-kpis div,
+  .cash-print-panel {
+    border: 1px solid #d8c1a6;
+    border-radius: 6px;
+    background: #fffaf5;
+    padding: 8px;
+  }
+
+  .cash-print-meta span {
+    display: grid;
+    gap: 3px;
+    color: #6d4c41;
+    font-size: 8.5pt;
+  }
+
+  .cash-print-meta strong {
+    color: #111;
+    font-size: 9.5pt;
+  }
+
+  .cash-print-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .cash-print-kpis div {
+    display: grid;
+    gap: 4px;
+  }
+
+  .cash-print-kpis span {
+    color: #6d4c41;
+    font-size: 8.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .cash-print-kpis strong {
+    color: #111;
+    font-size: 14pt;
+  }
+
+  .cash-print-kpis .cash-print-total {
+    background: #2b160d;
+    border-color: #2b160d;
+  }
+
+  .cash-print-kpis .cash-print-total span,
+  .cash-print-kpis .cash-print-total strong {
+    color: #fffaf5;
   }
 
   .cash-print-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .cash-print-panel h3 {
+    margin: 0 0 8px;
+    border-bottom: 1px solid #d8c1a6;
+    color: #2b160d;
+    padding-bottom: 6px;
+    font-size: 12pt;
+  }
+
+  .cash-print-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 30px 72px;
+    gap: 6px;
+    border-bottom: 1px dashed #d8c1a6;
+    padding: 5px 0;
+    font-size: 8.5pt;
+  }
+
+  .cash-print-row span {
+    color: #333;
+  }
+
+  .cash-print-row strong {
+    text-align: center;
+  }
+
+  .cash-print-row b {
+    text-align: right;
+  }
+
+  .cash-print-signature {
+    margin-top: 34mm;
+    border-top: 1px solid #111;
+    padding-top: 5px;
+    text-align: center;
+    font-size: 8.5pt;
   }
 }
