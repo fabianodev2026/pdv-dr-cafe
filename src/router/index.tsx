@@ -89,7 +89,7 @@ export default function AppRouter() {
             />
             <Route
               path="/pedidos"
-              element={requireRole(<OrdersManager />, OPERATION_ROLES)}
+              element={requireRole(<OrdersManager currentUser={currentUser} />, OPERATION_ROLES)}
             />
             <Route
               path="/produtos"

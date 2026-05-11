@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import type { CurrentUser } from '../lib/rolePermissions'
 import './OrdersManager.css'
 
 type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'entregue' | 'cancelado'
@@ -35,6 +36,10 @@ interface AppCustomer {
   status: 'pendente' | 'ativo' | 'bloqueado'
   credit_limit: number
   pending_total?: number
+}
+
+interface OrdersManagerProps {
+  currentUser?: CurrentUser | null
 }
 
 const statusMessages: Record<OrderStatus, string> = {
@@ -100,7 +105,7 @@ const mergeOpenOrders = (orders: OrderTicket[]) => {
   return Array.from(groupedOrders.values())
 }
 
-export default function OrdersManager() {
+export default function OrdersManager({ currentUser }: OrdersManagerProps) {
   const navigate = useNavigate()
   const [orders, setOrders] = useState<OrderTicket[]>([])
   const [appCustomers, setAppCustomers] = useState<AppCustomer[]>([])
@@ -355,6 +360,12 @@ export default function OrdersManager() {
           `${item.quantity}x ${item.name} - R$ ${(Number(item.unit_price) * Number(item.quantity)).toFixed(2)}`,
       )
       .join('; ')
+    const saleItems = selectedItems.map((item) => ({
+      name: item.name,
+      quantity: Number(item.quantity || 0),
+      unit_price: Number(item.unit_price || 0),
+      total: toMoney(Number(item.unit_price || 0) * Number(item.quantity || 0)),
+    }))
 
     const { error: pendingError } = await supabase.from('pending_payments').insert([
       {
@@ -373,6 +384,24 @@ export default function OrdersManager() {
     if (pendingError) {
       setSendingToAppOrderId(null)
       setMessage(`Nao foi possivel enviar para o app: ${pendingError.message}`)
+      return
+    }
+
+    const { error: saleError } = await supabase.from('sales').insert([
+      {
+        table_number: order.service_number || null,
+        total_amount: selectedTotal,
+        cashier_name: currentUser?.username ?? 'PDV',
+        customer_name: customer.name,
+        customer_phone: customer.phone,
+        items: saleItems,
+        payment_method: 'cliente_app',
+      },
+    ])
+
+    if (saleError) {
+      setSendingToAppOrderId(null)
+      setMessage(`Compra enviada ao app, mas nao entrou no relatorio: ${saleError.message}`)
       return
     }
 
