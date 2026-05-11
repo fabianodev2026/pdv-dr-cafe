@@ -138,7 +138,9 @@
 
 .cash-closing-actions {
   display: flex;
+  gap: 10px;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .cash-closing-actions button {
@@ -151,6 +153,14 @@
   font-weight: 900;
   min-height: 48px;
   padding: 12px 22px;
+}
+
+.cash-closing-actions .cash-print-button {
+  background: #6d4c41;
+}
+
+.cash-closing-print {
+  display: none;
 }
 
 .cash-history-grid {
@@ -200,5 +210,82 @@
 
   .cash-closing-actions button {
     width: 100%;
+  }
+}
+
+@media print {
+  body.printing-cash-closing * {
+    visibility: hidden;
+  }
+
+  body.printing-cash-closing .app-shell,
+  body.printing-cash-closing .app-content,
+  body.printing-cash-closing .cash-closing-page {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  body.printing-cash-closing .app-sidebar,
+  body.printing-cash-closing .cash-closing-heading,
+  body.printing-cash-closing .cash-closing-message,
+  body.printing-cash-closing .cash-closing-summary,
+  body.printing-cash-closing .cash-closing-columns,
+  body.printing-cash-closing .cash-closing-actions,
+  body.printing-cash-closing .cash-closing-history {
+    display: none !important;
+  }
+
+  body.printing-cash-closing .cash-closing-print,
+  body.printing-cash-closing .cash-closing-print * {
+    visibility: visible;
+  }
+
+  body.printing-cash-closing .cash-closing-print {
+    display: block;
+    color: #111;
+    font-family: Arial, 'Helvetica Neue', sans-serif;
+    padding: 14mm;
+  }
+
+  .cash-print-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #111;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+  }
+
+  .cash-print-header img {
+    width: 22mm;
+    height: 22mm;
+    object-fit: contain;
+    filter: grayscale(1) contrast(1.15);
+  }
+
+  .cash-print-header h1,
+  .cash-print-header p,
+  .cash-print-summary p,
+  .cash-print-summary h2,
+  .cash-print-grid h3,
+  .cash-print-grid p {
+    margin: 5px 0;
+  }
+
+  .cash-print-summary {
+    border-bottom: 1px dashed #333;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+
+  .cash-print-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
   }
 }

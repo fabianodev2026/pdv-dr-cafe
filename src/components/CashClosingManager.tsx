@@ -21,6 +21,7 @@ interface Denomination {
 interface CashClosing {
   id: number
   closing_date: string
+  opening_cashier_name?: string
   cashier_name: string
   opening_cash: number
   counted_cash: number
@@ -60,6 +61,7 @@ const toNumber = (value: string) => Number(value.replace(',', '.') || 0)
 
 export default function CashClosingManager({ currentUser }: CashClosingManagerProps) {
   const [closingDate, setClosingDate] = useState(today())
+  const [openingCashierName, setOpeningCashierName] = useState(currentUser?.username || '')
   const [openingCash, setOpeningCash] = useState('')
   const [cardTotal, setCardTotal] = useState('')
   const [pixTotal, setPixTotal] = useState('')
@@ -126,6 +128,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     const coinsDetail = buildDetail('moedas')
     const payload = {
       closing_date: closingDate,
+      opening_cashier_name: openingCashierName.trim() || currentUser?.username || 'Desconhecido',
       cashier_name: currentUser?.username || 'Desconhecido',
       opening_cash: openingCashValue,
       counted_cash: countedCash,
@@ -146,6 +149,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
 
     setMessage('Fechamento de caixa salvo com sucesso.')
     setCounts(initialCounts)
+    setOpeningCashierName(currentUser?.username || '')
     setOpeningCash('')
     setCardTotal('')
     setPixTotal('')
@@ -168,6 +172,22 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     )
   }
 
+  const printClosing = () => {
+    document.body.classList.add('printing-cash-closing')
+    const clearPrintMode = () => {
+      document.body.classList.remove('printing-cash-closing')
+      window.removeEventListener('afterprint', clearPrintMode)
+      window.removeEventListener('focus', clearPrintMode)
+    }
+
+    window.addEventListener('afterprint', clearPrintMode)
+    window.addEventListener('focus', clearPrintMode)
+    window.setTimeout(() => {
+      window.print()
+      window.setTimeout(clearPrintMode, 2500)
+    }, 50)
+  }
+
   return (
     <div className="cash-closing-page">
       <header className="cash-closing-heading">
@@ -187,6 +207,15 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
             type="date"
             value={closingDate}
             onChange={(event) => setClosingDate(event.target.value)}
+          />
+        </label>
+        <label>
+          Quem abriu o caixa
+          <input
+            value={openingCashierName}
+            onChange={(event) => setOpeningCashierName(event.target.value)}
+            placeholder="Nome de quem abriu"
+            maxLength={40}
           />
         </label>
         <div>
@@ -258,6 +287,47 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
 
       <section className="cash-closing-actions">
         <button onClick={saveClosing}>Fechar o dia</button>
+        <button onClick={printClosing} className="cash-print-button">
+          Imprimir / salvar PDF
+        </button>
+      </section>
+
+      <section className="cash-closing-print">
+        <div className="cash-print-header">
+          <img src="/logo.jpeg" alt="Dr. Cafe" />
+          <div>
+            <h1>Fechamento de caixa</h1>
+            <p>Data: {new Date(`${closingDate}T12:00:00`).toLocaleDateString('pt-BR')}</p>
+          </div>
+        </div>
+        <div className="cash-print-summary">
+          <p>Aberto por: {openingCashierName || '-'}</p>
+          <p>Fechado por: {currentUser?.username || 'Desconhecido'}</p>
+          <p>Abertura em dinheiro: {currencyFormatter.format(openingCashValue)}</p>
+          <p>Dinheiro contado: {currencyFormatter.format(countedCash)}</p>
+          <p>Cartao: {currencyFormatter.format(cardTotalValue)}</p>
+          <p>Pix: {currencyFormatter.format(pixTotalValue)}</p>
+          <p>Diferenca do dinheiro: {currencyFormatter.format(cashDifference)}</p>
+          <h2>Total geral: {currencyFormatter.format(grandTotal)}</h2>
+        </div>
+        <div className="cash-print-grid">
+          <div>
+            <h3>Notas</h3>
+            {notes.map((item) => (
+              <p key={item.key}>
+                {item.label}: {Number.parseInt(counts[item.key] || '0', 10) || 0}
+              </p>
+            ))}
+          </div>
+          <div>
+            <h3>Moedas</h3>
+            {coins.map((item) => (
+              <p key={item.key}>
+                {item.label}: {Number.parseInt(counts[item.key] || '0', 10) || 0}
+              </p>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="cash-closing-history">
@@ -269,6 +339,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
             {closings.map((closing) => (
               <article key={closing.id} className="cash-history-card">
                 <strong>{new Date(closing.closing_date).toLocaleDateString('pt-BR')}</strong>
+                <span>Abertura: {closing.opening_cashier_name || '-'}</span>
                 <span>Caixa: {closing.cashier_name}</span>
                 <span>Dinheiro: {currencyFormatter.format(Number(closing.counted_cash))}</span>
                 <span>Cartao: {currencyFormatter.format(Number(closing.card_total))}</span>

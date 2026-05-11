@@ -5,6 +5,7 @@ create table if not exists public.cash_closings (
   id bigserial primary key,
   created_at timestamptz not null default now(),
   closing_date date not null,
+  opening_cashier_name text,
   cashier_name text,
   opening_cash numeric(10,2) not null default 0,
   counted_cash numeric(10,2) not null default 0,
@@ -15,6 +16,9 @@ create table if not exists public.cash_closings (
   notes_detail jsonb not null default '{}'::jsonb,
   coins_detail jsonb not null default '{}'::jsonb
 );
+
+alter table public.cash_closings
+  add column if not exists opening_cashier_name text;
 
 alter table public.cash_closings enable row level security;
 

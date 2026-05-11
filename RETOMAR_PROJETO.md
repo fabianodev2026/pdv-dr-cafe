@@ -40,7 +40,7 @@ Ultimo commit enviado:
 - Botao `Adicionar itens` na tela `Ultimos pedidos feitos` para comanda, mesa e quarto.
 - Ao adicionar itens depois de enviar pedido, os itens antigos ficam como `Enviado` e so o acrescimo novo e enviado.
 - Arredondamento de valores do app cliente para salvar em centavos corretamente.
-- Aba `Fechamento` abaixo de `Configuracoes`, com abertura em dinheiro, contagem por notas/moedas, cartao, Pix e total automatico do dia.
+- Aba `Fechamento` abaixo de `Configuracoes`, com nome de quem abriu o caixa, abertura em dinheiro, contagem por notas/moedas, cartao, Pix, total automatico, impressao e opcao de salvar em PDF pela janela de impressao.
 
 ## SQLs novos/importantes
 
