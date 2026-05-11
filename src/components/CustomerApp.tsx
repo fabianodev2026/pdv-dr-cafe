@@ -43,6 +43,16 @@ interface CartItem {
   unit_price: number
 }
 
+interface PendingPayment {
+  id: number
+  description?: string
+  items_detail?: string
+  total_amount: number
+  purchase_date: string
+  due_date: string
+  status: string
+}
+
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
@@ -127,6 +137,7 @@ export default function CustomerApp() {
   const [dailyLunch, setDailyLunch] = useState<DailyLunch | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [pendingTotal, setPendingTotal] = useState(0)
+  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([])
   const [nextDueDate, setNextDueDate] = useState('')
   const [isBlockedByDebt, setIsBlockedByDebt] = useState(false)
   const [form, setForm] = useState({
@@ -224,12 +235,14 @@ export default function CustomerApp() {
         details: { table: 'pending_payments' },
       })
       setPendingTotal(0)
+      setPendingPayments([])
       setNextDueDate(getFifthBusinessDay())
       setIsBlockedByDebt(false)
       return
     }
 
     const payments = data ?? []
+    setPendingPayments(payments)
     const totalDebt = toMoney(
       payments.reduce((sum, payment) => sum + Number(payment.total_amount), 0),
     )
@@ -841,6 +854,13 @@ export default function CustomerApp() {
               <strong>{currencyFormatter.format(availableCredit)}</strong>
               <span>saldo disponivel</span>
               <span>Limite: {currencyFormatter.format(creditLimit)}</span>
+              <button
+                type="button"
+                className="customer-app__refresh-balance"
+                onClick={() => loadPending(customer.phone)}
+              >
+                Atualizar saldo
+              </button>
             </div>
           </section>
 
@@ -854,6 +874,29 @@ export default function CustomerApp() {
             <div className="customer-app__blocked">
               Conta bloqueada por atraso superior a 3 dias. Procure o cafe para regularizar.
             </div>
+          )}
+
+          {pendingPayments.length > 0 && (
+            <section className="customer-app__pending-list">
+              <div className="customer-app__pending-heading">
+                <h2>Compras em aberto</h2>
+                <strong>{currencyFormatter.format(pendingTotal)}</strong>
+              </div>
+              {pendingPayments.map((payment) => (
+                <article key={payment.id} className="customer-app__pending-card">
+                  <div>
+                    <strong>{currencyFormatter.format(Number(payment.total_amount || 0))}</strong>
+                    <span>
+                      Compra: {new Date(`${payment.purchase_date}T00:00:00`).toLocaleDateString('pt-BR')}
+                    </span>
+                    <span>
+                      Vencimento: {new Date(`${payment.due_date}T00:00:00`).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  <p>{payment.items_detail || payment.description || 'Compra lancada no caixa.'}</p>
+                </article>
+              ))}
+            </section>
           )}
 
           <main className="customer-app__layout">

@@ -230,6 +230,53 @@
   color: #d8c7b6;
 }
 
+.customer-app__refresh-balance {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.customer-app__pending-list {
+  display: grid;
+  gap: 10px;
+  max-width: 1080px;
+  margin: 0 auto 14px;
+}
+
+.customer-app__pending-heading,
+.customer-app__pending-card {
+  border-radius: 14px;
+  background: rgba(255, 248, 239, 0.1);
+  border: 1px solid rgba(245, 190, 125, 0.25);
+  padding: 12px;
+}
+
+.customer-app__pending-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.customer-app__pending-heading h2,
+.customer-app__pending-card p {
+  margin: 0;
+}
+
+.customer-app__pending-card {
+  display: grid;
+  gap: 8px;
+}
+
+.customer-app__pending-card strong,
+.customer-app__pending-card span {
+  display: block;
+}
+
+.customer-app__pending-card span,
+.customer-app__pending-card p {
+  color: #d8c7b6;
+}
+
 .customer-app__layout {
   display: grid;
   grid-template-columns: 310px minmax(0, 1fr);

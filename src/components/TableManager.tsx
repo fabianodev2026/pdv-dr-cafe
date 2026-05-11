@@ -21,6 +21,16 @@ interface Product {
   low_stock_threshold?: number
 }
 
+interface AppCustomer {
+  id: number
+  name: string
+  phone: string
+  position: string
+  status: 'pendente' | 'ativo' | 'bloqueado'
+  credit_limit: number
+  pending_total?: number
+}
+
 interface OrderItem {
   id: number
   name: string
@@ -57,11 +67,13 @@ interface ReceiptData {
   customer_phone: string
   date: string
   payment_method: PaymentMethod
+  app_customer_id?: number
+  app_customer_position?: string
   fiscal_cpf: string
   fiscal_qr_text: string
 }
 
-type PaymentMethod = 'pix' | 'credito' | 'debito' | 'dinheiro' | 'pagar_depois'
+type PaymentMethod = 'pix' | 'credito' | 'debito' | 'dinheiro' | 'pagar_depois' | 'cliente_app'
 
 interface CurrentUser {
   username: string
@@ -144,6 +156,21 @@ const getItemReset = (item: TableItem): TableItem => ({
 
 const toMoney = (value: number) => Number(value.toFixed(2))
 
+const getFifthBusinessDay = () => {
+  const now = new Date()
+  const targetMonth = now.getMonth() + 1
+  const date = new Date(now.getFullYear(), targetMonth, 1)
+  let businessDays = 0
+
+  while (businessDays < 5) {
+    const weekDay = date.getDay()
+    if (weekDay !== 0 && weekDay !== 6) businessDays += 1
+    if (businessDays < 5) date.setDate(date.getDate() + 1)
+  }
+
+  return date.toISOString().slice(0, 10)
+}
+
 const createFiscalQrText = (receipt: Omit<ReceiptData, 'fiscal_qr_text'>) => {
   if (!receipt.fiscal_cpf || !isCompleteCpf(receipt.fiscal_cpf)) return ''
 
@@ -187,6 +214,8 @@ export default function TableManager({
   )
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix')
   const [payLaterDueDate, setPayLaterDueDate] = useState('')
+  const [appCustomers, setAppCustomers] = useState<AppCustomer[]>([])
+  const [selectedAppCustomerId, setSelectedAppCustomerId] = useState('')
   const [fiscalCpf, setFiscalCpf] = useState('')
   const [selectedFloor, setSelectedFloor] = useState('todos')
   const [roomSearch, setRoomSearch] = useState('')
@@ -199,8 +228,42 @@ export default function TableManager({
     if (data) setAvailableProducts(data)
   }
 
+  const fetchAppCustomers = async () => {
+    const customersResult = await supabase
+      .from('app_customers')
+      .select('id, name, phone, position, status, credit_limit')
+      .eq('status', 'ativo')
+      .order('name')
+
+    if (customersResult.error) return
+
+    const pendingResult = await supabase
+      .from('pending_payments')
+      .select('phone, total_amount')
+      .eq('status', 'pendente')
+
+    const pendingByPhone = (pendingResult.data ?? []).reduce<Record<string, number>>(
+      (totals, payment) => {
+        const phone = String(payment.phone || '')
+        return {
+          ...totals,
+          [phone]: toMoney((totals[phone] ?? 0) + Number(payment.total_amount || 0)),
+        }
+      },
+      {},
+    )
+
+    setAppCustomers(
+      (customersResult.data ?? []).map((customer) => ({
+        ...customer,
+        pending_total: pendingByPhone[customer.phone] ?? 0,
+      })),
+    )
+  }
+
   useEffect(() => {
     fetchProducts()
+    fetchAppCustomers()
   }, [])
 
   useEffect(() => {
@@ -259,6 +322,7 @@ export default function TableManager({
     setActiveItem(reopenedItem)
     setPaymentMethod('pix')
     setPayLaterDueDate('')
+    setSelectedAppCustomerId('')
     setFiscalCpf('')
     setOrderMessage(
       `${getServiceLabel(reopenedItem)} reaberto. Os itens anteriores ja estao marcados como enviados; adicione novos produtos para enviar o acrescimo.`,
@@ -292,6 +356,7 @@ export default function TableManager({
     }
     setPaymentMethod('pix')
     setPayLaterDueDate('')
+    setSelectedAppCustomerId('')
     setFiscalCpf('')
     setOrderMessage('')
     setActiveItem(updatedItem)
@@ -556,15 +621,46 @@ export default function TableManager({
       return
     }
 
+    const selectedAppCustomer = appCustomers.find(
+      (customer) => String(customer.id) === selectedAppCustomerId,
+    )
+
+    if (paymentMethod === 'cliente_app') {
+      if (!selectedAppCustomer) {
+        alert('Escolha o cliente do app para lancar a compra.')
+        return
+      }
+
+      const creditLimit = Number(selectedAppCustomer.credit_limit || 0)
+      const pendingTotal = Number(selectedAppCustomer.pending_total || 0)
+      const availableCredit = Math.max(creditLimit - pendingTotal, 0)
+
+      if (creditLimit > 0 && activeItem.total > availableCredit) {
+        alert('Compra acima do saldo disponivel deste cliente app.')
+        return
+      }
+    }
+
+    const receiptCustomerName =
+      paymentMethod === 'cliente_app' && selectedAppCustomer
+        ? selectedAppCustomer.name
+        : activeItem.customer_name
+    const receiptCustomerPhone =
+      paymentMethod === 'cliente_app' && selectedAppCustomer
+        ? selectedAppCustomer.phone
+        : activeItem.customer_phone
+
     const receiptBase: Omit<ReceiptData, 'fiscal_qr_text'> = {
       type: activeItem.type,
       number: activeItem.number,
       items: [...activeItem.items],
       total: activeItem.total,
-      customer_name: activeItem.customer_name,
-      customer_phone: activeItem.customer_phone,
+      customer_name: receiptCustomerName,
+      customer_phone: receiptCustomerPhone,
       date: new Date().toLocaleString('pt-BR'),
       payment_method: paymentMethod,
+      app_customer_id: selectedAppCustomer?.id,
+      app_customer_position: selectedAppCustomer?.position,
       fiscal_cpf: fiscalCpf,
     }
     const receipt: ReceiptData = {
@@ -650,19 +746,28 @@ export default function TableManager({
         )
       }
 
-      if (receiptData.payment_method === 'pagar_depois') {
+      if (
+        receiptData.payment_method === 'pagar_depois' ||
+        receiptData.payment_method === 'cliente_app'
+      ) {
         const itemsDetail = receiptData.items
           .map((item) => `${item.quantity}x ${item.name} - R$ ${item.total.toFixed(2)}`)
           .join('; ')
         const pendingPayload = {
           customer_name: receiptData.customer_name,
           phone: receiptData.customer_phone,
-          position: getServiceLabel(activeItem),
-          description: `Venda registrada em ${receiptData.date}`,
+          position: receiptData.app_customer_position || getServiceLabel(activeItem),
+          description:
+            receiptData.payment_method === 'cliente_app'
+              ? `Compra lancada pelo caixa em ${getServiceLabel(activeItem)}`
+              : `Venda registrada em ${receiptData.date}`,
           items_detail: itemsDetail,
           total_amount: receiptData.total,
           purchase_date: new Date().toISOString().slice(0, 10),
-          due_date: payLaterDueDate || new Date().toISOString().slice(0, 10),
+          due_date:
+            receiptData.payment_method === 'cliente_app'
+              ? getFifthBusinessDay()
+              : payLaterDueDate || new Date().toISOString().slice(0, 10),
           status: 'pendente',
         }
 
@@ -702,6 +807,8 @@ export default function TableManager({
       setActiveItem(null)
       setShowReceipt(false)
       setIsReprint(false)
+      setSelectedAppCustomerId('')
+      fetchAppCustomers()
       markBackupNeededAfterClosing('Venda registrada no PDV apos as 20:00')
       void openCashDrawer(receiptData.payment_method)
       alert('Venda registrada com sucesso no cofre!')
@@ -728,6 +835,16 @@ export default function TableManager({
   )
   const pendingPreparationCount =
     activeItem?.items.filter((item) => !item.sent_to_preparation).length ?? 0
+  const selectedAppCustomer = appCustomers.find(
+    (customer) => String(customer.id) === selectedAppCustomerId,
+  )
+  const selectedAppCustomerAvailable = selectedAppCustomer
+    ? Math.max(
+        Number(selectedAppCustomer.credit_limit || 0) -
+          Number(selectedAppCustomer.pending_total || 0),
+        0,
+      )
+    : 0
 
   const roomFloors = useMemo(() => {
     return Array.from(new Set(rooms.map((room) => Math.floor(room.number / 100))))
@@ -1047,14 +1164,17 @@ export default function TableManager({
                           <label>Forma de pagamento</label>
                           <select
                             value={paymentMethod}
-                            onChange={(e) =>
-                              setPaymentMethod(e.target.value as PaymentMethod)
-                            }
+                            onChange={(e) => {
+                              const nextPaymentMethod = e.target.value as PaymentMethod
+                              setPaymentMethod(nextPaymentMethod)
+                              if (nextPaymentMethod === 'cliente_app') fetchAppCustomers()
+                            }}
                           >
                             <option value="pix">Pix</option>
                             <option value="credito">Cartao de credito</option>
                             <option value="debito">Cartao de debito</option>
                             <option value="dinheiro">Dinheiro</option>
+                            <option value="cliente_app">Cliente app</option>
                             {canPayLater && (
                               <option value="pagar_depois">Pagar depois</option>
                             )}
@@ -1072,6 +1192,57 @@ export default function TableManager({
                               onChange={(e) => setPayLaterDueDate(e.target.value)}
                             />
                             <small>Pagamento somente por Pix ou dinheiro.</small>
+                          </div>
+                        )}
+                        {paymentMethod === 'cliente_app' && (
+                          <div className="payment-methods app-customer-charge">
+                            <label>Cliente do app</label>
+                            <select
+                              value={selectedAppCustomerId}
+                              onChange={(e) => setSelectedAppCustomerId(e.target.value)}
+                            >
+                              <option value="">Escolha o cliente</option>
+                              {appCustomers.map((customer) => {
+                                const available = Math.max(
+                                  Number(customer.credit_limit || 0) -
+                                    Number(customer.pending_total || 0),
+                                  0,
+                                )
+                                const limitLabel =
+                                  Number(customer.credit_limit || 0) > 0
+                                    ? ` - saldo ${available.toLocaleString('pt-BR', {
+                                        style: 'currency',
+                                        currency: 'BRL',
+                                      })}`
+                                    : ' - sem limite definido'
+
+                                return (
+                                  <option key={customer.id} value={customer.id}>
+                                    {customer.name} - {customer.phone}{limitLabel}
+                                  </option>
+                                )
+                              })}
+                            </select>
+                            <button
+                              type="button"
+                              className="btn-refresh-app-customers"
+                              onClick={fetchAppCustomers}
+                            >
+                              Atualizar clientes
+                            </button>
+                            {selectedAppCustomer && (
+                              <small>
+                                Sera lancado no app de {selectedAppCustomer.name}. Saldo apos esta
+                                compra:{' '}
+                                {Math.max(
+                                  selectedAppCustomerAvailable - activeItem.total,
+                                  0,
+                                ).toLocaleString('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL',
+                                })}
+                              </small>
+                            )}
                           </div>
                         )}
                         <div className="payment-methods">

@@ -39,6 +39,8 @@ Ultimo commit enviado:
 - SQL modelo para cadastrar produtos em lote.
 - Botao `Adicionar itens` na tela `Ultimos pedidos feitos` para comanda, mesa e quarto.
 - Ao adicionar itens depois de enviar pedido, os itens antigos ficam como `Enviado` e so o acrescimo novo e enviado.
+- Forma de pagamento `Cliente app` no PDV, para escolher cliente ativo do app e lancar consumo no saldo/pagar depois.
+- App do cliente mostra compras em aberto e botao `Atualizar saldo`.
 - Arredondamento de valores do app cliente para salvar em centavos corretamente.
 - Aba `Fechamento` abaixo de `Configuracoes`, com nome de quem abriu o caixa, abertura em dinheiro, contagem por notas/moedas, cartao, Pix, total automatico, impressao e opcao de salvar em PDF pela janela de impressao.
 
