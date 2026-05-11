@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { ReactElement } from 'react'
 import AppShell from '../components/AppShell'
 import AppCustomersManager from '../components/AppCustomersManager'
+import CashClosingManager from '../components/CashClosingManager'
 import LoginScreen from '../components/LoginScreen'
 import ConfigManager from '../components/ConfigManager'
 import CustomerApp from '../components/CustomerApp'
@@ -135,6 +136,13 @@ export default function AppRouter() {
             <Route
               path="/configuracoes-sistema"
               element={requireRole(<SettingsManager />, ADMIN_ROLES)}
+            />
+            <Route
+              path="/fechamento-caixa"
+              element={requireRole(
+                <CashClosingManager currentUser={currentUser} />,
+                CASHIER_ROLES,
+              )}
             />
             <Route
               path="/suporte-ia"

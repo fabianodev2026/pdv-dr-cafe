@@ -40,6 +40,7 @@ Ultimo commit enviado:
 - Botao `Adicionar itens` na tela `Ultimos pedidos feitos` para comanda, mesa e quarto.
 - Ao adicionar itens depois de enviar pedido, os itens antigos ficam como `Enviado` e so o acrescimo novo e enviado.
 - Arredondamento de valores do app cliente para salvar em centavos corretamente.
+- Aba `Fechamento` abaixo de `Configuracoes`, com abertura em dinheiro, contagem por notas/moedas, cartao, Pix e total automatico do dia.
 
 ## SQLs novos/importantes
 
@@ -49,6 +50,7 @@ Executar no Supabase SQL Editor quando necessario:
 supabase/sql/product-barcodes.sql
 supabase/sql/product-insert-template.sql
 supabase/sql/service-orders-comandas.sql
+supabase/sql/cash-closing.sql
 ```
 
 Para liberar codigo de barras:
@@ -77,6 +79,12 @@ alter table public.service_orders
 notify pgrst, 'reload schema';
 ```
 
+Para liberar fechamento diario de caixa:
+
+```txt
+supabase/sql/cash-closing.sql
+```
+
 ## Validacoes feitas
 
 ```txt
@@ -89,4 +97,5 @@ Build passou. O Vite mostrou apenas aviso de bundle acima de 500 kB, sem quebrar
 
 - Se o Supabase reclamar que `barcode` nao existe, rodar `supabase/sql/product-barcodes.sql`.
 - Se a comanda nao enviar para `Ultimos pedidos feitos`, rodar `supabase/sql/service-orders-comandas.sql`.
+- Se o fechamento nao salvar, rodar `supabase/sql/cash-closing.sql`.
 - O leitor de codigo de barras comum USB/Bluetooth deve funcionar como teclado, sem instalar nada.

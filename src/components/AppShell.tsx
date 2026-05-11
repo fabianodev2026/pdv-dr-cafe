@@ -54,6 +54,7 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
           {canAdmin && (
             <NavLink to="/configuracoes-sistema">Configuracoes</NavLink>
           )}
+          {canUseCashier && <NavLink to="/fechamento-caixa">Fechamento</NavLink>}
         </nav>
 
         <div className="user-badge">

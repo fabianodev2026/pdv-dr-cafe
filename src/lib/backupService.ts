@@ -19,6 +19,7 @@ const BACKUP_TABLES = [
   'app_customers',
   'app_orders',
   'daily_lunches',
+  'cash_closings',
 ] as const
 
 export interface BackupState {
