@@ -101,9 +101,7 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
       return
     }
 
-    setMessage(
-      `Saldo de ${customer.name} atualizado para ${currencyFormatter.format(creditLimit)}.`,
-    )
+    setMessage('Saldo adicionado com sucesso.')
     fetchCustomers()
   }
 
