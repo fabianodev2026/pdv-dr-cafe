@@ -51,6 +51,7 @@ supabase/sql/product-barcodes.sql
 supabase/sql/product-insert-template.sql
 supabase/sql/service-orders-comandas.sql
 supabase/sql/cash-closing.sql
+supabase/sql/fix-pdv-users-password-hash.sql
 ```
 
 Para liberar codigo de barras:
@@ -98,4 +99,5 @@ Build passou. O Vite mostrou apenas aviso de bundle acima de 500 kB, sem quebrar
 - Se o Supabase reclamar que `barcode` nao existe, rodar `supabase/sql/product-barcodes.sql`.
 - Se a comanda nao enviar para `Ultimos pedidos feitos`, rodar `supabase/sql/service-orders-comandas.sql`.
 - Se o fechamento nao salvar, rodar `supabase/sql/cash-closing.sql`.
+- Se salvar saldo/limite do cliente app mostrar `column u.password_hash does not exist`, rodar `supabase/sql/fix-pdv-users-password-hash.sql`.
 - O leitor de codigo de barras comum USB/Bluetooth deve funcionar como teclado, sem instalar nada.
