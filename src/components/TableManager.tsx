@@ -43,6 +43,9 @@ interface TableItem {
   items: OrderItem[]
   customer_name: string
   customer_phone: string
+  preparation_order_id?: number
+  preparation_order_ids?: number[]
+  preparation_order_table?: 'service_orders' | 'room_orders'
 }
 
 interface ReceiptData {
@@ -76,6 +79,9 @@ interface ReopenServiceState {
     number: number
     customer_name?: string
     customer_phone?: string
+    order_id?: number
+    order_ids?: number[]
+    order_table?: 'service_orders' | 'room_orders'
     items?: Array<{
       name: string
       quantity: number
@@ -207,6 +213,9 @@ export default function TableManager({
       status: 'Ocupada',
       customer_name: serviceToReopen.customer_name || '',
       customer_phone: serviceToReopen.customer_phone || '',
+      preparation_order_id: serviceToReopen.order_id,
+      preparation_order_ids: serviceToReopen.order_ids,
+      preparation_order_table: serviceToReopen.order_table,
       items: (serviceToReopen.items ?? []).map((item, index) => {
         const quantity = Number(item.quantity || 1)
         const price = Number(item.unit_price || 0)
@@ -323,22 +332,106 @@ export default function TableManager({
     }
     const pendingTotal = toMoney(pendingItems.reduce((sum, item) => sum + item.total, 0))
 
-    const { error } = await supabase.from('service_orders').insert([
-      {
-        source_type: getServiceSource(activeItem.type),
-        service_number: activeItem.number,
-        customer_name: activeItem.customer_name,
-        customer_phone: activeItem.customer_phone,
-        items: pendingItems.map((item) => ({
-          name: item.name,
-          quantity: item.quantity,
-          unit_price: item.price,
-        })),
-        total_amount: pendingTotal,
-        status: 'recebido',
-        customer_message: 'Pedido recebido pelo PDV.',
-      },
-    ])
+    const allItemsPayload = activeItem.items.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      unit_price: item.price,
+    }))
+    const totalAmount = toMoney(activeItem.items.reduce((sum, item) => sum + item.total, 0))
+
+    let error: { message: string } | null = null
+    let preparationOrderId = activeItem.preparation_order_id
+    let preparationOrderIds = activeItem.preparation_order_ids ?? []
+    let preparationOrderTable = activeItem.preparation_order_table
+
+    if (preparationOrderTable === 'room_orders' && preparationOrderId) {
+      const updateResult = await supabase
+        .from('room_orders')
+        .update({
+          patient_name: activeItem.customer_name,
+          phone: activeItem.customer_phone,
+          items: allItemsPayload,
+          total_amount: totalAmount,
+          customer_message: 'Pedido atualizado pelo PDV.',
+        })
+        .eq('id', preparationOrderId)
+
+      error = updateResult.error
+    } else {
+      const sourceType = getServiceSource(activeItem.type)
+
+      if (!preparationOrderId || preparationOrderTable !== 'service_orders') {
+        const existingResult = await supabase
+          .from('service_orders')
+          .select('id, status, created_at')
+          .eq('source_type', sourceType)
+          .eq('service_number', activeItem.number)
+          .order('created_at', { ascending: false })
+
+        if (!existingResult.error) {
+          const openOrders = (existingResult.data ?? []).filter(
+            (order) => !['entregue', 'cancelado'].includes(order.status),
+          )
+          preparationOrderId = openOrders[0]?.id
+          preparationOrderIds = openOrders.map((order) => order.id)
+        }
+      }
+
+      if (preparationOrderId) {
+        const updateResult = await supabase
+          .from('service_orders')
+          .update({
+            source_type: sourceType,
+            service_number: activeItem.number,
+            customer_name: activeItem.customer_name,
+            customer_phone: activeItem.customer_phone,
+            items: allItemsPayload,
+            total_amount: totalAmount,
+            customer_message: 'Pedido atualizado pelo PDV.',
+          })
+          .eq('id', preparationOrderId)
+
+        error = updateResult.error
+
+        const duplicateIds = preparationOrderIds.filter((id) => id !== preparationOrderId)
+        if (!error && duplicateIds.length > 0) {
+          await supabase
+            .from('service_orders')
+            .update({
+              status: 'cancelado',
+              customer_message: 'Pedido unificado na comanda principal.',
+            })
+            .in('id', duplicateIds)
+        }
+      } else {
+        const insertResult = await supabase
+          .from('service_orders')
+          .insert([
+            {
+              source_type: sourceType,
+              service_number: activeItem.number,
+              customer_name: activeItem.customer_name,
+              customer_phone: activeItem.customer_phone,
+              items: pendingItems.map((item) => ({
+                name: item.name,
+                quantity: item.quantity,
+                unit_price: item.price,
+              })),
+              total_amount: pendingTotal,
+              status: 'recebido',
+              customer_message: 'Pedido recebido pelo PDV.',
+            },
+          ])
+          .select('id')
+          .single()
+
+        error = insertResult.error
+        preparationOrderId = insertResult.data?.id
+        preparationOrderIds = preparationOrderId ? [preparationOrderId] : []
+      }
+
+      preparationOrderTable = 'service_orders'
+    }
 
     if (error) {
       console.error('Erro ao enviar pedido:', error)
@@ -350,6 +443,9 @@ export default function TableManager({
 
     const updatedItem = {
       ...activeItem,
+      preparation_order_id: preparationOrderId,
+      preparation_order_ids: preparationOrderIds.length > 0 ? preparationOrderIds : preparationOrderId ? [preparationOrderId] : [],
+      preparation_order_table: preparationOrderTable,
       items: activeItem.items.map((item) => ({
         ...item,
         sent_to_preparation: true,

@@ -14,6 +14,7 @@ interface OrderItem {
 
 interface OrderTicket {
   id: number
+  ids: number[]
   tableName: 'room_orders' | 'service_orders' | 'app_orders'
   created_at: string
   source_type: OrderSource
@@ -36,6 +37,36 @@ const statusMessages: Record<OrderStatus, string> = {
 }
 
 const closedStatuses: OrderStatus[] = ['entregue', 'cancelado']
+
+const mergeOpenOrders = (orders: OrderTicket[]) => {
+  const groupedOrders = new Map<string, OrderTicket>()
+
+  orders
+    .filter((order) => !closedStatuses.includes(order.status))
+    .forEach((order) => {
+      const key = [
+        order.tableName,
+        order.source_type,
+        order.service_number,
+        order.customer_name?.trim().toLowerCase() ?? '',
+      ].join('-')
+      const current = groupedOrders.get(key)
+
+      if (!current) {
+        groupedOrders.set(key, { ...order, ids: order.ids.length > 0 ? order.ids : [order.id] })
+        return
+      }
+
+      groupedOrders.set(key, {
+        ...current,
+        ids: [...current.ids, ...order.ids],
+        items: [...current.items, ...order.items],
+        total_amount: Number(current.total_amount || 0) + Number(order.total_amount || 0),
+      })
+    })
+
+  return Array.from(groupedOrders.values())
+}
 
 export default function OrdersManager() {
   const navigate = useNavigate()
@@ -80,6 +111,7 @@ export default function OrdersManager() {
 
     const roomOrders: OrderTicket[] = (roomResult.data ?? []).map((order) => ({
       id: order.id,
+      ids: [order.id],
       tableName: 'room_orders',
       created_at: order.created_at,
       source_type: 'quarto',
@@ -94,6 +126,7 @@ export default function OrdersManager() {
 
     const serviceOrders: OrderTicket[] = (serviceResult.data ?? []).map((order) => ({
       id: order.id,
+      ids: [order.id],
       tableName: 'service_orders',
       created_at: order.created_at,
       source_type: order.source_type,
@@ -108,6 +141,7 @@ export default function OrdersManager() {
 
     const appOrders: OrderTicket[] = (appResult.data ?? []).map((order) => ({
       id: order.id,
+      ids: [order.id],
       tableName: 'app_orders',
       created_at: order.created_at,
       source_type: 'app',
@@ -121,8 +155,10 @@ export default function OrdersManager() {
     }))
 
     setOrders(
-      [...roomOrders, ...serviceOrders, ...appOrders]
-        .filter((order) => !closedStatuses.includes(order.status))
+      [
+        ...mergeOpenOrders([...roomOrders, ...serviceOrders]),
+        ...appOrders.filter((order) => !closedStatuses.includes(order.status)),
+      ]
         .sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -138,13 +174,14 @@ export default function OrdersManager() {
   }, [])
 
   const updateStatus = async (order: OrderTicket, status: OrderStatus) => {
+    const targetIds = order.ids.length > 0 ? order.ids : [order.id]
     const { error } = await supabase
       .from(order.tableName)
       .update({
         status,
         customer_message: statusMessages[status],
       })
-      .eq('id', order.id)
+      .in('id', targetIds)
 
     if (error) {
       console.error('Erro ao atualizar pedido:', error)
@@ -186,6 +223,9 @@ export default function OrdersManager() {
           number: order.service_number,
           customer_name: order.customer_name,
           customer_phone: order.customer_phone,
+          order_id: order.id,
+          order_ids: order.ids,
+          order_table: order.tableName === 'room_orders' ? 'room_orders' : 'service_orders',
           items: order.items,
         },
       },
