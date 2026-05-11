@@ -559,6 +559,53 @@ export default function OrdersManager() {
                         </label>
                       )
                     })}
+                    {(() => {
+                      const orderKey = `${order.tableName}-${order.id}`
+                      const selectedIndexes =
+                        selectedAppItemIndexesByOrder[orderKey] ??
+                        order.items.map((_, itemIndex) => itemIndex)
+                      const selectedCustomerId = selectedAppCustomerByOrder[orderKey]
+                      const selectedCustomer = appCustomers.find(
+                        (customer) => String(customer.id) === selectedCustomerId,
+                      )
+                      const selectedTotal = toMoney(
+                        order.items
+                          .filter((_, itemIndex) => selectedIndexes.includes(itemIndex))
+                          .reduce(
+                            (sum, item) =>
+                              sum +
+                              Number(item.unit_price || 0) * Number(item.quantity || 0),
+                            0,
+                          ),
+                      )
+                      const remainingTotal = Math.max(
+                        Number(order.total_amount || 0) - selectedTotal,
+                        0,
+                      )
+                      const customerAvailable = selectedCustomer
+                        ? Math.max(
+                            Number(selectedCustomer.credit_limit || 0) -
+                              Number(selectedCustomer.pending_total || 0),
+                            0,
+                          )
+                        : 0
+                      const customerAfter = selectedCustomer
+                        ? Math.max(customerAvailable - selectedTotal, 0)
+                        : 0
+
+                      return (
+                        <div className="send-to-app-summary">
+                          <span>Vai para o app: {currencyFormatter.format(selectedTotal)}</span>
+                          <span>Resta na comanda: {currencyFormatter.format(remainingTotal)}</span>
+                          {selectedCustomer && (
+                            <span>
+                              Saldo do cliente depois:{' '}
+                              {currencyFormatter.format(customerAfter)}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                   <select
                     value={selectedAppCustomerByOrder[`${order.tableName}-${order.id}`] ?? ''}
