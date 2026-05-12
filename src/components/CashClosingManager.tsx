@@ -65,6 +65,14 @@ const today = () => {
 }
 const formatClosingDate = (value: string) =>
   new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR')
+const addDaysToDate = (value: string, days: number) => {
+  const date = new Date(`${value}T12:00:00`)
+  date.setDate(date.getDate() + days)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 const toMoney = (value: number) => Number(value.toFixed(2))
 const toNumber = (value: string) => Number(value.replace(',', '.') || 0)
 
@@ -196,7 +204,10 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         return detail
       }, {})
 
-  const saveClosing = async (successMessage = 'Fechamento de caixa salvo com sucesso.') => {
+  const saveClosing = async (
+    successMessage = 'Fechamento de caixa salvo com sucesso.',
+    resetForNextDay = false,
+  ) => {
     if (isSaving) return
 
     const notesDetail = buildDetail('notas')
@@ -228,8 +239,21 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         return
       }
 
-      setMessage(`${successMessage} ${new Date().toLocaleTimeString('pt-BR')}`)
       await fetchClosings()
+      if (resetForNextDay) {
+        const nextClosingDate = addDaysToDate(closingDate, 1)
+        setClosingDate(nextClosingDate)
+        setOpeningCash(String(countedCash))
+        setCardTotal('')
+        setPixTotal('')
+        setMessage(
+          `${successMessage} Cartao e Pix zerados para ${formatClosingDate(nextClosingDate)}. ` +
+            `Dinheiro mantido como abertura: ${currencyFormatter.format(countedCash)}.`,
+        )
+        return
+      }
+
+      setMessage(`${successMessage} ${new Date().toLocaleTimeString('pt-BR')}`)
     } catch (error) {
       setMessage(
         `Nao foi possivel salvar o fechamento: ${
@@ -243,6 +267,10 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
 
   const saveOpening = async () => {
     await saveClosing('Abertura do caixa salva com sucesso.')
+  }
+
+  const closeDay = async () => {
+    await saveClosing('Fechamento de caixa salvo com sucesso.', true)
   }
 
   const renderDenomination = (item: Denomination) => {
@@ -378,7 +406,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         <button type="button" onClick={saveOpening} disabled={isSaving}>
           {isSaving ? 'Salvando...' : 'Salvar abertura'}
         </button>
-        <button type="button" onClick={() => saveClosing()} disabled={isSaving}>
+        <button type="button" onClick={closeDay} disabled={isSaving}>
           {isSaving ? 'Salvando...' : 'Fechar o dia'}
         </button>
         <button type="button" onClick={printClosing} className="cash-print-button">
