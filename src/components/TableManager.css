@@ -392,10 +392,46 @@
   font-size: 1em;
 }
 
-.hospital-fields input:focus {
+.hospital-fields select {
+  padding: 12px;
+  border: 1px solid #8d6e63;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #3e2723;
+  font-family: inherit;
+  font-size: 1em;
+}
+
+.hospital-fields input:focus,
+.hospital-fields select:focus {
   outline: none;
   border-color: #6d4c41;
   box-shadow: 0 0 0 3px rgba(109, 76, 65, 0.1);
+}
+
+.app-customer-command-picker {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #ead4b9;
+  border-radius: 8px;
+  background: #fff8ef;
+  padding: 12px;
+}
+
+.app-customer-command-picker label {
+  color: #5d4037;
+  font-weight: 800;
+}
+
+.app-customer-command-picker button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: #5d4037;
+  color: #fff8ef;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
 }
 
 /* ITEMS LIST */

@@ -490,6 +490,35 @@ export default function TableManager({
     )
   }
 
+  const getMatchingAppCustomerId = (item: TableItem) => {
+    const phone = item.customer_phone.replace(/\D/g, '')
+    const name = item.customer_name.trim().toLowerCase()
+    const match = appCustomers.find((customer) => {
+      const customerPhone = String(customer.phone || '').replace(/\D/g, '')
+      return (phone && customerPhone === phone) || (name && customer.name.trim().toLowerCase() === name)
+    })
+
+    return match ? String(match.id) : ''
+  }
+
+  const selectAppCustomerForActiveItem = (customerId: string) => {
+    setSelectedAppCustomerId(customerId)
+    if (!activeItem) return
+
+    const customer = appCustomers.find((appCustomer) => String(appCustomer.id) === customerId)
+    if (!customer) return
+
+    const updatedItem = {
+      ...activeItem,
+      customer_name: customer.name,
+      customer_phone: customer.phone,
+    }
+
+    setPaymentMethod('cliente_app')
+    setActiveItem(updatedItem)
+    persistServiceItem(updatedItem)
+  }
+
   const openItem = (item: TableItem) => {
     const updatedItem = { ...item }
     if (updatedItem.status === 'Livre') {
@@ -497,7 +526,7 @@ export default function TableManager({
     }
     setPaymentMethod('pix')
     setPayLaterDueDate('')
-    setSelectedAppCustomerId('')
+    setSelectedAppCustomerId(getMatchingAppCustomerId(updatedItem))
     setFiscalCpf('')
     setOrderMessage('')
     setActiveItem(updatedItem)
@@ -1241,6 +1270,25 @@ export default function TableManager({
 
               {activeItem.type !== 'room' && (
                 <div className="glass-panel hospital-fields">
+                  {activeItem.type === 'command' && (
+                    <div className="app-customer-command-picker">
+                      <label>Cliente app na comanda</label>
+                      <select
+                        value={selectedAppCustomerId}
+                        onChange={(e) => selectAppCustomerForActiveItem(e.target.value)}
+                      >
+                        <option value="">Comanda pelo nome da pessoa</option>
+                        {appCustomers.map((customer) => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.name} - {customer.phone}
+                          </option>
+                        ))}
+                      </select>
+                      <button type="button" onClick={fetchAppCustomers}>
+                        Atualizar clientes app
+                      </button>
+                    </div>
+                  )}
                   <input
                     type="text"
                     value={activeItem.customer_name}
@@ -1323,7 +1371,11 @@ export default function TableManager({
                             onChange={(e) => {
                               const nextPaymentMethod = e.target.value as PaymentMethod
                               setPaymentMethod(nextPaymentMethod)
-                              if (nextPaymentMethod === 'cliente_app') fetchAppCustomers()
+                              if (nextPaymentMethod === 'cliente_app') {
+                                fetchAppCustomers()
+                                const matchingCustomerId = getMatchingAppCustomerId(activeItem)
+                                if (matchingCustomerId) setSelectedAppCustomerId(matchingCustomerId)
+                              }
                             }}
                           >
                             <option value="pix">Pix</option>
@@ -1355,7 +1407,7 @@ export default function TableManager({
                             <label>Cliente do app</label>
                             <select
                               value={selectedAppCustomerId}
-                              onChange={(e) => setSelectedAppCustomerId(e.target.value)}
+                              onChange={(e) => selectAppCustomerForActiveItem(e.target.value)}
                             >
                               <option value="">Escolha o cliente</option>
                               {appCustomers.map((customer) => {
