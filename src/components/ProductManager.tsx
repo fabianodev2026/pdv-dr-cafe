@@ -36,6 +36,7 @@ const categoryLabels: Record<ProductCategory, string> = {
 
 export default function ProductManager() {
   const [products, setProducts] = useState<Product[]>([])
+  const [productSearch, setProductSearch] = useState('')
   const [newProduct, setNewProduct] = useState<NewProduct>({
     name: '',
     price: '',
@@ -174,6 +175,21 @@ export default function ProductManager() {
   const lowStockProducts = products.filter((product) => {
     const threshold = Number(product.low_stock_threshold || 0)
     return threshold > 0 && Number(product.stock_quantity || 0) <= threshold
+  })
+  const filteredProducts = products.filter((product) => {
+    const search = productSearch.trim().toLowerCase()
+    if (!search) return true
+
+    return [
+      product.name,
+      product.description || '',
+      product.barcode || '',
+      product.category || '',
+      categoryLabels[product.category || 'comida'],
+    ]
+      .join(' ')
+      .toLowerCase()
+      .includes(search)
   })
 
   return (
@@ -321,11 +337,26 @@ export default function ProductManager() {
             <span>{lowStockProducts.map((product) => product.name).join(', ')}</span>
           </div>
         )}
+        <div className="products-search">
+          <label>
+            Pesquisar produtos cadastrados
+            <input
+              value={productSearch}
+              onChange={(event) => setProductSearch(event.target.value)}
+              placeholder="Buscar por nome, categoria, descricao ou codigo"
+            />
+          </label>
+          <strong>
+            {filteredProducts.length} de {products.length} produto(s)
+          </strong>
+        </div>
         {products.length === 0 ? (
           <p className="no-products">Nenhum produto cadastrado ainda.</p>
+        ) : filteredProducts.length === 0 ? (
+          <p className="no-products">Nenhum produto encontrado para esta pesquisa.</p>
         ) : (
           <div className="products-grid">
-            {products.map((product) => (
+            {filteredProducts.map((product) => (
               <div
                 key={product.id}
                 className={`product-card ${
