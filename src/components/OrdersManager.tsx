@@ -6,6 +6,7 @@ import './OrdersManager.css'
 
 type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'entregue' | 'cancelado'
 type OrderSource = 'mesa' | 'quarto' | 'comanda' | 'app'
+type PaymentMethod = 'pix' | 'credito' | 'debito' | 'dinheiro'
 
 interface OrderItem {
   name: string
@@ -111,7 +112,9 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
   const [appCustomers, setAppCustomers] = useState<AppCustomer[]>([])
   const [selectedAppCustomerByOrder, setSelectedAppCustomerByOrder] = useState<Record<string, string>>({})
   const [selectedAppItemIndexesByOrder, setSelectedAppItemIndexesByOrder] = useState<Record<string, number[]>>({})
+  const [selectedPaymentByOrder, setSelectedPaymentByOrder] = useState<Record<string, PaymentMethod>>({})
   const [sendingToAppOrderId, setSendingToAppOrderId] = useState<string | null>(null)
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [printOrder, setPrintOrder] = useState<OrderTicket | null>(null)
 
@@ -454,6 +457,61 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
     fetchOrders()
   }
 
+  const paySentOrder = async (order: OrderTicket) => {
+    const orderKey = `${order.tableName}-${order.id}`
+    const paymentMethod = selectedPaymentByOrder[orderKey] ?? 'pix'
+    const confirmed = window.confirm(
+      `Registrar pagamento de ${currencyFormatter.format(Number(order.total_amount || 0))} em ${getOrderTitle(order)}?`,
+    )
+    if (!confirmed) return
+
+    setPayingOrderId(orderKey)
+
+    const saleItems = order.items.map((item) => ({
+      name: item.name,
+      quantity: Number(item.quantity || 0),
+      unit_price: Number(item.unit_price || 0),
+      total: toMoney(Number(item.unit_price || 0) * Number(item.quantity || 0)),
+    }))
+
+    const { error: saleError } = await supabase.from('sales').insert([
+      {
+        table_number: order.service_number || null,
+        total_amount: Number(order.total_amount || 0),
+        cashier_name: currentUser?.username ?? 'PDV',
+        customer_name: order.customer_name || null,
+        customer_phone: order.customer_phone || null,
+        items: saleItems,
+        payment_method: paymentMethod,
+      },
+    ])
+
+    if (saleError) {
+      setPayingOrderId(null)
+      setMessage(`Nao foi possivel registrar pagamento: ${saleError.message}`)
+      return
+    }
+
+    const targetIds = order.ids.length > 0 ? order.ids : [order.id]
+    const { error: statusError } = await supabase
+      .from(order.tableName)
+      .update({
+        status: 'entregue',
+        customer_message: 'Atendimento pago e finalizado no PDV.',
+      })
+      .in('id', targetIds)
+
+    setPayingOrderId(null)
+
+    if (statusError) {
+      setMessage(`Pagamento registrado, mas nao foi possivel finalizar pedido: ${statusError.message}`)
+      return
+    }
+
+    setMessage(`Pagamento registrado em ${getOrderTitle(order)}.`)
+    fetchOrders()
+  }
+
   const closeReprint = () => {
     document.body.classList.remove('printing-order-receipt')
     setPrintOrder(null)
@@ -669,6 +727,35 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
                     {sendingToAppOrderId === `${order.tableName}-${order.id}`
                       ? 'Enviando...'
                       : 'Enviar para app'}
+                  </button>
+                </div>
+              )}
+              {order.source_type !== 'app' && (
+                <div className="order-payment-control">
+                  <label>Pagamento</label>
+                  <select
+                    value={selectedPaymentByOrder[`${order.tableName}-${order.id}`] ?? 'pix'}
+                    onChange={(event) =>
+                      setSelectedPaymentByOrder((current) => ({
+                        ...current,
+                        [`${order.tableName}-${order.id}`]: event.target.value as PaymentMethod,
+                      }))
+                    }
+                  >
+                    <option value="pix">Pix</option>
+                    <option value="credito">Cartao de credito</option>
+                    <option value="debito">Cartao de debito</option>
+                    <option value="dinheiro">Dinheiro</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-pay-order"
+                    onClick={() => paySentOrder(order)}
+                    disabled={payingOrderId === `${order.tableName}-${order.id}`}
+                  >
+                    {payingOrderId === `${order.tableName}-${order.id}`
+                      ? 'Registrando...'
+                      : 'Registrar pagamento'}
                   </button>
                 </div>
               )}

@@ -218,6 +218,43 @@
   opacity: 0.7;
 }
 
+.order-payment-control {
+  display: grid;
+  flex: 1 1 220px;
+  max-width: 320px;
+  gap: 6px;
+  border: 1px solid #d9c1a6;
+  border-radius: 8px;
+  background: #f7ead9;
+  padding: 8px;
+}
+
+.order-payment-control label {
+  color: #5a2f17;
+  font-weight: 900;
+}
+
+.order-payment-control select {
+  min-height: 40px;
+  border: 1px solid #b98554;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #2b160d;
+  font: inherit;
+  font-weight: 800;
+  padding: 8px;
+}
+
+.status-actions .btn-pay-order {
+  background: #2f7d42;
+  color: #fffaf5;
+}
+
+.status-actions .btn-pay-order:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .status-actions .btn-cancel-order {
   background: #a5392f;
   color: #fff7ec;
