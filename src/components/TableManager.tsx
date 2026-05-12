@@ -152,6 +152,9 @@ const getItemReset = (item: TableItem): TableItem => ({
   status: 'Livre',
   customer_name: '',
   customer_phone: '',
+  preparation_order_id: undefined,
+  preparation_order_ids: undefined,
+  preparation_order_table: undefined,
 })
 
 const toMoney = (value: number) => Number(value.toFixed(2))
@@ -261,9 +264,147 @@ export default function TableManager({
     )
   }
 
+  const markServiceOccupied = (
+    current: TableItem[],
+    service: TableItem,
+  ) => {
+    const exists = current.some((item) => item.id === service.id)
+    if (!exists) return [...current, service]
+
+    return current.map((item) =>
+      item.id === service.id && item.status === 'Livre' ? service : item,
+    )
+  }
+
+  const buildItemsFromPreparation = (
+    items: Array<{ name: string; quantity: number; unit_price: number }> = [],
+  ) =>
+    items.map((item, index) => {
+      const quantity = Number(item.quantity || 1)
+      const price = Number(item.unit_price || 0)
+      return {
+        id: Date.now() + index,
+        name: item.name,
+        price,
+        quantity,
+        total: toMoney(price * quantity),
+        sent_to_preparation: true,
+      }
+    })
+
+  const fetchOpenPreparationServices = async () => {
+    const serviceResult = await supabase
+      .from('service_orders')
+      .select('*')
+      .not('status', 'in', '("entregue","cancelado")')
+      .order('created_at', { ascending: false })
+
+    if (!serviceResult.error) {
+      const openServices = new Map<string, TableItem>()
+
+      ;(serviceResult.data ?? []).forEach((order) => {
+        const serviceType =
+          order.source_type === 'comanda'
+            ? 'command'
+            : order.source_type === 'mesa'
+              ? 'table'
+              : null
+        if (!serviceType) return
+
+        const key = `${serviceType}-${order.service_number}`
+        const orderItems = buildItemsFromPreparation(order.items ?? [])
+        const current = openServices.get(key)
+
+        if (!current) {
+          openServices.set(key, {
+            ...createServiceItem(order.service_number, serviceType),
+            status: 'Ocupada',
+            customer_name: order.customer_name || '',
+            customer_phone: order.customer_phone || '',
+            preparation_order_id: order.id,
+            preparation_order_ids: [order.id],
+            preparation_order_table: 'service_orders',
+            items: orderItems,
+            total: toMoney(Number(order.total_amount || 0)),
+          })
+          return
+        }
+
+        openServices.set(key, {
+          ...current,
+          preparation_order_ids: [...(current.preparation_order_ids ?? []), order.id],
+          items: [...current.items, ...orderItems],
+          total: toMoney(current.total + Number(order.total_amount || 0)),
+        })
+      })
+
+      const openTables = Array.from(openServices.values()).filter(
+        (service) => service.type === 'table',
+      )
+      const openCommands = Array.from(openServices.values()).filter(
+        (service) => service.type === 'command',
+      )
+
+      setTables((current) =>
+        openTables.reduce((next, service) => markServiceOccupied(next, service), current),
+      )
+      setCommands((current) =>
+        openCommands.reduce((next, service) => markServiceOccupied(next, service), current),
+      )
+    }
+
+    const roomResult = await supabase
+      .from('room_orders')
+      .select('*')
+      .not('status', 'in', '("entregue","cancelado")')
+      .order('created_at', { ascending: false })
+
+    if (!roomResult.error) {
+      const openRooms = new Map<number, TableItem>()
+
+      ;(roomResult.data ?? []).forEach((order) => {
+        const roomNumber = Number(order.room_number || 0)
+        if (!roomNumber) return
+
+        const orderItems = buildItemsFromPreparation(order.items ?? [])
+        const current = openRooms.get(roomNumber)
+
+        if (!current) {
+          openRooms.set(roomNumber, {
+            ...createServiceItem(roomNumber, 'room'),
+            status: 'Ocupada',
+            customer_name: order.patient_name || '',
+            customer_phone: order.phone || '',
+            preparation_order_id: order.id,
+            preparation_order_ids: [order.id],
+            preparation_order_table: 'room_orders',
+            items: orderItems,
+            total: toMoney(Number(order.total_amount || 0)),
+          })
+          return
+        }
+
+        openRooms.set(roomNumber, {
+          ...current,
+          preparation_order_ids: [...(current.preparation_order_ids ?? []), order.id],
+          items: [...current.items, ...orderItems],
+          total: toMoney(current.total + Number(order.total_amount || 0)),
+        })
+      })
+
+      setRooms((current) =>
+        Array.from(openRooms.values()).reduce(
+          (next, service) => markServiceOccupied(next, service),
+          current,
+        ),
+      )
+    }
+  }
+
   useEffect(() => {
     fetchProducts()
     fetchAppCustomers()
+    fetchOpenPreparationServices()
   }, [])
 
   useEffect(() => {
@@ -788,6 +929,21 @@ export default function TableManager({
             details: { offlineId: offlinePending.id },
           })
         }
+      }
+
+      if (activeItem.preparation_order_id && activeItem.preparation_order_table) {
+        const targetIds =
+          activeItem.preparation_order_ids && activeItem.preparation_order_ids.length > 0
+            ? activeItem.preparation_order_ids
+            : [activeItem.preparation_order_id]
+
+        await supabase
+          .from(activeItem.preparation_order_table)
+          .update({
+            status: 'entregue',
+            customer_message: 'Atendimento pago e finalizado no PDV.',
+          })
+          .in('id', targetIds)
       }
 
       // Atualizar o estado do atendimento fechado.
