@@ -266,7 +266,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   }
 
   const saveOpening = async () => {
-    await saveClosing('Abertura do caixa salva com sucesso.')
+    await saveClosing('Caixa aberto com sucesso.')
   }
 
   const closeDay = async () => {
@@ -407,7 +407,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
 
       <section className="cash-closing-actions">
         <button type="button" onClick={saveOpening} disabled={isSaving}>
-          {isSaving ? 'Salvando...' : 'Salvar abertura'}
+          {isSaving ? 'Salvando...' : 'Abrir caixa'}
         </button>
         <button type="button" onClick={closeDay} disabled={isSaving}>
           {isSaving ? 'Salvando...' : 'Fechar o dia'}
