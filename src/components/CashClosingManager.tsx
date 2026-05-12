@@ -270,6 +270,9 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   }
 
   const closeDay = async () => {
+    const confirmed = window.confirm('Deseja fechar o dia?')
+    if (!confirmed) return
+
     await saveClosing('Fechamento de caixa salvo com sucesso.', true)
   }
 
