@@ -70,6 +70,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [closings, setClosings] = useState<CashClosing[]>([])
   const [message, setMessage] = useState('')
   const [isDraftLoaded, setIsDraftLoaded] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const notes = denominations.filter((item) => item.group === 'notas')
   const coins = denominations.filter((item) => item.group === 'moedas')
@@ -188,6 +189,8 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       }, {})
 
   const saveClosing = async (successMessage = 'Fechamento de caixa salvo com sucesso.') => {
+    if (isSaving) return
+
     const notesDetail = buildDetail('notas')
     const coinsDetail = buildDetail('moedas')
     const payload = {
@@ -204,21 +207,34 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       coins_detail: coinsDetail,
     }
 
-    const { error } = await supabase
-      .from('cash_closings')
-      .upsert([payload], { onConflict: 'closing_date' })
+    setIsSaving(true)
+    setMessage('Salvando fechamento de caixa...')
 
-    if (error) {
-      setMessage(`Nao foi possivel salvar o fechamento: ${error.message}`)
-      return
+    try {
+      const { error } = await supabase
+        .from('cash_closings')
+        .upsert([payload], { onConflict: 'closing_date' })
+
+      if (error) {
+        setMessage(`Nao foi possivel salvar o fechamento: ${error.message}`)
+        return
+      }
+
+      setMessage(`${successMessage} ${new Date().toLocaleTimeString('pt-BR')}`)
+      await fetchClosings()
+    } catch (error) {
+      setMessage(
+        `Nao foi possivel salvar o fechamento: ${
+          error instanceof Error ? error.message : 'erro inesperado'
+        }`,
+      )
+    } finally {
+      setIsSaving(false)
     }
-
-    setMessage(successMessage)
-    fetchClosings()
   }
 
-  const saveOpening = () => {
-    saveClosing('Abertura do caixa salva com sucesso.')
+  const saveOpening = async () => {
+    await saveClosing('Abertura do caixa salva com sucesso.')
   }
 
   const renderDenomination = (item: Denomination) => {
@@ -351,9 +367,13 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       </section>
 
       <section className="cash-closing-actions">
-        <button onClick={saveOpening}>Salvar abertura</button>
-        <button onClick={() => saveClosing()}>Fechar o dia</button>
-        <button onClick={printClosing} className="cash-print-button">
+        <button type="button" onClick={saveOpening} disabled={isSaving}>
+          {isSaving ? 'Salvando...' : 'Salvar abertura'}
+        </button>
+        <button type="button" onClick={() => saveClosing()} disabled={isSaving}>
+          {isSaving ? 'Salvando...' : 'Fechar o dia'}
+        </button>
+        <button type="button" onClick={printClosing} className="cash-print-button">
           Imprimir / salvar PDF
         </button>
       </section>
