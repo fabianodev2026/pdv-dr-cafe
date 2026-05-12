@@ -6,6 +6,7 @@ import { customerFieldLimits } from '../lib/customerLimits'
 import './CustomerApp.css'
 
 type CustomerStatus = 'pendente' | 'ativo' | 'bloqueado'
+type AppMessageType = 'info' | 'success' | 'error'
 
 interface AppCustomer {
   id: number
@@ -121,6 +122,7 @@ export default function CustomerApp() {
   const [loginForm, setLoginForm] = useState({ login: '', password: '' })
   const [resetForm, setResetForm] = useState({ login: '', email: '' })
   const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState<AppMessageType>('info')
   const [menuMessage, setMenuMessage] = useState('')
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [showRegisterPassword, setShowRegisterPassword] = useState(false)
@@ -181,6 +183,11 @@ export default function CustomerApp() {
       ),
     [filteredProducts],
   )
+
+  const showMessage = (text: string, type: AppMessageType = 'info') => {
+    setMessageType(type)
+    setMessage(text)
+  }
 
   const visibleProducts = productsByTab[activeMenuTab]
 
@@ -373,12 +380,12 @@ export default function CustomerApp() {
       !form.email ||
       !form.emailConfirmation
     ) {
-      setMessage('Preencha nome, login, senha, telefone, cargo, email e confirmacao do email.')
+      showMessage('Preencha nome, login, senha, telefone, cargo, email e confirmacao do email.', 'error')
       return
     }
 
     if (form.email.trim().toLowerCase() !== form.emailConfirmation.trim().toLowerCase()) {
-      setMessage('O email e a confirmacao do email precisam ser iguais.')
+      showMessage('O email e a confirmacao do email precisam ser iguais.', 'error')
       return
     }
 
@@ -391,8 +398,9 @@ export default function CustomerApp() {
       form.email.length > customerFieldLimits.email ||
       form.emailConfirmation.length > customerFieldLimits.email
     ) {
-      setMessage(
+      showMessage(
         `Nome ate ${customerFieldLimits.name}, login ate ${customerFieldLimits.login}, senha ate ${customerFieldLimits.password}, telefone ate ${customerFieldLimits.phone}, cargo ate ${customerFieldLimits.position} e email ate ${customerFieldLimits.email} caracteres.`,
+        'error',
       )
       return
     }
@@ -425,7 +433,15 @@ export default function CustomerApp() {
         },
       })
       if (error.code === '23505') {
-        setMessage('Este login ou email ja tem cadastro. Use outro ou fale com o cafe.')
+        showMessage('Este login ou email ja tem cadastro. Use outro ou fale com o cafe.', 'error')
+        return
+      }
+
+      if (error.message.includes('app_customers_email_length')) {
+        showMessage(
+          `Email muito longo. Use um email com ate ${customerFieldLimits.email} caracteres.`,
+          'error',
+        )
         return
       }
 
@@ -441,24 +457,26 @@ export default function CustomerApp() {
         error.message.includes('Senha') ||
         error.message.includes('Cargo')
       ) {
-        setMessage(error.message)
+        showMessage(error.message, 'error')
         return
       }
 
       if (error.code === '42P01' || error.message.includes('schema cache')) {
-        setMessage('Cadastro do app ainda esta sendo configurado. Avise o cafe.')
+        showMessage('Cadastro do app ainda esta sendo configurado. Avise o cafe.', 'error')
         return
       }
 
-      setMessage(
+      showMessage(
         `Nao foi possivel enviar o cadastro agora. Codigo suporte: ${normalized.code || 'CAD-RPC'}.`,
+        'error',
       )
       return
     }
 
     setLoginForm({ login: form.login, password: '' })
-    setMessage(
+    showMessage(
       'Cadastro enviado. Enviamos um email de verificacao; confirme o email e aguarde o cafe liberar seu acesso.',
+      'success',
     )
   }
 
@@ -668,7 +686,18 @@ export default function CustomerApp() {
         </div>
       </header>
 
-      {message && <div className="customer-app__alert">{message}</div>}
+      {message && (
+        <div className={`customer-app__alert customer-app__alert--${messageType}`}>
+          <strong>
+            {messageType === 'error'
+              ? 'Atenção'
+              : messageType === 'success'
+                ? 'Tudo certo'
+                : 'Aviso'}
+          </strong>
+          <span>{message}</span>
+        </div>
+      )}
       {menuMessage && <div className="customer-app__alert">{menuMessage}</div>}
 
       {!customer && (

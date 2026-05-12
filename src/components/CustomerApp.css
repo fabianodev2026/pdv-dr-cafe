@@ -51,11 +51,37 @@
   font-weight: 900;
 }
 
-.customer-app__alert,
+.customer-app__alert {
+  position: sticky;
+  top: 10px;
+  z-index: 20;
+  display: grid;
+  gap: 4px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+}
+
+.customer-app__alert strong,
+.customer-app__alert span {
+  display: block;
+}
+
+.customer-app__alert--info,
 .customer-app__warning {
   background: rgba(245, 190, 125, 0.18);
   border: 1px solid rgba(245, 190, 125, 0.42);
   color: #f5be7d;
+}
+
+.customer-app__alert--error {
+  background: rgba(145, 25, 18, 0.94);
+  border: 1px solid rgba(255, 210, 199, 0.75);
+  color: #fff8ef;
+}
+
+.customer-app__alert--success {
+  background: rgba(35, 112, 63, 0.94);
+  border: 1px solid rgba(206, 255, 222, 0.7);
+  color: #fff8ef;
 }
 
 .customer-app__blocked {
