@@ -607,6 +607,35 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
                 </button>
               )}
               {order.source_type !== 'app' && (
+                <div className="order-payment-control">
+                  <label>Pagamento</label>
+                  <select
+                    value={selectedPaymentByOrder[`${order.tableName}-${order.id}`] ?? 'pix'}
+                    onChange={(event) =>
+                      setSelectedPaymentByOrder((current) => ({
+                        ...current,
+                        [`${order.tableName}-${order.id}`]: event.target.value as PaymentMethod,
+                      }))
+                    }
+                  >
+                    <option value="pix">Pix</option>
+                    <option value="credito">Cartao de credito</option>
+                    <option value="debito">Cartao de debito</option>
+                    <option value="dinheiro">Dinheiro</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-pay-order"
+                    onClick={() => paySentOrder(order)}
+                    disabled={payingOrderId === `${order.tableName}-${order.id}`}
+                  >
+                    {payingOrderId === `${order.tableName}-${order.id}`
+                      ? 'Registrando...'
+                      : 'Registrar pagamento'}
+                  </button>
+                </div>
+              )}
+              {order.source_type !== 'app' && (
                 <div className="send-to-app-control">
                   <div className="send-to-app-items">
                     <strong>Enviar quais itens?</strong>
@@ -727,35 +756,6 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
                     {sendingToAppOrderId === `${order.tableName}-${order.id}`
                       ? 'Enviando...'
                       : 'Enviar para app'}
-                  </button>
-                </div>
-              )}
-              {order.source_type !== 'app' && (
-                <div className="order-payment-control">
-                  <label>Pagamento</label>
-                  <select
-                    value={selectedPaymentByOrder[`${order.tableName}-${order.id}`] ?? 'pix'}
-                    onChange={(event) =>
-                      setSelectedPaymentByOrder((current) => ({
-                        ...current,
-                        [`${order.tableName}-${order.id}`]: event.target.value as PaymentMethod,
-                      }))
-                    }
-                  >
-                    <option value="pix">Pix</option>
-                    <option value="credito">Cartao de credito</option>
-                    <option value="debito">Cartao de debito</option>
-                    <option value="dinheiro">Dinheiro</option>
-                  </select>
-                  <button
-                    type="button"
-                    className="btn-pay-order"
-                    onClick={() => paySentOrder(order)}
-                    disabled={payingOrderId === `${order.tableName}-${order.id}`}
-                  >
-                    {payingOrderId === `${order.tableName}-${order.id}`
-                      ? 'Registrando...'
-                      : 'Registrar pagamento'}
                   </button>
                 </div>
               )}

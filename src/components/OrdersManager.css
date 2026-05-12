@@ -220,8 +220,8 @@
 
 .order-payment-control {
   display: grid;
-  flex: 1 1 220px;
-  max-width: 320px;
+  flex: 1 1 260px;
+  max-width: 380px;
   gap: 6px;
   border: 1px solid #d9c1a6;
   border-radius: 8px;
