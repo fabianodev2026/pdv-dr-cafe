@@ -56,7 +56,15 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 })
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+const formatClosingDate = (value: string) =>
+  new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR')
 const toMoney = (value: number) => Number(value.toFixed(2))
 const toNumber = (value: string) => Number(value.replace(',', '.') || 0)
 
@@ -384,7 +392,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
           <div>
             <h1>Fechamento de caixa</h1>
             <p>Dr. Cafe</p>
-            <span>Data: {new Date(`${closingDate}T12:00:00`).toLocaleDateString('pt-BR')}</span>
+            <span>Data: {formatClosingDate(closingDate)}</span>
           </div>
         </div>
         <div className="cash-print-meta">
@@ -479,7 +487,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
           <div className="cash-history-grid">
             {closings.map((closing) => (
               <article key={closing.id} className="cash-history-card">
-                <strong>{new Date(closing.closing_date).toLocaleDateString('pt-BR')}</strong>
+                <strong>{formatClosingDate(closing.closing_date)}</strong>
                 <span>Abertura: {closing.opening_cashier_name || '-'}</span>
                 <span>Caixa: {closing.cashier_name}</span>
                 <span>Dinheiro: {currencyFormatter.format(Number(closing.counted_cash))}</span>
