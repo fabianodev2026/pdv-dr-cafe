@@ -129,7 +129,7 @@ const initialRooms: TableItem[] = roomNumbers.map((number) =>
   createServiceItem(number, 'room'),
 )
 
-const initialCommands: TableItem[] = Array.from({ length: 12 }, (_, index) =>
+const initialCommands: TableItem[] = Array.from({ length: 30 }, (_, index) =>
   createServiceItem(index + 1, 'command'),
 )
 
