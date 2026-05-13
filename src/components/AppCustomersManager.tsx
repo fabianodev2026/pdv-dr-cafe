@@ -49,7 +49,7 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
     const { data, error } = await supabase
       .from('app_customers')
       .select('*')
-      .order('created_at', { ascending: false })
+      .order('name', { ascending: true })
 
     if (error) {
       setMessage('Execute o SQL do app para criar app_customers.')
