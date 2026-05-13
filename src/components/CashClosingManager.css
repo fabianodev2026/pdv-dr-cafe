@@ -90,7 +90,7 @@
 
 .cash-closing-columns {
   display: grid;
-  grid-template-columns: minmax(280px, 1.35fr) minmax(220px, 0.8fr) minmax(220px, 0.8fr);
+  grid-template-columns: minmax(520px, 1.45fr) minmax(260px, 0.75fr);
   gap: 16px;
   align-items: start;
 }
@@ -106,21 +106,51 @@
 }
 
 .cash-section-title {
-  margin: 16px 0 8px;
+  margin: 0 0 8px;
   border-bottom: 1px solid #ead4b9;
   color: #7b4a27;
   font-weight: 900;
   padding-bottom: 6px;
 }
 
-.cash-denomination {
-  grid-template-columns: minmax(115px, 1fr) 86px minmax(92px, auto);
-  align-items: center;
+.cash-money-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.cash-count-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.cash-denomination-group {
+  min-width: 0;
+}
+
+.cash-denominations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 8px;
-  margin-bottom: 8px;
+}
+
+.cash-denomination {
+  grid-template-columns: minmax(70px, 1fr) 58px minmax(72px, auto);
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+  border: 1px solid #ead4b9;
+  border-radius: 8px;
+  background: #fffaf5;
+  padding: 8px;
+  font-size: 0.88rem;
 }
 
 .cash-denomination input {
+  min-height: 36px;
+  padding: 6px;
   text-align: center;
 }
 
@@ -129,7 +159,7 @@
 }
 
 .cash-column-total {
-  margin-top: 18px;
+  margin-top: 10px;
   border-radius: 8px;
   background: #fffaf5;
   border: 1px solid #ead4b9;
@@ -151,8 +181,8 @@
   cursor: pointer;
   font: inherit;
   font-weight: 900;
-  min-height: 48px;
-  padding: 12px 22px;
+  min-height: 44px;
+  padding: 10px 18px;
 }
 
 .cash-closing-actions .cash-print-button {
@@ -180,6 +210,10 @@
 
 @media (max-width: 900px) {
   .cash-closing-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .cash-count-layout {
     grid-template-columns: 1fr;
   }
 }
