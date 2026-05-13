@@ -409,15 +409,6 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
                 placeholder="0,00"
               />
             </label>
-            <label className="cash-money-input">
-              Despesas do dia
-              <input
-                value={cashExpenses}
-                onChange={(event) => setCashExpenses(event.target.value)}
-                inputMode="decimal"
-                placeholder="0,00"
-              />
-            </label>
           </div>
           <div className="cash-column-total">
             <span>Dinheiro esperado</span>
@@ -437,6 +428,15 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
               <input
                 value={cashInDay}
                 onChange={(event) => setCashInDay(event.target.value)}
+                inputMode="decimal"
+                placeholder="0,00"
+              />
+            </label>
+            <label className="cash-money-input">
+              Despesas do dia
+              <input
+                value={cashExpenses}
+                onChange={(event) => setCashExpenses(event.target.value)}
                 inputMode="decimal"
                 placeholder="0,00"
               />
