@@ -459,7 +459,6 @@ export default function CustomerApp() {
     })
 
     if (error) {
-      const normalized = normalizeError(error)
       logAppError({
         source: 'CustomerApp',
         action: 'registerCustomer',
@@ -511,7 +510,7 @@ export default function CustomerApp() {
       }
 
       showMessage(
-        `Nao foi possivel enviar o cadastro agora. Codigo suporte: ${normalized.code || 'CAD-RPC'}.`,
+        'Nao foi possivel enviar o cadastro. Confira se email, login e telefone estao corretos ou se ja existe cadastro com esses dados. Se continuar, fale com o cafe.',
         'error',
       )
       return
