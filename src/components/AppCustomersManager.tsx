@@ -31,6 +31,12 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 })
 
+const statusMessages: Record<CustomerStatus, string> = {
+  ativo: 'Cliente ativo',
+  bloqueado: 'Cliente bloqueado',
+  pendente: 'Cliente pendente',
+}
+
 export default function AppCustomersManager({ currentUser }: AppCustomersManagerProps) {
   const [customers, setCustomers] = useState<AppCustomer[]>([])
   const [creditInputs, setCreditInputs] = useState<Record<number, string>>({})
@@ -74,7 +80,8 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
       return
     }
 
-    fetchCustomers()
+    await fetchCustomers()
+    setMessage(`${statusMessages[status]}: ${customer.name}.`)
   }
 
   const updateCreditLimit = async (customer: AppCustomer) => {

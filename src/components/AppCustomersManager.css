@@ -57,10 +57,17 @@
 .app-customers-alert,
 .app-customers-empty {
   border-radius: 10px;
-  background: #fff8ef;
-  border: 1px solid #d8a66b;
+  background: #e8f5e9;
+  border: 1px solid #81c784;
+  color: #1b5e20;
   padding: 12px;
   font-weight: 800;
+}
+
+.app-customers-empty {
+  background: #fff8ef;
+  border-color: #d8a66b;
+  color: #2b160d;
 }
 
 .app-customers-grid {
