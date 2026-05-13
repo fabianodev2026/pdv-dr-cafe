@@ -54,6 +54,15 @@ interface PendingPayment {
   status: string
 }
 
+interface AppOrderProgress {
+  id: number
+  created_at: string
+  items?: CartItem[]
+  total_amount: number
+  status: string
+  customer_message?: string
+}
+
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
@@ -140,6 +149,7 @@ export default function CustomerApp() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [pendingTotal, setPendingTotal] = useState(0)
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([])
+  const [appOrders, setAppOrders] = useState<AppOrderProgress[]>([])
   const [nextDueDate, setNextDueDate] = useState('')
   const [isBlockedByDebt, setIsBlockedByDebt] = useState(false)
   const [form, setForm] = useState({
@@ -227,6 +237,28 @@ export default function CustomerApp() {
     }
   }
 
+  const loadAppOrders = async (phone: string) => {
+    const { data, error } = await supabase
+      .from('app_orders')
+      .select('id, created_at, items, total_amount, status, customer_message')
+      .eq('customer_phone', phone)
+      .not('status', 'in', '("entregue","cancelado")')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      logAppError({
+        source: 'CustomerApp',
+        action: 'loadAppOrders',
+        error,
+        details: { table: 'app_orders' },
+      })
+      setAppOrders([])
+      return
+    }
+
+    setAppOrders(data ?? [])
+  }
+
   const loadPending = async (phone: string) => {
     const { data, error } = await supabase
       .from('pending_payments')
@@ -245,6 +277,7 @@ export default function CustomerApp() {
       setPendingPayments([])
       setNextDueDate(getFifthBusinessDay())
       setIsBlockedByDebt(false)
+      loadAppOrders(phone)
       return
     }
 
@@ -261,7 +294,18 @@ export default function CustomerApp() {
     setPendingTotal(totalDebt)
     setNextDueDate(closestDue || getFifthBusinessDay())
     setIsBlockedByDebt(overdue)
+    loadAppOrders(phone)
   }
+
+  useEffect(() => {
+    if (!customer?.phone) return
+
+    const intervalId = window.setInterval(() => {
+      loadAppOrders(customer.phone)
+    }, 10000)
+
+    return () => window.clearInterval(intervalId)
+  }, [customer?.phone])
 
   useEffect(() => {
     loadMenu()
@@ -923,6 +967,33 @@ export default function CustomerApp() {
                     </span>
                   </div>
                   <p>{payment.items_detail || payment.description || 'Compra lancada no caixa.'}</p>
+                </article>
+              ))}
+            </section>
+          )}
+
+          {appOrders.length > 0 && (
+            <section className="customer-app__pending-list">
+              <div className="customer-app__pending-heading">
+                <h2>Pedidos em andamento</h2>
+                <strong>{appOrders.length} pedido(s)</strong>
+              </div>
+              {appOrders.map((order) => (
+                <article
+                  key={order.id}
+                  className={`customer-app__pending-card customer-app__order-status-card ${order.status}`}
+                >
+                  <div>
+                    <strong>{order.customer_message || 'Pedido enviado para o cafe.'}</strong>
+                    <span>Status: {order.status}</span>
+                    <span>{new Date(order.created_at).toLocaleString('pt-BR')}</span>
+                  </div>
+                  <p>
+                    {(order.items ?? [])
+                      .map((item) => `${item.quantity}x ${item.name}`)
+                      .join(', ') || 'Itens do pedido em preparo.'}
+                  </p>
+                  <strong>{currencyFormatter.format(Number(order.total_amount || 0))}</strong>
                 </article>
               ))}
             </section>

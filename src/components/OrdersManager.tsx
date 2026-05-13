@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import type { CurrentUser } from '../lib/rolePermissions'
 import './OrdersManager.css'
 
-type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'entregue' | 'cancelado'
+type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'pago' | 'entregue' | 'cancelado'
 type OrderSource = 'mesa' | 'quarto' | 'comanda' | 'app'
 type PaymentMethod = 'pix' | 'credito' | 'debito' | 'dinheiro'
 
@@ -39,6 +39,24 @@ interface AppCustomer {
   pending_total?: number
 }
 
+interface SaleRecord {
+  id: number
+  created_at: string
+  table_number?: number | null
+  total_amount: number
+  cashier_name?: string | null
+  customer_name?: string | null
+  customer_phone?: string | null
+  items?: Array<{
+    name?: string
+    quantity?: number
+    unit_price?: number
+    price?: number
+    total?: number
+  }>
+  payment_method?: string | null
+}
+
 interface OrdersManagerProps {
   currentUser?: CurrentUser | null
 }
@@ -48,6 +66,7 @@ const statusMessages: Record<OrderStatus, string> = {
   recebido: 'Seu pedido foi recebido.',
   preparo: 'Seu pedido esta em preparo.',
   pronto: 'Seu pedido esta pronto para entrega.',
+  pago: 'Pagamento registrado. Seu pedido sera finalizado na entrega.',
   entregue: 'Pedido entregue. Obrigado!',
   cancelado: 'Pedido cancelado pelo cafe.',
 }
@@ -115,6 +134,9 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
   const [selectedPaymentByOrder, setSelectedPaymentByOrder] = useState<Record<string, PaymentMethod>>({})
   const [sendingToAppOrderId, setSendingToAppOrderId] = useState<string | null>(null)
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null)
+  const [showOrderLog, setShowOrderLog] = useState(false)
+  const [orderLog, setOrderLog] = useState<SaleRecord[]>([])
+  const [isLoadingOrderLog, setIsLoadingOrderLog] = useState(false)
   const [message, setMessage] = useState('')
   const [printOrder, setPrintOrder] = useState<OrderTicket | null>(null)
 
@@ -496,8 +518,8 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
     const { error: statusError } = await supabase
       .from(order.tableName)
       .update({
-        status: 'entregue',
-        customer_message: 'Atendimento pago e finalizado no PDV.',
+        status: 'pago',
+        customer_message: statusMessages.pago,
       })
       .in('id', targetIds)
 
@@ -508,8 +530,27 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
       return
     }
 
-    setMessage(`Pagamento registrado em ${getOrderTitle(order)}.`)
+    setMessage(`Pagamento registrado em ${getOrderTitle(order)}. Clique em Entregue para fechar.`)
     fetchOrders()
+  }
+
+  const fetchOrderLog = async () => {
+    setIsLoadingOrderLog(true)
+    setShowOrderLog(true)
+    const { data, error } = await supabase
+      .from('sales')
+      .select('id, created_at, table_number, total_amount, cashier_name, customer_name, customer_phone, items, payment_method')
+      .order('created_at', { ascending: false })
+      .limit(80)
+
+    setIsLoadingOrderLog(false)
+
+    if (error) {
+      setMessage(`Nao foi possivel buscar registro de pedidos: ${error.message}`)
+      return
+    }
+
+    setOrderLog(data ?? [])
   }
 
   const closeReprint = () => {
@@ -545,6 +586,9 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
         </div>
         <button onClick={fetchOrders} className="orders-refresh">
           Atualizar
+        </button>
+        <button onClick={fetchOrderLog} className="orders-log-button">
+          Registro de pedidos
         </button>
       </header>
 
@@ -762,7 +806,7 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
               <button onClick={() => updateStatus(order, 'recebido')}>Recebido</button>
               <button onClick={() => updateStatus(order, 'preparo')}>Preparo</button>
               <button onClick={() => updateStatus(order, 'pronto')}>Pronto</button>
-              {order.status === 'pronto' && (
+              {(order.status === 'pronto' || order.status === 'pago') && (
                 <button
                   onClick={() => updateStatus(order, 'entregue')}
                   className="btn-delivered"
@@ -780,6 +824,59 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
           </article>
         ))}
       </section>
+
+      {showOrderLog && (
+        <div className="orders-log-overlay">
+          <div className="orders-log-panel">
+            <div className="orders-log-heading">
+              <div>
+                <h2>Registro de pedidos</h2>
+                <p>Historico do que foi lancado no caixa.</p>
+              </div>
+              <button type="button" onClick={() => setShowOrderLog(false)}>
+                Fechar
+              </button>
+            </div>
+            {isLoadingOrderLog ? (
+              <p className="orders-empty">Carregando registros...</p>
+            ) : orderLog.length === 0 ? (
+              <p className="orders-empty">Nenhum registro encontrado.</p>
+            ) : (
+              <div className="orders-log-list">
+                {orderLog.map((sale) => (
+                  <article key={sale.id} className="orders-log-card">
+                    <div>
+                      <strong>{new Date(sale.created_at).toLocaleString('pt-BR')}</strong>
+                      <span>
+                        {sale.payment_method === 'cliente_app'
+                          ? 'Lancado no app'
+                          : `Pagamento: ${sale.payment_method || '-'}`}
+                      </span>
+                      <span>Cliente: {sale.customer_name || '-'}</span>
+                      {sale.customer_phone && <span>Telefone: {sale.customer_phone}</span>}
+                      <span>Atendimento: {sale.table_number ? `#${sale.table_number}` : '-'}</span>
+                      <span>Caixa: {sale.cashier_name || '-'}</span>
+                    </div>
+                    <div className="orders-log-items">
+                      {(sale.items ?? []).map((item, index) => {
+                        const quantity = Number(item.quantity || 0)
+                        const unitPrice = Number(item.unit_price ?? item.price ?? 0)
+                        const total = Number(item.total ?? quantity * unitPrice)
+                        return (
+                          <span key={`${sale.id}-item-${index}`}>
+                            {quantity}x {item.name || 'Item'} - {currencyFormatter.format(total)}
+                          </span>
+                        )
+                      })}
+                    </div>
+                    <b>Total: {currencyFormatter.format(Number(sale.total_amount || 0))}</b>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {printOrder && (
         <>

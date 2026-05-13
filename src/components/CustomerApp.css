@@ -303,6 +303,22 @@
   color: #d8c7b6;
 }
 
+.customer-app__order-status-card {
+  border-left: 5px solid #f5be7d;
+}
+
+.customer-app__order-status-card.preparo {
+  border-left-color: #f2a23a;
+}
+
+.customer-app__order-status-card.pronto {
+  border-left-color: #31c47a;
+}
+
+.customer-app__order-status-card.pago {
+  border-left-color: #44c8d8;
+}
+
 .customer-app__layout {
   display: grid;
   grid-template-columns: 310px minmax(0, 1fr);
