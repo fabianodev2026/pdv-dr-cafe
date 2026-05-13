@@ -81,7 +81,7 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
     }
 
     await fetchCustomers()
-    setMessage(`${statusMessages[status]}: ${customer.name}.`)
+    window.alert(`${statusMessages[status]}: ${customer.name}.`)
   }
 
   const updateCreditLimit = async (customer: AppCustomer) => {
