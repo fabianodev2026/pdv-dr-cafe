@@ -25,6 +25,7 @@ interface CashClosing {
   cashier_name: string
   opening_cash: number
   cash_in_day?: number
+  cash_expenses?: number
   counted_cash: number
   card_total: number
   credit_total?: number
@@ -84,6 +85,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [openingCashierName, setOpeningCashierName] = useState(currentUser?.username || '')
   const [openingCash, setOpeningCash] = useState('')
   const [cashInDay, setCashInDay] = useState('')
+  const [cashExpenses, setCashExpenses] = useState('')
   const [creditTotal, setCreditTotal] = useState('')
   const [debitTotal, setDebitTotal] = useState('')
   const [pixTotal, setPixTotal] = useState('')
@@ -109,11 +111,12 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
 
   const openingCashValue = toMoney(toNumber(openingCash))
   const cashInDayValue = toMoney(toNumber(cashInDay))
+  const cashExpensesValue = toMoney(toNumber(cashExpenses))
   const creditTotalValue = toMoney(toNumber(creditTotal))
   const debitTotalValue = toMoney(toNumber(debitTotal))
   const cardTotalValue = toMoney(creditTotalValue + debitTotalValue)
   const pixTotalValue = toMoney(toNumber(pixTotal))
-  const expectedCash = toMoney(openingCashValue + cashInDayValue)
+  const expectedCash = toMoney(openingCashValue + cashInDayValue - cashExpensesValue)
   const grandTotal = toMoney(cashInDayValue + cardTotalValue + pixTotalValue)
   const cashDifference = toMoney(countedCash - expectedCash)
 
@@ -143,6 +146,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       setOpeningCashierName(draft.openingCashierName || currentUser?.username || '')
       setOpeningCash(draft.openingCash || '')
       setCashInDay(draft.cashInDay || '')
+      setCashExpenses(draft.cashExpenses || '')
       setCreditTotal(draft.creditTotal || draft.cardTotal || '')
       setDebitTotal(draft.debitTotal || '')
       setPixTotal(draft.pixTotal || '')
@@ -168,6 +172,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         openingCashierName,
         openingCash,
         cashInDay,
+        cashExpenses,
         creditTotal,
         debitTotal,
         pixTotal,
@@ -176,6 +181,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     )
   }, [
     cashInDay,
+    cashExpenses,
     closingDate,
     counts,
     creditTotal,
@@ -200,6 +206,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     setOpeningCashierName(latestForDate.opening_cashier_name || currentUser?.username || '')
     setOpeningCash(String(Number(latestForDate.opening_cash || 0)))
     setCashInDay(String(Number(latestForDate.cash_in_day || 0)))
+    setCashExpenses(String(Number(latestForDate.cash_expenses || 0)))
     setCreditTotal(String(Number(latestForDate.credit_total ?? latestForDate.card_total ?? 0)))
     setDebitTotal(String(Number(latestForDate.debit_total || 0)))
     setPixTotal(String(Number(latestForDate.pix_total || 0)))
@@ -235,6 +242,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       cashier_name: currentUser?.username || 'Desconhecido',
       opening_cash: openingCashValue,
       cash_in_day: cashInDayValue,
+      cash_expenses: cashExpensesValue,
       counted_cash: countedCash,
       card_total: cardTotalValue,
       credit_total: creditTotalValue,
@@ -265,6 +273,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         setClosingDate(nextClosingDate)
         setOpeningCash(String(countedCash))
         setCashInDay('')
+        setCashExpenses('')
         setCreditTotal('')
         setDebitTotal('')
         setPixTotal('')
@@ -409,6 +418,15 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
                 placeholder="0,00"
               />
             </label>
+            <label className="cash-money-input">
+              Despesas do dia
+              <input
+                value={cashExpenses}
+                onChange={(event) => setCashExpenses(event.target.value)}
+                inputMode="decimal"
+                placeholder="0,00"
+              />
+            </label>
           </div>
           <div className="cash-column-total">
             <span>Dinheiro esperado</span>
@@ -496,6 +514,10 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
           <div>
             <span>Dinheiro do dia</span>
             <strong>{currencyFormatter.format(cashInDayValue)}</strong>
+          </div>
+          <div>
+            <span>Despesas</span>
+            <strong>{currencyFormatter.format(cashExpensesValue)}</strong>
           </div>
           <div>
             <span>Dinheiro contado</span>
@@ -588,6 +610,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
                 <span>Caixa: {closing.cashier_name}</span>
                 <span>Dinheiro: {currencyFormatter.format(Number(closing.counted_cash))}</span>
                 <span>Dinheiro dia: {currencyFormatter.format(Number(closing.cash_in_day || 0))}</span>
+                <span>Despesas: {currencyFormatter.format(Number(closing.cash_expenses || 0))}</span>
                 <span>Credito: {currencyFormatter.format(Number(closing.credit_total ?? closing.card_total ?? 0))}</span>
                 <span>Debito: {currencyFormatter.format(Number(closing.debit_total || 0))}</span>
                 <span>Pix: {currencyFormatter.format(Number(closing.pix_total))}</span>

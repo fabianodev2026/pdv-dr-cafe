@@ -3,6 +3,7 @@
 
 alter table public.cash_closings
   add column if not exists cash_in_day numeric(10,2) not null default 0,
+  add column if not exists cash_expenses numeric(10,2) not null default 0,
   add column if not exists credit_total numeric(10,2) not null default 0,
   add column if not exists debit_total numeric(10,2) not null default 0;
 
