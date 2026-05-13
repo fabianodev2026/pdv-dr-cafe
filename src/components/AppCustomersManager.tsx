@@ -37,6 +37,18 @@ const statusMessages: Record<CustomerStatus, string> = {
   pendente: 'Cliente pendente',
 }
 
+const sortAppCustomers = (customers: AppCustomer[]) =>
+  [...customers].sort((first, second) => {
+    if (first.status === 'pendente' && second.status !== 'pendente') return -1
+    if (first.status !== 'pendente' && second.status === 'pendente') return 1
+
+    if (first.status === 'pendente' && second.status === 'pendente') {
+      return new Date(second.created_at).getTime() - new Date(first.created_at).getTime()
+    }
+
+    return first.name.localeCompare(second.name, 'pt-BR', { sensitivity: 'base' })
+  })
+
 export default function AppCustomersManager({ currentUser }: AppCustomersManagerProps) {
   const [customers, setCustomers] = useState<AppCustomer[]>([])
   const [creditInputs, setCreditInputs] = useState<Record<number, string>>({})
@@ -58,7 +70,7 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
     }
 
     setMessage(showSuccessMessage ? 'Clientes do app atualizados.' : '')
-    const nextCustomers = data ?? []
+    const nextCustomers = sortAppCustomers(data ?? [])
     setCustomers(nextCustomers)
     setCreditInputs(
       Object.fromEntries(
