@@ -84,7 +84,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [closingDate, setClosingDate] = useState(today())
   const [openingCashierName, setOpeningCashierName] = useState(currentUser?.username || '')
   const [openingCash, setOpeningCash] = useState('')
-  const [cashInDay, setCashInDay] = useState('')
+  const [cashInDay, setCashInDay] = useState('0')
   const [cashExpenses, setCashExpenses] = useState('')
   const [creditTotal, setCreditTotal] = useState('')
   const [debitTotal, setDebitTotal] = useState('')
@@ -145,7 +145,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       setClosingDate(draft.closingDate || today())
       setOpeningCashierName(draft.openingCashierName || currentUser?.username || '')
       setOpeningCash(draft.openingCash || '')
-      setCashInDay(draft.cashInDay || '')
+      setCashInDay(draft.cashInDay || '0')
       setCashExpenses(draft.cashExpenses || '')
       setCreditTotal(draft.creditTotal || draft.cardTotal || '')
       setDebitTotal(draft.debitTotal || '')
@@ -272,7 +272,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         const nextClosingDate = addDaysToDate(closingDate, 1)
         setClosingDate(nextClosingDate)
         setOpeningCash(String(countedCash))
-        setCashInDay('')
+        setCashInDay('0')
         setCashExpenses('')
         setCreditTotal('')
         setDebitTotal('')
@@ -410,15 +410,6 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
               />
             </label>
             <label className="cash-money-input">
-              Dinheiro que entrou no dia
-              <input
-                value={cashInDay}
-                onChange={(event) => setCashInDay(event.target.value)}
-                inputMode="decimal"
-                placeholder="0,00"
-              />
-            </label>
-            <label className="cash-money-input">
               Despesas do dia
               <input
                 value={cashExpenses}
@@ -439,8 +430,17 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         </div>
 
         <div className="cash-closing-column">
-          <h2>Cartao e Pix</h2>
+          <h2>Movimento do dia</h2>
           <div className="cash-money-grid">
+            <label className="cash-money-input">
+              Dinheiro do dia
+              <input
+                value={cashInDay}
+                onChange={(event) => setCashInDay(event.target.value)}
+                inputMode="decimal"
+                placeholder="0,00"
+              />
+            </label>
             <label className="cash-money-input">
               Credito
               <input
@@ -473,9 +473,9 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
             <span>Total cartao</span>
             <strong>{currencyFormatter.format(cardTotalValue)}</strong>
           </div>
-          <div className="cash-column-total">
-            <span>Total Pix</span>
-            <strong>{currencyFormatter.format(pixTotalValue)}</strong>
+          <div className="cash-column-total cash-column-total--grand">
+            <span>Total</span>
+            <strong>{currencyFormatter.format(grandTotal)}</strong>
           </div>
         </div>
       </section>

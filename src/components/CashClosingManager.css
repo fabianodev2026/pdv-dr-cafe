@@ -174,6 +174,17 @@
   padding: 12px;
 }
 
+.cash-column-total--grand {
+  background: #2b160d;
+  border-color: #2b160d;
+  color: #fffaf5;
+}
+
+.cash-column-total--grand strong,
+.cash-column-total--grand span {
+  color: #fffaf5;
+}
+
 .cash-closing-actions {
   display: flex;
   gap: 10px;
