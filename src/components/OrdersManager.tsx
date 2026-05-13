@@ -78,6 +78,13 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 })
 
+const getLocalDateInputValue = (date = new Date()) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 const toMoney = (value: number) => Number(value.toFixed(2))
 
 const getFifthBusinessDay = () => {
@@ -136,6 +143,7 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null)
   const [showOrderLog, setShowOrderLog] = useState(false)
   const [orderLog, setOrderLog] = useState<SaleRecord[]>([])
+  const [orderLogDate, setOrderLogDate] = useState(getLocalDateInputValue())
   const [isLoadingOrderLog, setIsLoadingOrderLog] = useState(false)
   const [message, setMessage] = useState('')
   const [printOrder, setPrintOrder] = useState<OrderTicket | null>(null)
@@ -534,14 +542,21 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
     fetchOrders()
   }
 
-  const fetchOrderLog = async () => {
+  const fetchOrderLog = async (dateValue = orderLogDate) => {
+    const selectedDate = dateValue || getLocalDateInputValue()
+    const startDate = new Date(`${selectedDate}T00:00:00`)
+    const endDate = new Date(startDate)
+    endDate.setDate(endDate.getDate() + 1)
+
+    setOrderLogDate(selectedDate)
     setIsLoadingOrderLog(true)
     setShowOrderLog(true)
     const { data, error } = await supabase
       .from('sales')
       .select('id, created_at, table_number, total_amount, cashier_name, customer_name, customer_phone, items, payment_method')
+      .gte('created_at', startDate.toISOString())
+      .lt('created_at', endDate.toISOString())
       .order('created_at', { ascending: false })
-      .limit(80)
 
     setIsLoadingOrderLog(false)
 
@@ -587,7 +602,7 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
         <button onClick={fetchOrders} className="orders-refresh">
           Atualizar
         </button>
-        <button onClick={fetchOrderLog} className="orders-log-button">
+        <button onClick={() => fetchOrderLog(getLocalDateInputValue())} className="orders-log-button">
           Registro de pedidos
         </button>
       </header>
@@ -831,10 +846,23 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
             <div className="orders-log-heading">
               <div>
                 <h2>Registro de pedidos</h2>
-                <p>Historico do que foi lancado no caixa.</p>
+                <p>Historico do que foi lancado no caixa neste dia.</p>
               </div>
               <button type="button" onClick={() => setShowOrderLog(false)}>
                 Fechar
+              </button>
+            </div>
+            <div className="orders-log-filter">
+              <label>
+                Data
+                <input
+                  type="date"
+                  value={orderLogDate}
+                  onChange={(event) => setOrderLogDate(event.target.value)}
+                />
+              </label>
+              <button type="button" onClick={() => fetchOrderLog(orderLogDate)}>
+                Buscar data
               </button>
             </div>
             {isLoadingOrderLog ? (
