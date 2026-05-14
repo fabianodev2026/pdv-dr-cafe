@@ -136,9 +136,15 @@ export default function CustomerApp() {
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [showRegisterPassword, setShowRegisterPassword] = useState(false)
   const [showPasswordReset, setShowPasswordReset] = useState(false)
+  const [showPasswordChange, setShowPasswordChange] = useState(false)
   const [tokenResetForm, setTokenResetForm] = useState({
     token: '',
     password: '',
+    confirmPassword: '',
+  })
+  const [passwordChangeForm, setPasswordChangeForm] = useState({
+    currentPassword: '',
+    newPassword: '',
     confirmPassword: '',
   })
   const [showTokenPasswordReset, setShowTokenPasswordReset] = useState(false)
@@ -610,6 +616,50 @@ export default function CustomerApp() {
     setMessage('Senha alterada com sucesso. Entre com sua nova senha.')
   }
 
+  const changeCustomerPassword = async () => {
+    if (!customer) return
+
+    const currentPassword = passwordChangeForm.currentPassword.trim()
+    const newPassword = passwordChangeForm.newPassword.trim()
+    const confirmPassword = passwordChangeForm.confirmPassword.trim()
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      showMessage('Preencha senha atual, nova senha e confirmacao.', 'error')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      showMessage('A nova senha e a confirmacao precisam ser iguais.', 'error')
+      return
+    }
+
+    if (newPassword.length > customerFieldLimits.password) {
+      showMessage(`Senha ate ${customerFieldLimits.password} caracteres.`, 'error')
+      return
+    }
+
+    const { data, error } = await supabase.rpc('app_customer_change_password', {
+      p_login: customer.login,
+      p_current_password: currentPassword,
+      p_new_password: newPassword,
+    })
+
+    if (error || data !== true) {
+      logAppError({
+        source: 'CustomerApp',
+        action: 'changeCustomerPassword',
+        error: error ?? new Error('Change password returned false'),
+        details: { table: 'app_customers', customerId: customer.id },
+      })
+      showMessage('Nao foi possivel trocar a senha. Confira a senha atual e tente novamente.', 'error')
+      return
+    }
+
+    setPasswordChangeForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    setShowPasswordChange(false)
+    showMessage('Senha alterada com sucesso.', 'success')
+  }
+
   const addToCart = (item: { id: string; name: string; unit_price: number }) => {
     setCart((current) => {
       const existing = current.find((cartItem) => cartItem.id === item.id)
@@ -933,8 +983,61 @@ export default function CustomerApp() {
               >
                 Atualizar saldo
               </button>
+              <button
+                type="button"
+                className="customer-app__refresh-balance"
+                onClick={() => setShowPasswordChange((current) => !current)}
+              >
+                Trocar senha
+              </button>
             </div>
           </section>
+
+          {showPasswordChange && (
+            <section className="customer-app__panel customer-app__password-change">
+              <span className="customer-app__panel-kicker">Seguranca</span>
+              <h2>TROCAR SENHA</h2>
+              <input
+                type="password"
+                value={passwordChangeForm.currentPassword}
+                onChange={(event) =>
+                  setPasswordChangeForm({
+                    ...passwordChangeForm,
+                    currentPassword: event.target.value,
+                  })
+                }
+                placeholder="Senha atual"
+                maxLength={customerFieldLimits.password}
+              />
+              <input
+                type="password"
+                value={passwordChangeForm.newPassword}
+                onChange={(event) =>
+                  setPasswordChangeForm({
+                    ...passwordChangeForm,
+                    newPassword: event.target.value,
+                  })
+                }
+                placeholder="Nova senha"
+                maxLength={customerFieldLimits.password}
+              />
+              <input
+                type="password"
+                value={passwordChangeForm.confirmPassword}
+                onChange={(event) =>
+                  setPasswordChangeForm({
+                    ...passwordChangeForm,
+                    confirmPassword: event.target.value,
+                  })
+                }
+                placeholder="Confirmar nova senha"
+                maxLength={customerFieldLimits.password}
+              />
+              <button type="button" onClick={changeCustomerPassword}>
+                Salvar nova senha
+              </button>
+            </section>
+          )}
 
           {dueWarning && (
             <div className="customer-app__warning">

@@ -261,6 +261,11 @@
   width: 100%;
 }
 
+.customer-app__password-change {
+  max-width: 1080px;
+  margin: 0 auto 14px;
+}
+
 .customer-app__pending-list {
   display: grid;
   gap: 10px;

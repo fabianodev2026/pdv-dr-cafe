@@ -157,6 +157,42 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
     setMessage(`Conta do app de ${customer.name} excluida.`)
   }
 
+  const resetCustomerPassword = async (customer: AppCustomer) => {
+    if (!isAdmin) {
+      setMessage('Somente administrador geral pode resetar senha.')
+      return
+    }
+
+    const temporaryPassword = window.prompt(
+      `Digite a senha provisoria para ${customer.name}. Depois o cliente troca no app.`,
+    )
+    if (!temporaryPassword) return
+
+    if (temporaryPassword.trim().length > 20) {
+      setMessage('Senha provisoria deve ter ate 20 caracteres.')
+      return
+    }
+
+    const adminPassword = window.prompt('Confirme sua senha de administrador.')
+    if (!adminPassword) return
+
+    const { error } = await supabase.rpc('admin_reset_app_customer_password', {
+      p_admin_username: currentUser.username,
+      p_admin_password: adminPassword,
+      p_customer_id: customer.id,
+      p_new_password: temporaryPassword.trim(),
+    })
+
+    if (error) {
+      setMessage(`Erro ao resetar senha: ${error.message}`)
+      return
+    }
+
+    setMessage(
+      `Senha de ${customer.name} resetada. Informe a senha provisoria para o cliente trocar no app.`,
+    )
+  }
+
   return (
     <div className="app-customers-manager">
       <header className="app-customers-heading">
@@ -229,6 +265,9 @@ export default function AppCustomersManager({ currentUser }: AppCustomersManager
                   onClick={() => updateCreditLimit(customer)}
                 >
                   Salvar saldo
+                </button>
+                <button type="button" onClick={() => resetCustomerPassword(customer)}>
+                  Resetar senha
                 </button>
                 <button onClick={() => deleteCustomer(customer)}>Excluir conta</button>
               </div>
