@@ -130,6 +130,8 @@ export default function CustomerApp() {
   const [customer, setCustomer] = useState<AppCustomer | null>(null)
   const [loginForm, setLoginForm] = useState({ login: '', password: '' })
   const [resetForm, setResetForm] = useState({ login: '', email: '' })
+  const [loginRecoveryForm, setLoginRecoveryForm] = useState({ phone: '', email: '' })
+  const [recoveredLogin, setRecoveredLogin] = useState('')
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<AppMessageType>('info')
   const [menuMessage, setMenuMessage] = useState('')
@@ -572,6 +574,39 @@ export default function CustomerApp() {
     setMessage('Se o login e email estiverem corretos, enviamos um link para trocar a senha.')
   }
 
+  const recoverCustomerLogin = async () => {
+    const phone = loginRecoveryForm.phone.trim()
+    const email = loginRecoveryForm.email.trim().toLowerCase()
+
+    if (!phone || !email) {
+      showMessage('Preencha telefone e email cadastrado para buscar o login.', 'error')
+      return
+    }
+
+    const { data, error } = await supabase.rpc('app_customer_find_login', {
+      p_phone: phone,
+      p_email: email,
+    })
+
+    const login = Array.isArray(data) ? data[0]?.login : null
+
+    if (error || !login) {
+      logAppError({
+        source: 'CustomerApp',
+        action: 'recoverCustomerLogin',
+        error: error ?? new Error('Login not found'),
+        details: { table: 'app_customers', hasPhone: Boolean(phone), hasEmail: Boolean(email) },
+      })
+      showMessage('Nao encontramos login com este telefone e email. Fale com o cafe.', 'error')
+      return
+    }
+
+    setRecoveredLogin(login)
+    setLoginForm((current) => ({ ...current, login }))
+    setResetForm((current) => ({ ...current, login, email }))
+    showMessage(`Seu login e: ${login}`, 'success')
+  }
+
   const resetCustomerPasswordWithToken = async () => {
     const token = tokenResetForm.token.trim()
     const password = tokenResetForm.password.trim()
@@ -862,6 +897,34 @@ export default function CustomerApp() {
                 O email precisa ser o mesmo do cadastro. O link de troca sera enviado para esse
                 email.
               </small>
+              <div className="customer-app__login-recovery">
+                <span className="customer-app__panel-kicker">Esqueci meu login</span>
+                <input
+                  value={loginRecoveryForm.phone}
+                  onChange={(e) =>
+                    setLoginRecoveryForm({
+                      ...loginRecoveryForm,
+                      phone: formatPhone(e.target.value),
+                    })
+                  }
+                  placeholder="Telefone cadastrado"
+                  inputMode="numeric"
+                  maxLength={customerFieldLimits.phone}
+                />
+                <input
+                  type="email"
+                  value={loginRecoveryForm.email}
+                  onChange={(e) =>
+                    setLoginRecoveryForm({ ...loginRecoveryForm, email: e.target.value })
+                  }
+                  placeholder="Email cadastrado"
+                  maxLength={customerFieldLimits.email}
+                />
+                <button type="button" onClick={recoverCustomerLogin}>
+                  Buscar login
+                </button>
+                {recoveredLogin && <strong>Login: {recoveredLogin}</strong>}
+              </div>
             </div>
           )}
 

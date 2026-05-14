@@ -216,6 +216,18 @@
   min-width: 0;
 }
 
+.customer-app__login-recovery {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(245, 190, 125, 0.25);
+  padding-top: 12px;
+}
+
+.customer-app__login-recovery strong {
+  color: #f5be7d;
+}
+
 .customer-app button {
   min-height: 44px;
   border: 0;
