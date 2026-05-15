@@ -47,6 +47,15 @@ interface Sale {
   items?: SaleItem[]
 }
 
+interface PendingPayment {
+  id: number
+  created_at: string
+  description?: string
+  items_detail?: string
+  total_amount: number
+  purchase_date: string
+}
+
 interface SaleItem {
   name?: string
   quantity?: number
@@ -60,6 +69,39 @@ interface BestSeller {
   quantity: number
   revenue: number
   orders: number
+}
+
+const parseMoney = (value?: string) => Number(String(value ?? '0').replace(',', '.') || 0)
+
+const parsePendingItems = (payment: PendingPayment): SaleItem[] => {
+  const detail = payment.items_detail?.trim()
+  if (!detail) {
+    return [
+      {
+        name: payment.description || 'Pagar depois',
+        quantity: 1,
+        total: Number(payment.total_amount || 0),
+      },
+    ]
+  }
+
+  const parts = detail
+    .split(/;|\n/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  return parts.map((part) => {
+    const match = part.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s+-\s+R\$\s*([\d.,]+))?$/i)
+    if (!match) {
+      return { name: part, quantity: 1, total: 0 }
+    }
+
+    return {
+      quantity: parseMoney(match[1]),
+      name: match[2].trim(),
+      total: parseMoney(match[3]),
+    }
+  })
 }
 
 interface FiscalProductData {
@@ -108,6 +150,7 @@ export default function SettingsManager() {
   const [backupRunning, setBackupRunning] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [sales, setSales] = useState<Sale[]>([])
+  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([])
   const [message, setMessage] = useState('')
   const [supportUnlocked, setSupportUnlocked] = useState(false)
   const [supportPassword, setSupportPassword] = useState('')
@@ -129,13 +172,18 @@ export default function SettingsManager() {
 
   useEffect(() => {
     async function fetchData() {
-      const [{ data: productsData }, { data: salesData }] = await Promise.all([
+      const [{ data: productsData }, { data: salesData }, { data: pendingData }] = await Promise.all([
         supabase.from('products').select('id, name').order('name'),
         supabase.from('sales').select('*').order('created_at', { ascending: false }),
+        supabase
+          .from('pending_payments')
+          .select('id, created_at, description, items_detail, total_amount, purchase_date')
+          .order('created_at', { ascending: false }),
       ])
 
       setProducts(productsData ?? [])
       setSales(salesData ?? [])
+      setPendingPayments(pendingData ?? [])
     }
 
     fetchData()
@@ -171,6 +219,47 @@ export default function SettingsManager() {
     )
   }, [sales])
 
+  const appPendingBalance = useMemo(() => {
+    const now = new Date()
+    const today = now.toLocaleDateString('pt-BR')
+
+    return pendingPayments
+      .filter((payment) => payment.description === 'Compra pelo app Dr. Cafe')
+      .reduce(
+        (totals, payment) => {
+          const paymentDate = new Date(`${payment.purchase_date}T12:00:00`)
+          const amount = Number(payment.total_amount || 0)
+
+          if (paymentDate.toLocaleDateString('pt-BR') === today) {
+            totals.day += amount
+          }
+
+          if (
+            paymentDate.getMonth() === now.getMonth() &&
+            paymentDate.getFullYear() === now.getFullYear()
+          ) {
+            totals.month += amount
+          }
+
+          if (paymentDate.getFullYear() === now.getFullYear()) {
+            totals.year += amount
+          }
+
+          return totals
+        },
+        { day: 0, month: 0, year: 0 },
+      )
+  }, [pendingPayments])
+
+  const movementBalance = useMemo(
+    () => ({
+      day: balance.day + appPendingBalance.day,
+      month: balance.month + appPendingBalance.month,
+      year: balance.year + appPendingBalance.year,
+    }),
+    [appPendingBalance, balance],
+  )
+
   const filteredSales = useMemo(() => {
     const now = new Date()
 
@@ -192,6 +281,29 @@ export default function SettingsManager() {
       return saleDate.getFullYear() === now.getFullYear()
     })
   }, [sales, salesPeriod])
+
+  const filteredPendingPayments = useMemo(() => {
+    const now = new Date()
+
+    return pendingPayments.filter((payment) => {
+      const paymentDate = new Date(`${payment.purchase_date}T12:00:00`)
+
+      if (salesPeriod === 'todos') return true
+
+      if (salesPeriod === 'dia') {
+        return paymentDate.toLocaleDateString('pt-BR') === now.toLocaleDateString('pt-BR')
+      }
+
+      if (salesPeriod === 'mes') {
+        return (
+          paymentDate.getMonth() === now.getMonth() &&
+          paymentDate.getFullYear() === now.getFullYear()
+        )
+      }
+
+      return paymentDate.getFullYear() === now.getFullYear()
+    })
+  }, [pendingPayments, salesPeriod])
 
   const bestSellers = useMemo(() => {
     const ranking = new Map<string, BestSeller>()
@@ -219,11 +331,36 @@ export default function SettingsManager() {
       })
     })
 
+    filteredPendingPayments
+      .filter((payment) => payment.description === 'Compra pelo app Dr. Cafe')
+      .forEach((payment) => {
+        parsePendingItems(payment).forEach((item) => {
+          const name = item.name?.trim()
+          if (!name) return
+
+          const quantity = Number(item.quantity || 1)
+          const revenue = Number(item.total ?? Number(item.price ?? item.unit_price ?? 0) * quantity)
+          const current = ranking.get(name) ?? {
+            name,
+            quantity: 0,
+            revenue: 0,
+            orders: 0,
+          }
+
+          ranking.set(name, {
+            ...current,
+            quantity: current.quantity + quantity,
+            revenue: current.revenue + revenue,
+            orders: current.orders + 1,
+          })
+        })
+      })
+
     return Array.from(ranking.values()).sort((a, b) => {
       if (b.quantity !== a.quantity) return b.quantity - a.quantity
       return b.revenue - a.revenue
     })
-  }, [filteredSales])
+  }, [filteredPendingPayments, filteredSales])
 
   const readInvoiceKey = () => {
     const digits = fiscalData.barcode.replace(/\D/g, '')
@@ -744,15 +881,15 @@ export default function SettingsManager() {
           <div className="balance-grid">
             <article>
               <span>Diario</span>
-              <strong>R$ {balance.day.toFixed(2)}</strong>
+              <strong>R$ {movementBalance.day.toFixed(2)}</strong>
             </article>
             <article>
               <span>Mensal</span>
-              <strong>R$ {balance.month.toFixed(2)}</strong>
+              <strong>R$ {movementBalance.month.toFixed(2)}</strong>
             </article>
             <article>
               <span>Anual</span>
-              <strong>R$ {balance.year.toFixed(2)}</strong>
+              <strong>R$ {movementBalance.year.toFixed(2)}</strong>
             </article>
           </div>
           <div className="history-section">

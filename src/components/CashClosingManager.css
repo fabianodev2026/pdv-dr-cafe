@@ -32,6 +32,7 @@
 .cash-closing-message,
 .cash-closing-summary,
 .cash-closing-column,
+.cash-pay-later-panel,
 .cash-closing-actions,
 .cash-closing-history {
   background: rgba(255, 248, 239, 0.92);
@@ -185,6 +186,67 @@
   color: #fffaf5;
 }
 
+.cash-pay-later-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.cash-pay-later-heading h2,
+.cash-pay-later-heading p,
+.cash-pay-later-card p,
+.cash-pay-later-empty {
+  margin: 0;
+}
+
+.cash-pay-later-heading h2 {
+  color: #5d4037;
+}
+
+.cash-pay-later-heading p,
+.cash-pay-later-card span,
+.cash-pay-later-card p,
+.cash-pay-later-empty {
+  color: #7b4a27;
+  font-weight: 800;
+}
+
+.cash-pay-later-heading > strong {
+  color: #2b160d;
+  font-size: 1.3rem;
+}
+
+.cash-pay-later-list {
+  display: grid;
+  gap: 10px;
+}
+
+.cash-pay-later-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1fr) auto;
+  gap: 12px;
+  border: 1px solid #ead4b9;
+  border-radius: 8px;
+  background: #fffaf5;
+  padding: 12px;
+}
+
+.cash-pay-later-card div {
+  display: grid;
+  gap: 4px;
+}
+
+.cash-pay-later-card p {
+  white-space: pre-wrap;
+}
+
+.cash-pay-later-card b {
+  align-self: center;
+  white-space: nowrap;
+}
+
 .cash-closing-actions {
   display: flex;
   gap: 10px;
@@ -264,6 +326,12 @@
   .cash-closing-actions button {
     width: 100%;
   }
+
+  .cash-pay-later-heading,
+  .cash-pay-later-card {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
 }
 
 @media print {
@@ -293,6 +361,7 @@
   body.printing-cash-closing .cash-closing-message,
   body.printing-cash-closing .cash-closing-summary,
   body.printing-cash-closing .cash-closing-columns,
+  body.printing-cash-closing .cash-pay-later-panel,
   body.printing-cash-closing .cash-closing-actions,
   body.printing-cash-closing .cash-closing-history {
     display: none !important;

@@ -38,6 +38,20 @@ interface CashClosing {
   created_at: string
 }
 
+interface PendingPayment {
+  id: number
+  created_at: string
+  customer_name: string
+  phone?: string
+  position?: string
+  description?: string
+  items_detail?: string
+  total_amount: number
+  purchase_date: string
+  due_date: string
+  status: string
+}
+
 const denominations: Denomination[] = [
   { key: 'n100', label: 'Nota R$ 100', value: 100, group: 'notas' },
   { key: 'n50', label: 'Nota R$ 50', value: 50, group: 'notas' },
@@ -91,6 +105,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [pixTotal, setPixTotal] = useState('')
   const [counts, setCounts] = useState<Record<string, string>>(initialCounts)
   const [closings, setClosings] = useState<CashClosing[]>([])
+  const [payLaterMovements, setPayLaterMovements] = useState<PendingPayment[]>([])
   const [message, setMessage] = useState('')
   const [isDraftLoaded, setIsDraftLoaded] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -119,6 +134,9 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const expectedCash = toMoney(openingCashValue + cashInDayValue - cashExpensesValue)
   const grandTotal = toMoney(cashInDayValue + cardTotalValue + pixTotalValue)
   const cashDifference = toMoney(countedCash - expectedCash)
+  const payLaterTotal = toMoney(
+    payLaterMovements.reduce((sum, payment) => sum + Number(payment.total_amount || 0), 0),
+  )
 
   const fetchClosings = async () => {
     const { data, error } = await supabase
@@ -134,6 +152,22 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     }
 
     setClosings(data ?? [])
+  }
+
+  const fetchPayLaterMovements = async (date = closingDate) => {
+    const { data, error } = await supabase
+      .from('pending_payments')
+      .select('id, created_at, customer_name, phone, position, description, items_detail, total_amount, purchase_date, due_date, status')
+      .eq('purchase_date', date)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Erro ao buscar pagar depois do fechamento:', error)
+      setPayLaterMovements([])
+      return
+    }
+
+    setPayLaterMovements(data ?? [])
   }
 
   useEffect(() => {
@@ -161,6 +195,10 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   useEffect(() => {
     fetchClosings()
   }, [])
+
+  useEffect(() => {
+    fetchPayLaterMovements(closingDate)
+  }, [closingDate])
 
   useEffect(() => {
     if (!isDraftLoaded) return
@@ -390,6 +428,10 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
           <span>Total vendido no dia</span>
           <strong>{currencyFormatter.format(grandTotal)}</strong>
         </div>
+        <div>
+          <span>Pagar depois do dia</span>
+          <strong>{currencyFormatter.format(payLaterTotal)}</strong>
+        </div>
         <div className={cashDifference < 0 ? 'negative' : 'positive'}>
           <span>Diferenca do dinheiro</span>
           <strong>{currencyFormatter.format(cashDifference)}</strong>
@@ -478,6 +520,34 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
             <strong>{currencyFormatter.format(grandTotal)}</strong>
           </div>
         </div>
+      </section>
+
+      <section className="cash-pay-later-panel">
+        <div className="cash-pay-later-heading">
+          <div>
+            <h2>Pagar depois do dia</h2>
+            <p>Compras lancadas para pagamento posterior nesta data.</p>
+          </div>
+          <strong>{currencyFormatter.format(payLaterTotal)}</strong>
+        </div>
+        {payLaterMovements.length === 0 ? (
+          <p className="cash-pay-later-empty">Nenhum pagar depois lancado nesta data.</p>
+        ) : (
+          <div className="cash-pay-later-list">
+            {payLaterMovements.map((payment) => (
+              <article key={payment.id} className="cash-pay-later-card">
+                <div>
+                  <strong>{payment.customer_name || 'Cliente nao informado'}</strong>
+                  <span>{payment.description || 'Pagar depois'}</span>
+                  {payment.phone && <span>Telefone: {payment.phone}</span>}
+                  <span>Vencimento: {formatClosingDate(payment.due_date)}</span>
+                </div>
+                <p>{payment.items_detail || '-'}</p>
+                <b>{currencyFormatter.format(Number(payment.total_amount || 0))}</b>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="cash-closing-actions">

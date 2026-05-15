@@ -160,6 +160,7 @@ export default function CustomerApp() {
   const [appOrders, setAppOrders] = useState<AppOrderProgress[]>([])
   const [nextDueDate, setNextDueDate] = useState('')
   const [isBlockedByDebt, setIsBlockedByDebt] = useState(false)
+  const [isSendingOrder, setIsSendingOrder] = useState(false)
   const [form, setForm] = useState({
     name: '',
     login: '',
@@ -714,6 +715,7 @@ export default function CustomerApp() {
 
   const sendOrder = async () => {
     if (!customer) return
+    if (isSendingOrder) return
 
     if (customer.status !== 'ativo' || isBlockedByDebt) {
       setMessage('Sua conta nao esta liberada para novos pedidos.')
@@ -738,67 +740,73 @@ export default function CustomerApp() {
     }))
     const orderTotal = toMoney(total)
 
-    const { error: orderError } = await supabase.from('app_orders').insert([
-      {
-        customer_id: customer.id,
-        customer_name: customer.name,
-        customer_phone: customer.phone,
-        items: orderItems,
-        total_amount: orderTotal,
-        status: 'novo',
-        customer_message: 'Pedido enviado pelo app.',
-      },
-    ])
+    setIsSendingOrder(true)
 
-    if (orderError) {
-      logAppError({
-        source: 'CustomerApp',
-        action: 'sendOrder.appOrder',
-        error: orderError,
-        details: { table: 'app_orders', itemCount: cart.length, total: orderTotal },
-      })
-      setMessage('Nao foi possivel enviar o pedido agora. Tente novamente em instantes.')
-      return
-    }
+    try {
+      const { error: orderError } = await supabase.from('app_orders').insert([
+        {
+          customer_id: customer.id,
+          customer_name: customer.name,
+          customer_phone: customer.phone,
+          items: orderItems,
+          total_amount: orderTotal,
+          status: 'novo',
+          customer_message: 'Pedido enviado pelo app.',
+        },
+      ])
 
-    const itemsDetail = cart
-      .map(
-        (item) =>
-          `${item.quantity}x ${item.name} - R$ ${(item.quantity * item.unit_price).toFixed(2)}`,
+      if (orderError) {
+        logAppError({
+          source: 'CustomerApp',
+          action: 'sendOrder.appOrder',
+          error: orderError,
+          details: { table: 'app_orders', itemCount: cart.length, total: orderTotal },
+        })
+        setMessage('Nao foi possivel enviar o pedido agora. Tente novamente em instantes.')
+        return
+      }
+
+      const itemsDetail = cart
+        .map(
+          (item) =>
+            `${item.quantity}x ${item.name} - R$ ${(item.quantity * item.unit_price).toFixed(2)}`,
+        )
+        .join('; ')
+
+      const { error: pendingError } = await supabase.from('pending_payments').insert([
+        {
+          customer_name: customer.name,
+          phone: customer.phone,
+          position: customer.position,
+          description: 'Compra pelo app Dr. Cafe',
+          items_detail: itemsDetail,
+          total_amount: orderTotal,
+          purchase_date: new Date().toISOString().slice(0, 10),
+          due_date: dueDate,
+          status: 'pendente',
+        },
+      ])
+
+      if (pendingError) {
+        logAppError({
+          source: 'CustomerApp',
+          action: 'sendOrder.pendingPayment',
+          error: pendingError,
+          details: { table: 'pending_payments', itemCount: cart.length, total: orderTotal },
+        })
+        setMessage('Pedido enviado. O cafe vai conferir seu consumo no sistema.')
+        return
+      }
+
+      setCart([])
+      markBackupNeededAfterClosing('Pedido do app registrado apos as 20:00')
+      setMessage(
+        'Pedido enviado. Seu cadastro foi feito com sucesso; sua forma de pagamento sera todo dia 5 util.',
       )
-      .join('; ')
-
-    const { error: pendingError } = await supabase.from('pending_payments').insert([
-      {
-        customer_name: customer.name,
-        phone: customer.phone,
-        position: customer.position,
-        description: 'Compra pelo app Dr. Cafe',
-        items_detail: itemsDetail,
-        total_amount: orderTotal,
-        purchase_date: new Date().toISOString().slice(0, 10),
-        due_date: dueDate,
-        status: 'pendente',
-      },
-    ])
-
-    if (pendingError) {
-      logAppError({
-        source: 'CustomerApp',
-        action: 'sendOrder.pendingPayment',
-        error: pendingError,
-        details: { table: 'pending_payments', itemCount: cart.length, total: orderTotal },
-      })
-      setMessage('Pedido enviado. O cafe vai conferir seu consumo no sistema.')
-      return
+      loadPending(customer.phone)
+    } finally {
+      setIsSendingOrder(false)
     }
-
-    setCart([])
-    markBackupNeededAfterClosing('Pedido do app registrado apos as 20:00')
-    setMessage(
-      'Pedido enviado. Seu cadastro foi feito com sucesso; sua forma de pagamento sera todo dia 5 util.',
-    )
-    loadPending(customer.phone)
   }
 
   const dueWarning =
@@ -1197,10 +1205,11 @@ export default function CustomerApp() {
                 disabled={
                   customer.status !== 'ativo' ||
                   isBlockedByDebt ||
+                  isSendingOrder ||
                   (creditLimit > 0 && total > availableCredit)
                 }
               >
-                Enviar pedido
+                {isSendingOrder ? 'Enviando...' : 'Enviar pedido'}
               </button>
             </aside>
 
