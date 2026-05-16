@@ -159,6 +159,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       .from('pending_payments')
       .select('id, created_at, customer_name, phone, position, description, items_detail, total_amount, purchase_date, due_date, status')
       .eq('purchase_date', date)
+      .order('customer_name', { ascending: true })
       .order('created_at', { ascending: false })
 
     if (error) {

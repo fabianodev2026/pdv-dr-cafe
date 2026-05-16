@@ -53,17 +53,28 @@ export default function PendingPayments() {
   )
 
   const groupedPending = useMemo(() => {
-    return pendingList.reduce<Record<string, PendingPayment[]>>((groups, payment) => {
-      const key = `${payment.customer_name}__${payment.phone}`
-      groups[key] = [...(groups[key] ?? []), payment]
-      return groups
-    }, {})
+    const groups = pendingList
+      .filter((payment) => payment.status === 'pendente')
+      .reduce<Record<string, PendingPayment[]>>((grouped, payment) => {
+        const key = `${payment.customer_name}__${payment.phone}`
+        grouped[key] = [...(grouped[key] ?? []), payment]
+        return grouped
+      }, {})
+
+    return Object.fromEntries(
+      Object.entries(groups).sort(([, firstEntries], [, secondEntries]) =>
+        firstEntries[0].customer_name.localeCompare(secondEntries[0].customer_name, 'pt-BR', {
+          sensitivity: 'base',
+        }),
+      ),
+    )
   }, [pendingList])
 
   const fetchPending = async () => {
     const { data, error } = await supabase
       .from('pending_payments')
       .select('*')
+      .order('customer_name', { ascending: true })
       .order('due_date', { ascending: true })
 
     if (error) {
@@ -114,13 +125,33 @@ export default function PendingPayments() {
     setPendingItem('')
   }
 
-  const markAsPaid = async (id: number) => {
+  const markCustomerAsPaid = async (entries: PendingPayment[]) => {
+    const pendingIds = entries
+      .filter((entry) => entry.status === 'pendente')
+      .map((entry) => entry.id)
+
+    if (pendingIds.length === 0) return
+
+    const first = entries[0]
+    const total = entries.reduce((sum, entry) => sum + Number(entry.total_amount || 0), 0)
+    const confirmed = window.confirm(
+      `Marcar tudo de ${first.customer_name} como pago? Total: R$ ${total.toFixed(2)}`,
+    )
+    if (!confirmed) return
+
     const { error } = await supabase
       .from('pending_payments')
       .update({ status: 'pago' })
-      .eq('id', id)
+      .in('id', pendingIds)
 
-    if (!error) fetchPending()
+    if (error) {
+      console.error('Erro ao quitar pendencias:', error)
+      setMessage('Nao foi possivel quitar este cliente.')
+      return
+    }
+
+    setMessage(`Pendencias de ${first.customer_name} quitadas.`)
+    fetchPending()
   }
 
   return (
@@ -244,9 +275,7 @@ export default function PendingPayments() {
         <div className="pending-groups">
           {Object.entries(groupedPending).map(([key, entries]) => {
             const first = entries[0]
-            const personTotal = entries
-              .filter((entry) => entry.status === 'pendente')
-              .reduce((sum, entry) => sum + Number(entry.total_amount), 0)
+            const personTotal = entries.reduce((sum, entry) => sum + Number(entry.total_amount), 0)
 
             return (
               <section key={key} className="pending-person">
@@ -256,6 +285,9 @@ export default function PendingPayments() {
                     <p>{first.phone} · {first.position || 'Sem cargo'}</p>
                   </div>
                   <strong>Aberto: R$ {personTotal.toFixed(2)}</strong>
+                  <button type="button" onClick={() => markCustomerAsPaid(entries)}>
+                    Marcar tudo como pago
+                  </button>
                 </div>
                 <div className="pending-grid">
                   {entries.map((pending) => (
@@ -274,9 +306,6 @@ export default function PendingPayments() {
                       </div>
                       <p><strong>Observacao:</strong> {pending.description || '-'}</p>
                       <p className="payment-only">Somente Pix ou dinheiro</p>
-                      {pending.status === 'pendente' && (
-                        <button onClick={() => markAsPaid(pending.id)}>Marcar como pago</button>
-                      )}
                     </article>
                   ))}
                 </div>

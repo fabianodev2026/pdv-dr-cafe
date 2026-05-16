@@ -163,6 +163,7 @@ export default function CustomerApp() {
   const [isSendingOrder, setIsSendingOrder] = useState(false)
   const [form, setForm] = useState({
     name: '',
+    lastName: '',
     login: '',
     password: '',
     phone: '',
@@ -424,8 +425,11 @@ export default function CustomerApp() {
   }
 
   const registerCustomer = async () => {
+    const fullName = `${form.name.trim()} ${form.lastName.trim()}`.trim()
+
     if (
       !form.name ||
+      !form.lastName ||
       !form.login ||
       !form.password ||
       !form.phone ||
@@ -433,7 +437,10 @@ export default function CustomerApp() {
       !form.email ||
       !form.emailConfirmation
     ) {
-      showMessage('Preencha nome, login, senha, telefone, cargo, email e confirmacao do email.', 'error')
+      showMessage(
+        'Preencha nome, sobrenome, login, senha, telefone, cargo, email e confirmacao do email.',
+        'error',
+      )
       return
     }
 
@@ -443,7 +450,9 @@ export default function CustomerApp() {
     }
 
     if (
-      form.name.length > customerFieldLimits.name ||
+      form.name.length > customerFieldLimits.firstName ||
+      form.lastName.length > customerFieldLimits.lastName ||
+      fullName.length > customerFieldLimits.name ||
       form.login.length > customerFieldLimits.login ||
       form.password.length > customerFieldLimits.password ||
       form.phone.length > customerFieldLimits.phone ||
@@ -452,14 +461,14 @@ export default function CustomerApp() {
       form.emailConfirmation.length > customerFieldLimits.email
     ) {
       showMessage(
-        `Nome ate ${customerFieldLimits.name}, login ate ${customerFieldLimits.login}, senha ate ${customerFieldLimits.password}, telefone ate ${customerFieldLimits.phone}, cargo ate ${customerFieldLimits.position} e email ate ${customerFieldLimits.email} caracteres.`,
+        `Nome ate ${customerFieldLimits.firstName}, sobrenome ate ${customerFieldLimits.lastName}, nome completo ate ${customerFieldLimits.name}, login ate ${customerFieldLimits.login}, senha ate ${customerFieldLimits.password}, telefone ate ${customerFieldLimits.phone}, cargo ate ${customerFieldLimits.position} e email ate ${customerFieldLimits.email} caracteres.`,
         'error',
       )
       return
     }
 
     const { error } = await supabase.rpc('app_customer_register', {
-      p_name: form.name.trim(),
+      p_name: fullName,
       p_login: form.login.trim(),
       p_password: form.password.trim(),
       p_phone: form.phone.trim(),
@@ -476,6 +485,7 @@ export default function CustomerApp() {
           table: 'app_customers',
           formState: {
             hasName: Boolean(form.name),
+            hasLastName: Boolean(form.lastName),
             hasLogin: Boolean(form.login),
             hasPassword: Boolean(form.password),
             hasPhone: Boolean(form.phone),
@@ -494,6 +504,11 @@ export default function CustomerApp() {
           `Email muito longo. Use um email com ate ${customerFieldLimits.email} caracteres.`,
           'error',
         )
+        return
+      }
+
+      if (error.message.includes('app_customers_name_length')) {
+        showMessage('Nome completo muito longo. Avise o cafe para executar o SQL de sobrenome.', 'error')
         return
       }
 
@@ -970,7 +985,13 @@ export default function CustomerApp() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value.toUpperCase() })}
               placeholder="Nome"
-              maxLength={customerFieldLimits.name}
+              maxLength={customerFieldLimits.firstName}
+            />
+            <input
+              value={form.lastName}
+              onChange={(e) => setForm({ ...form, lastName: e.target.value.toUpperCase() })}
+              placeholder="Sobrenome"
+              maxLength={customerFieldLimits.lastName}
             />
             <input
               value={form.login}

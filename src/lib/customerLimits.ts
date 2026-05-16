@@ -1,5 +1,7 @@
 export const customerFieldLimits = {
-  name: 25,
+  name: 60,
+  firstName: 25,
+  lastName: 35,
   login: 20,
   password: 20,
   position: 20,
