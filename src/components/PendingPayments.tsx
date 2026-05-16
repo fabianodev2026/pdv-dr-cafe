@@ -43,6 +43,7 @@ export default function PendingPayments() {
   const [pendingItem, setPendingItem] = useState('')
   const [pendingItems, setPendingItems] = useState<string[]>([])
   const [message, setMessage] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
 
   const totalPending = useMemo(
     () =>
@@ -52,8 +53,25 @@ export default function PendingPayments() {
     [pendingList],
   )
 
+  const filteredPendingList = useMemo(() => {
+    const search = searchTerm.trim().toLowerCase()
+    if (!search) return pendingList
+
+    return pendingList.filter((payment) =>
+      [
+        payment.customer_name,
+        payment.phone,
+        payment.position,
+        payment.description,
+        payment.items_detail,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search)),
+    )
+  }, [pendingList, searchTerm])
+
   const groupedPending = useMemo(() => {
-    const groups = pendingList
+    const groups = filteredPendingList
       .filter((payment) => payment.status === 'pendente')
       .reduce<Record<string, PendingPayment[]>>((grouped, payment) => {
         const key = `${payment.customer_name}__${payment.phone}`
@@ -68,7 +86,7 @@ export default function PendingPayments() {
         }),
       ),
     )
-  }, [pendingList])
+  }, [filteredPendingList])
 
   const fetchPending = async () => {
     const { data, error } = await supabase
@@ -271,8 +289,24 @@ export default function PendingPayments() {
       </section>
 
       <section className="list-section">
-        <h2>Contas pendentes - R$ {totalPending.toFixed(2)}</h2>
+        <div className="pending-list-header">
+          <div>
+            <h2>Contas pendentes - R$ {totalPending.toFixed(2)}</h2>
+            <p>{Object.keys(groupedPending).length} cliente(s) em aberto na lista.</p>
+          </div>
+          <label>
+            Buscar
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Nome, telefone, cargo ou item"
+            />
+          </label>
+        </div>
         <div className="pending-groups">
+          {Object.entries(groupedPending).length === 0 && (
+            <p className="pending-empty">Nenhuma pendencia encontrada.</p>
+          )}
           {Object.entries(groupedPending).map(([key, entries]) => {
             const first = entries[0]
             const personTotal = entries.reduce((sum, entry) => sum + Number(entry.total_amount), 0)
