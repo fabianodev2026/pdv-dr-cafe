@@ -37,6 +37,9 @@ const initialPending: NewPending = {
   due_date: '',
 }
 
+const formatLocalDate = (date: string) =>
+  date ? new Date(`${date}T00:00:00`).toLocaleDateString('pt-BR') : '-'
+
 export default function PendingPayments() {
   const [pendingList, setPendingList] = useState<PendingPayment[]>([])
   const [newPending, setNewPending] = useState<NewPending>(initialPending)
@@ -350,8 +353,8 @@ export default function PendingPayments() {
                         <h3>{pending.status}</h3>
                         <span>R$ {Number(pending.total_amount).toFixed(2)}</span>
                       </div>
-                      <p><strong>Compra:</strong> {pending.purchase_date}</p>
-                      <p><strong>Pagamento:</strong> {pending.due_date}</p>
+                      <p><strong>Compra:</strong> {formatLocalDate(pending.purchase_date)}</p>
+                      <p><strong>Pagamento:</strong> {formatLocalDate(pending.due_date)}</p>
                       <div className="consumed-history">
                         <strong>Consumiu:</strong>
                         {(pending.items_detail || '-').split('\n').map((item, index) => (

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import type { CurrentUser } from '../lib/rolePermissions'
+import { ADMIN_ROLES, hasRole, type CurrentUser } from '../lib/rolePermissions'
 import './OrdersManager.css'
 
 type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'pago' | 'entregue' | 'cancelado'
@@ -152,6 +152,7 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
     () => orders.filter((order) => !closedStatuses.includes(order.status)).length,
     [orders],
   )
+  const isAdmin = Boolean(currentUser && hasRole(currentUser, ADMIN_ROLES))
 
   const fetchOrders = async () => {
     const roomResult = await supabase
@@ -310,6 +311,49 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
 
     if (!confirmed) return
     await updateStatus(order, 'cancelado')
+  }
+
+  const deleteAppOrder = async (order: OrderTicket) => {
+    if (!isAdmin || order.source_type !== 'app') return
+
+    const confirmed = window.confirm(
+      `Apagar definitivamente o pedido do app de ${order.customer_name}? A pendencia financeira deste pedido tambem sera removida se ainda estiver em aberto.`,
+    )
+    if (!confirmed) return
+
+    const purchaseDate = getLocalDateInputValue(new Date(order.created_at))
+    const itemsDetail = order.items
+      .map(
+        (item) =>
+          `${item.quantity}x ${item.name} - R$ ${(Number(item.unit_price || 0) * Number(item.quantity || 0)).toFixed(2)}`,
+      )
+      .join('; ')
+
+    const { error: pendingError } = await supabase
+      .from('pending_payments')
+      .delete()
+      .eq('phone', order.customer_phone)
+      .eq('purchase_date', purchaseDate)
+      .eq('status', 'pendente')
+      .eq('description', 'Compra pelo app Dr. Cafe')
+      .eq('items_detail', itemsDetail)
+
+    if (pendingError) {
+      setMessage(`Nao foi possivel remover a pendencia do app: ${pendingError.message}`)
+      return
+    }
+
+    const targetIds = order.ids.length > 0 ? order.ids : [order.id]
+    const { error } = await supabase.from('app_orders').delete().in('id', targetIds)
+
+    if (error) {
+      setMessage(`Nao foi possivel apagar o pedido do app: ${error.message}`)
+      return
+    }
+
+    setMessage(`Pedido do app de ${order.customer_name} apagado.`)
+    fetchOrders()
+    fetchAppCustomers()
   }
 
   const openReprint = (order: OrderTicket) => {
@@ -835,6 +879,15 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
               >
                 Cancelar pedido
               </button>
+              {isAdmin && order.source_type === 'app' && (
+                <button
+                  type="button"
+                  onClick={() => deleteAppOrder(order)}
+                  className="btn-delete-app-order"
+                >
+                  Apagar pedido
+                </button>
+              )}
             </div>
           </article>
         ))}

@@ -71,21 +71,25 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 const toMoney = (value: number) => Number(value.toFixed(2))
 
 const getAppOrderAvailability = (date = new Date()) => {
-  const isSunday = date.getDay() === 0
-  const closesAtMinutes = 14 * 60 + 30
+  const weekDay = date.getDay()
+  const isSunday = weekDay === 0
+  const isSaturday = weekDay === 6
+  const opensAtMinutes = 8 * 60
+  const closesAtMinutes = isSaturday ? 14 * 60 + 30 : 20 * 60
   const currentMinutes = date.getHours() * 60 + date.getMinutes()
+  const scheduleMessage = 'Funcionamento do app: segunda a sexta das 8h as 20h e sabado das 8h as 14:30.'
 
   if (isSunday) {
     return {
       isOpen: false,
-      message: 'Pedidos pelo app ficam fechados aos domingos. A loja nao abre no domingo.',
+      message: `Pedidos pelo app ficam fechados aos domingos. A loja nao abre no domingo. ${scheduleMessage}`,
     }
   }
 
-  if (currentMinutes > closesAtMinutes) {
+  if (currentMinutes < opensAtMinutes || currentMinutes > closesAtMinutes) {
     return {
       isOpen: false,
-      message: 'Pedidos pelo app funcionam somente ate as 14:30.',
+      message: scheduleMessage,
     }
   }
 
@@ -1269,6 +1273,7 @@ export default function CustomerApp() {
                 </p>
               )}
               <p>Pagamento: pagar depois, Pix ou dinheiro no dia combinado.</p>
+              <p>Funcionamento do app: segunda a sexta das 8h as 20h, sabado das 8h as 14:30 e domingo fechado.</p>
               <button
                 onClick={sendOrder}
                 disabled={

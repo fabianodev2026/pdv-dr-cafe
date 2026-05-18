@@ -164,6 +164,11 @@
   color: #fffaf5;
 }
 
+.status-actions .btn-delete-app-order {
+  background: #9c2f45;
+  color: #fffaf5;
+}
+
 .send-to-app-control {
   display: grid;
   flex: 1 1 260px;
