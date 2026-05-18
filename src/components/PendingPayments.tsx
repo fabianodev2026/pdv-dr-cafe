@@ -41,6 +41,15 @@ const initialPending: NewPending = {
 const formatLocalDate = (date: string) =>
   date ? new Date(`${date}T00:00:00`).toLocaleDateString('pt-BR') : '-'
 
+const isAppPendingPayment = (pending: PendingPayment) => {
+  const description = pending.description
+    ?.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase() ?? ''
+
+  return description.includes('app') || description.includes('dr. cafe')
+}
+
 interface PendingPaymentsProps {
   currentUser?: CurrentUser | null
 }
@@ -391,7 +400,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
                       </div>
                       <p><strong>Observacao:</strong> {pending.description || '-'}</p>
                       <p className="payment-only">Somente Pix ou dinheiro</p>
-                      {isAdmin && pending.description === 'Compra pelo app Dr. Cafe' && (
+                      {isAdmin && isAppPendingPayment(pending) && (
                         <button
                           type="button"
                           className="btn-delete-pending-app"
