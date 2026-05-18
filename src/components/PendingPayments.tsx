@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { ADMIN_ROLES, hasRole, type CurrentUser } from '../lib/rolePermissions'
 import './PendingPayments.css'
 
 interface PendingPayment {
@@ -40,7 +41,11 @@ const initialPending: NewPending = {
 const formatLocalDate = (date: string) =>
   date ? new Date(`${date}T00:00:00`).toLocaleDateString('pt-BR') : '-'
 
-export default function PendingPayments() {
+interface PendingPaymentsProps {
+  currentUser?: CurrentUser | null
+}
+
+export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
   const [pendingList, setPendingList] = useState<PendingPayment[]>([])
   const [newPending, setNewPending] = useState<NewPending>(initialPending)
   const [pendingItem, setPendingItem] = useState('')
@@ -48,6 +53,7 @@ export default function PendingPayments() {
   const [message, setMessage] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const isAdmin = Boolean(currentUser && hasRole(currentUser, ADMIN_ROLES))
 
   const totalPending = useMemo(
     () =>
@@ -182,6 +188,28 @@ export default function PendingPayments() {
     }
 
     setMessage(`Pendencias de ${first.customer_name} quitadas.`)
+    fetchPending()
+  }
+
+  const deleteAppPending = async (pending: PendingPayment) => {
+    if (!isAdmin) return
+
+    const confirmed = window.confirm(
+      `Apagar o pedido do app de ${pending.customer_name}? Esta acao remove a pendencia financeira deste lancamento.`,
+    )
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('pending_payments')
+      .delete()
+      .eq('id', pending.id)
+
+    if (error) {
+      setMessage(`Nao foi possivel apagar o pedido do app: ${error.message}`)
+      return
+    }
+
+    setMessage(`Pedido do app de ${pending.customer_name} apagado.`)
     fetchPending()
   }
 
@@ -363,6 +391,15 @@ export default function PendingPayments() {
                       </div>
                       <p><strong>Observacao:</strong> {pending.description || '-'}</p>
                       <p className="payment-only">Somente Pix ou dinheiro</p>
+                      {isAdmin && pending.description === 'Compra pelo app Dr. Cafe' && (
+                        <button
+                          type="button"
+                          className="btn-delete-pending-app"
+                          onClick={() => deleteAppPending(pending)}
+                        >
+                          Apagar pedido app
+                        </button>
+                      )}
                     </article>
                   ))}
                 </div>

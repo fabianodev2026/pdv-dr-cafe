@@ -127,6 +127,12 @@
   white-space: nowrap;
 }
 
+.pending-card .btn-delete-pending-app {
+  margin-top: 8px;
+  background: #9c2f45;
+  color: #fffaf5;
+}
+
 .pending-groups {
   display: grid;
   gap: 16px;

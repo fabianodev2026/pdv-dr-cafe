@@ -131,7 +131,7 @@ export default function AppRouter() {
             />
             <Route
               path="/pendencias"
-              element={requireRole(<PendingPayments />, CASHIER_ROLES)}
+              element={requireRole(<PendingPayments currentUser={currentUser} />, CASHIER_ROLES)}
             />
             <Route
               path="/configuracoes-sistema"
