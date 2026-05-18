@@ -43,6 +43,7 @@ export default function PendingPayments() {
   const [pendingItem, setPendingItem] = useState('')
   const [pendingItems, setPendingItems] = useState<string[]>([])
   const [message, setMessage] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
 
   const totalPending = useMemo(
@@ -141,6 +142,15 @@ export default function PendingPayments() {
 
     setPendingItems((items) => [...items, item])
     setPendingItem('')
+  }
+
+  const applySearch = () => {
+    setSearchTerm(searchInput.trim())
+  }
+
+  const clearSearch = () => {
+    setSearchInput('')
+    setSearchTerm('')
   }
 
   const markCustomerAsPaid = async (entries: PendingPayment[]) => {
@@ -296,11 +306,18 @@ export default function PendingPayments() {
           </div>
           <label>
             Buscar
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Nome, telefone, cargo ou item"
-            />
+            <div className="pending-search-actions">
+              <input
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') applySearch()
+                }}
+                placeholder="Nome, telefone, cargo ou item"
+              />
+              <button type="button" onClick={applySearch}>Buscar</button>
+              {searchTerm && <button type="button" onClick={clearSearch}>Limpar</button>}
+            </div>
           </label>
         </div>
         <div className="pending-groups">

@@ -70,6 +70,28 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 
 const toMoney = (value: number) => Number(value.toFixed(2))
 
+const getAppOrderAvailability = (date = new Date()) => {
+  const isSunday = date.getDay() === 0
+  const closesAtMinutes = 14 * 60 + 30
+  const currentMinutes = date.getHours() * 60 + date.getMinutes()
+
+  if (isSunday) {
+    return {
+      isOpen: false,
+      message: 'Pedidos pelo app ficam fechados aos domingos. A loja nao abre no domingo.',
+    }
+  }
+
+  if (currentMinutes > closesAtMinutes) {
+    return {
+      isOpen: false,
+      message: 'Pedidos pelo app funcionam somente ate as 14:30.',
+    }
+  }
+
+  return { isOpen: true, message: '' }
+}
+
 const getFifthBusinessDay = () => {
   const now = new Date()
   const targetMonth = now.getMonth() + 1
@@ -161,6 +183,7 @@ export default function CustomerApp() {
   const [nextDueDate, setNextDueDate] = useState('')
   const [isBlockedByDebt, setIsBlockedByDebt] = useState(false)
   const [isSendingOrder, setIsSendingOrder] = useState(false)
+  const [orderAvailability, setOrderAvailability] = useState(() => getAppOrderAvailability())
   const [form, setForm] = useState({
     name: '',
     lastName: '',
@@ -180,6 +203,7 @@ export default function CustomerApp() {
   const creditLimit = Number(customer?.credit_limit || 0)
   const availableCredit = Math.max(creditLimit - pendingTotal, 0)
   const availableAfterCart = Math.max(availableCredit - total, 0)
+  const isOrderingOpen = orderAvailability.isOpen
 
   const filteredProducts = useMemo(() => {
     const search = productSearch.trim().toLowerCase()
@@ -316,6 +340,14 @@ export default function CustomerApp() {
 
     return () => window.clearInterval(intervalId)
   }, [customer?.phone])
+
+  useEffect(() => {
+    const updateAvailability = () => setOrderAvailability(getAppOrderAvailability())
+    updateAvailability()
+    const intervalId = window.setInterval(updateAvailability, 60000)
+
+    return () => window.clearInterval(intervalId)
+  }, [])
 
   useEffect(() => {
     loadMenu()
@@ -712,6 +744,11 @@ export default function CustomerApp() {
   }
 
   const addToCart = (item: { id: string; name: string; unit_price: number }) => {
+    if (!isOrderingOpen) {
+      showMessage(orderAvailability.message, 'error')
+      return
+    }
+
     setCart((current) => {
       const existing = current.find((cartItem) => cartItem.id === item.id)
       if (existing) {
@@ -731,6 +768,11 @@ export default function CustomerApp() {
   const sendOrder = async () => {
     if (!customer) return
     if (isSendingOrder) return
+
+    if (!isOrderingOpen) {
+      showMessage(orderAvailability.message, 'error')
+      return
+    }
 
     if (customer.status !== 'ativo' || isBlockedByDebt) {
       setMessage('Sua conta nao esta liberada para novos pedidos.')
@@ -1143,6 +1185,12 @@ export default function CustomerApp() {
             </div>
           )}
 
+          {!isOrderingOpen && (
+            <div className="customer-app__blocked">
+              {orderAvailability.message}
+            </div>
+          )}
+
           {pendingPayments.length > 0 && (
             <section className="customer-app__pending-list">
               <div className="customer-app__pending-heading">
@@ -1226,7 +1274,9 @@ export default function CustomerApp() {
                 disabled={
                   customer.status !== 'ativo' ||
                   isBlockedByDebt ||
+                  !isOrderingOpen ||
                   isSendingOrder ||
+                  cart.length === 0 ||
                   (creditLimit > 0 && total > availableCredit)
                 }
               >
@@ -1267,6 +1317,7 @@ export default function CustomerApp() {
                       <p>{dailyLunch.description}</p>
                       <span>{currencyFormatter.format(Number(dailyLunch.price))}</span>
                       <button
+                        disabled={!isOrderingOpen}
                         onClick={() =>
                           addToCart({
                             id: `lunch-${dailyLunch.id}`,
@@ -1289,7 +1340,12 @@ export default function CustomerApp() {
                 </div>
                 <div className="customer-app__grid">
                   {visibleProducts.map((product) => (
-                    <MenuItem key={product.id} product={product} onAdd={addToCart} />
+                    <MenuItem
+                      key={product.id}
+                      product={product}
+                      onAdd={addToCart}
+                      disabled={!isOrderingOpen}
+                    />
                   ))}
                 </div>
                 {visibleProducts.length === 0 && (
@@ -1307,9 +1363,11 @@ export default function CustomerApp() {
 function MenuItem({
   product,
   onAdd,
+  disabled,
 }: {
   product: Product
   onAdd: (item: { id: string; name: string; unit_price: number }) => void
+  disabled: boolean
 }) {
   return (
     <article className="customer-app__item">
@@ -1329,6 +1387,7 @@ function MenuItem({
         {product.description && <p>{product.description}</p>}
         <span>{currencyFormatter.format(Number(product.unit_price))}</span>
         <button
+          disabled={disabled}
           onClick={() =>
             onAdd({
               id: `product-${product.id}`,

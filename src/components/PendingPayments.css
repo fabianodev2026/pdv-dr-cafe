@@ -158,6 +158,12 @@
   font-weight: 800;
 }
 
+.pending-search-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
 .pending-list-header input {
   width: 100%;
   box-sizing: border-box;
@@ -166,6 +172,16 @@
   border-radius: 8px;
   background: #fffaf5;
   color: #2b160d;
+}
+
+.pending-search-actions button {
+  border: 0;
+  border-radius: 8px;
+  background: #2b160d;
+  color: #f8dfbf;
+  padding: 11px 14px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .pending-empty {
@@ -238,6 +254,10 @@
 
 @media (max-width: 560px) {
   .pending-list-header {
+    grid-template-columns: 1fr;
+  }
+
+  .pending-search-actions {
     grid-template-columns: 1fr;
   }
 
