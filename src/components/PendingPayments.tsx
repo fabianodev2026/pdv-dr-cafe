@@ -309,7 +309,10 @@ export default function PendingPayments() {
             <div className="pending-search-actions">
               <input
                 value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
+                onChange={(event) => {
+                  setSearchInput(event.target.value)
+                  setSearchTerm(event.target.value.trim())
+                }}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') applySearch()
                 }}
