@@ -245,6 +245,72 @@
   color: #f5be7d;
 }
 
+.customer-app__passkey-callout {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  margin: 4px 0;
+  padding: 16px;
+  border: 1px solid rgba(245, 190, 125, 0.58);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(245, 190, 125, 0.34), transparent 32%),
+    linear-gradient(135deg, rgba(60, 31, 18, 0.96), rgba(139, 82, 44, 0.9));
+  box-shadow: 0 18px 34px rgba(20, 12, 8, 0.34);
+  overflow: hidden;
+}
+
+.customer-app__passkey-callout::after {
+  content: "";
+  position: absolute;
+  right: 22px;
+  bottom: -10px;
+  width: 28px;
+  height: 28px;
+  background: rgba(139, 82, 44, 0.9);
+  border-right: 1px solid rgba(245, 190, 125, 0.4);
+  border-bottom: 1px solid rgba(245, 190, 125, 0.4);
+  transform: rotate(45deg);
+}
+
+.customer-app__passkey-callout span,
+.customer-app__passkey-callout strong,
+.customer-app__passkey-callout p {
+  position: relative;
+  z-index: 1;
+}
+
+.customer-app__passkey-callout span {
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(245, 190, 125, 0.18);
+  color: #ffe0b5;
+  padding: 4px 9px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.customer-app__passkey-callout strong {
+  color: #fff8ef;
+  font-size: 1.25rem;
+  line-height: 1.08;
+}
+
+.customer-app__passkey-callout p {
+  margin: 0;
+  color: #f5d7b1;
+  font-weight: 700;
+}
+
+.customer-app__passkey-callout button {
+  position: relative;
+  z-index: 1;
+  background: #f5be7d;
+  color: #24140d;
+  box-shadow: 0 10px 22px rgba(20, 12, 8, 0.22);
+}
+
 .customer-app button:disabled {
   opacity: 0.55;
   cursor: not-allowed;

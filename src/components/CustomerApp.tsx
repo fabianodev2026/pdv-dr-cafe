@@ -1092,13 +1092,14 @@ export default function CustomerApp() {
             </div>
             <button onClick={loginCustomer}>Entrar no app</button>
             {storedPasskey && (
-              <button
-                type="button"
-                className="customer-app__link-button"
-                onClick={unlockWithPasskey}
-              >
-                Entrar com biometria/Face ID
-              </button>
+              <div className="customer-app__passkey-callout">
+                <span>acesso rapido</span>
+                <strong>Entrar com biometria/Face ID</strong>
+                <p>Use o desbloqueio deste aparelho para entrar com seguranca.</p>
+                <button type="button" onClick={unlockWithPasskey}>
+                  Desbloquear agora
+                </button>
+              </div>
             )}
             <button
               type="button"
