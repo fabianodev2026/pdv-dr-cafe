@@ -216,6 +216,21 @@
   min-width: 0;
 }
 
+.customer-app__keep-login {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #f5d7b1;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.customer-app__keep-login input {
+  width: 18px;
+  min-height: 18px;
+  accent-color: #f5be7d;
+}
+
 .customer-app__login-recovery {
   display: grid;
   gap: 8px;

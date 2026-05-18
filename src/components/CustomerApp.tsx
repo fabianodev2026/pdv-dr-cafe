@@ -74,6 +74,7 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 })
 
 const PASSKEY_STORAGE_KEY = 'dr-cafe-app-passkey'
+const CUSTOMER_SESSION_KEY = 'dr-cafe-app-session'
 
 const toMoney = (value: number) => Number(value.toFixed(2))
 
@@ -103,6 +104,19 @@ const readStoredPasskey = (): StoredPasskey | null => {
   } catch {
     return null
   }
+}
+
+const readStoredCustomerSession = (): AppCustomer | null => {
+  try {
+    const saved = localStorage.getItem(CUSTOMER_SESSION_KEY)
+    return saved ? JSON.parse(saved) : null
+  } catch {
+    return null
+  }
+}
+
+const saveCustomerSession = (customer: AppCustomer) => {
+  localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(customer))
 }
 
 const createPasskeyChallenge = () => window.crypto.getRandomValues(new Uint8Array(32))
@@ -192,6 +206,7 @@ const getProductGroup = (product: Product): MenuTab => {
 export default function CustomerApp() {
   const [customer, setCustomer] = useState<AppCustomer | null>(null)
   const [loginForm, setLoginForm] = useState({ login: '', password: '' })
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false)
   const [resetForm, setResetForm] = useState({ login: '', email: '' })
   const [loginRecoveryForm, setLoginRecoveryForm] = useState({ phone: '', email: '' })
   const [recoveredLogin, setRecoveredLogin] = useState('')
@@ -409,6 +424,13 @@ export default function CustomerApp() {
       setLoginForm((current) => ({ ...current, login: savedLogin }))
     }
 
+    const savedSession = readStoredCustomerSession()
+    if (savedSession) {
+      setCustomer(savedSession)
+      setKeepLoggedIn(true)
+      loadPending(savedSession.phone)
+    }
+
     const params = new URLSearchParams(window.location.search)
     const verifyToken = params.get('verify_email')
     const resetToken = params.get('reset_password')
@@ -503,6 +525,11 @@ export default function CustomerApp() {
     const normalizedCustomer = normalizeCustomerData(customerData)
     setCustomer(normalizedCustomer)
     localStorage.setItem('dr-cafe-app-login', customerData.login)
+    if (keepLoggedIn) {
+      saveCustomerSession(normalizedCustomer)
+    } else {
+      localStorage.removeItem(CUSTOMER_SESSION_KEY)
+    }
     setMessage('')
     loadPending(normalizedCustomer.phone)
   }
@@ -548,7 +575,9 @@ export default function CustomerApp() {
         customer,
       }
       localStorage.setItem(PASSKEY_STORAGE_KEY, JSON.stringify(nextPasskey))
+      saveCustomerSession(customer)
       setStoredPasskey(nextPasskey)
+      setKeepLoggedIn(true)
       showMessage('Biometria/Face ID ativado neste aparelho.', 'success')
     } catch (error) {
       logAppError({
@@ -597,6 +626,8 @@ export default function CustomerApp() {
       setStoredPasskey(savedPasskey)
       setCustomer(savedPasskey.customer)
       localStorage.setItem('dr-cafe-app-login', savedPasskey.customer.login)
+      saveCustomerSession(savedPasskey.customer)
+      setKeepLoggedIn(true)
       loadPending(savedPasskey.customer.phone)
       showMessage('App desbloqueado com biometria/Face ID.', 'success')
     } catch (error) {
@@ -614,6 +645,17 @@ export default function CustomerApp() {
     localStorage.removeItem(PASSKEY_STORAGE_KEY)
     setStoredPasskey(null)
     showMessage('Biometria/Face ID removido deste aparelho.', 'success')
+  }
+
+  const signOutCustomer = () => {
+    setCustomer(null)
+    setCart([])
+    setPendingTotal(0)
+    setPendingPayments([])
+    setAppOrders([])
+    setKeepLoggedIn(false)
+    localStorage.removeItem(CUSTOMER_SESSION_KEY)
+    showMessage('Voce saiu do app neste aparelho.', 'success')
   }
 
   const registerCustomer = async () => {
@@ -1090,6 +1132,14 @@ export default function CustomerApp() {
                 {showLoginPassword ? 'Ocultar' : 'Ver'}
               </button>
             </div>
+            <label className="customer-app__keep-login">
+              <input
+                type="checkbox"
+                checked={keepLoggedIn}
+                onChange={(event) => setKeepLoggedIn(event.target.checked)}
+              />
+              <span>Manter logado neste aparelho</span>
+            </label>
             <button onClick={loginCustomer}>Entrar no app</button>
             {storedPasskey && (
               <div className="customer-app__passkey-callout">
@@ -1305,6 +1355,13 @@ export default function CustomerApp() {
                     : 'Ativar biometria/Face ID'}
                 </button>
               )}
+              <button
+                type="button"
+                className="customer-app__refresh-balance"
+                onClick={signOutCustomer}
+              >
+                Sair do app
+              </button>
             </div>
           </section>
 
