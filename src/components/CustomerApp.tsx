@@ -63,12 +63,49 @@ interface AppOrderProgress {
   customer_message?: string
 }
 
+interface StoredPasskey {
+  credentialId: string
+  customer: AppCustomer
+}
+
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
 })
 
+const PASSKEY_STORAGE_KEY = 'dr-cafe-app-passkey'
+
 const toMoney = (value: number) => Number(value.toFixed(2))
+
+const normalizeCustomerData = (customerData: any): AppCustomer => ({
+  ...customerData,
+  position: customerData.position ?? customerData.customer_position,
+})
+
+const arrayBufferToBase64Url = (buffer: ArrayBuffer) =>
+  window
+    .btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '')
+
+const base64UrlToUint8Array = (value: string) => {
+  const padded = value.padEnd(value.length + ((4 - (value.length % 4)) % 4), '=')
+  const base64 = padded.replace(/-/g, '+').replace(/_/g, '/')
+  const binary = window.atob(base64)
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0))
+}
+
+const readStoredPasskey = (): StoredPasskey | null => {
+  try {
+    const saved = localStorage.getItem(PASSKEY_STORAGE_KEY)
+    return saved ? JSON.parse(saved) : null
+  } catch {
+    return null
+  }
+}
+
+const createPasskeyChallenge = () => window.crypto.getRandomValues(new Uint8Array(32))
 
 const getAppOrderAvailability = (date = new Date()) => {
   const weekDay = date.getDay()
@@ -188,6 +225,8 @@ export default function CustomerApp() {
   const [isBlockedByDebt, setIsBlockedByDebt] = useState(false)
   const [isSendingOrder, setIsSendingOrder] = useState(false)
   const [orderAvailability, setOrderAvailability] = useState(() => getAppOrderAvailability())
+  const [storedPasskey, setStoredPasskey] = useState<StoredPasskey | null>(() => readStoredPasskey())
+  const [isPasskeyAvailable, setIsPasskeyAvailable] = useState(false)
   const [form, setForm] = useState({
     name: '',
     lastName: '',
@@ -208,6 +247,8 @@ export default function CustomerApp() {
   const availableCredit = Math.max(creditLimit - pendingTotal, 0)
   const availableAfterCart = Math.max(availableCredit - total, 0)
   const isOrderingOpen = orderAvailability.isOpen
+  const hasPasskeyForCurrentCustomer =
+    Boolean(customer && storedPasskey?.customer.id === customer.id)
 
   const filteredProducts = useMemo(() => {
     const search = productSearch.trim().toLowerCase()
@@ -354,6 +395,14 @@ export default function CustomerApp() {
   }, [])
 
   useEffect(() => {
+    setIsPasskeyAvailable(
+      typeof window !== 'undefined' &&
+        Boolean(window.PublicKeyCredential) &&
+        window.location.protocol === 'https:',
+    )
+  }, [])
+
+  useEffect(() => {
     loadMenu()
     const savedLogin = localStorage.getItem('dr-cafe-app-login')
     if (savedLogin) {
@@ -451,13 +500,120 @@ export default function CustomerApp() {
       return
     }
 
-    setCustomer({
-      ...customerData,
-      position: customerData.position ?? customerData.customer_position,
-    })
+    const normalizedCustomer = normalizeCustomerData(customerData)
+    setCustomer(normalizedCustomer)
     localStorage.setItem('dr-cafe-app-login', customerData.login)
     setMessage('')
-    loadPending(customerData.phone)
+    loadPending(normalizedCustomer.phone)
+  }
+
+  const activatePasskey = async () => {
+    if (!customer) return
+
+    if (!isPasskeyAvailable) {
+      showMessage('Este aparelho ou navegador ainda nao liberou biometria/Face ID para o app.', 'error')
+      return
+    }
+
+    try {
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge: createPasskeyChallenge(),
+          rp: { name: 'Dr. Cafe' },
+          user: {
+            id: new TextEncoder().encode(String(customer.id)),
+            name: customer.login,
+            displayName: customer.name,
+          },
+          pubKeyCredParams: [
+            { type: 'public-key', alg: -7 },
+            { type: 'public-key', alg: -257 },
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+            userVerification: 'required',
+          },
+          timeout: 60000,
+          attestation: 'none',
+        },
+      })
+
+      if (!(credential instanceof PublicKeyCredential)) {
+        showMessage('Nao foi possivel ativar biometria neste aparelho.', 'error')
+        return
+      }
+
+      const nextPasskey = {
+        credentialId: arrayBufferToBase64Url(credential.rawId),
+        customer,
+      }
+      localStorage.setItem(PASSKEY_STORAGE_KEY, JSON.stringify(nextPasskey))
+      setStoredPasskey(nextPasskey)
+      showMessage('Biometria/Face ID ativado neste aparelho.', 'success')
+    } catch (error) {
+      logAppError({
+        source: 'CustomerApp',
+        action: 'activatePasskey',
+        error,
+        details: { customerId: customer.id },
+      })
+      showMessage('Biometria/Face ID nao foi ativado. Tente novamente neste aparelho.', 'error')
+    }
+  }
+
+  const unlockWithPasskey = async () => {
+    const savedPasskey = readStoredPasskey()
+
+    if (!savedPasskey) {
+      showMessage('Nenhuma biometria ativada neste aparelho.', 'error')
+      return
+    }
+
+    if (!isPasskeyAvailable) {
+      showMessage('Este aparelho ou navegador ainda nao liberou biometria/Face ID para o app.', 'error')
+      return
+    }
+
+    try {
+      const credential = await navigator.credentials.get({
+        publicKey: {
+          challenge: createPasskeyChallenge(),
+          allowCredentials: [
+            {
+              type: 'public-key',
+              id: base64UrlToUint8Array(savedPasskey.credentialId),
+            },
+          ],
+          userVerification: 'required',
+          timeout: 60000,
+        },
+      })
+
+      if (!credential) {
+        showMessage('Nao foi possivel desbloquear com biometria/Face ID.', 'error')
+        return
+      }
+
+      setStoredPasskey(savedPasskey)
+      setCustomer(savedPasskey.customer)
+      localStorage.setItem('dr-cafe-app-login', savedPasskey.customer.login)
+      loadPending(savedPasskey.customer.phone)
+      showMessage('App desbloqueado com biometria/Face ID.', 'success')
+    } catch (error) {
+      logAppError({
+        source: 'CustomerApp',
+        action: 'unlockWithPasskey',
+        error,
+        details: { hasStoredPasskey: true },
+      })
+      showMessage('Biometria/Face ID nao confirmada. Entre com login e senha.', 'error')
+    }
+  }
+
+  const removePasskey = () => {
+    localStorage.removeItem(PASSKEY_STORAGE_KEY)
+    setStoredPasskey(null)
+    showMessage('Biometria/Face ID removido deste aparelho.', 'success')
   }
 
   const registerCustomer = async () => {
@@ -935,6 +1091,15 @@ export default function CustomerApp() {
               </button>
             </div>
             <button onClick={loginCustomer}>Entrar no app</button>
+            {storedPasskey && (
+              <button
+                type="button"
+                className="customer-app__link-button"
+                onClick={unlockWithPasskey}
+              >
+                Entrar com biometria/Face ID
+              </button>
+            )}
             <button
               type="button"
               className="customer-app__link-button"
@@ -1128,6 +1293,17 @@ export default function CustomerApp() {
               >
                 Trocar senha
               </button>
+              {isPasskeyAvailable && (
+                <button
+                  type="button"
+                  className="customer-app__refresh-balance"
+                  onClick={hasPasskeyForCurrentCustomer ? removePasskey : activatePasskey}
+                >
+                  {hasPasskeyForCurrentCustomer
+                    ? 'Remover biometria'
+                    : 'Ativar biometria/Face ID'}
+                </button>
+              )}
             </div>
           </section>
 
