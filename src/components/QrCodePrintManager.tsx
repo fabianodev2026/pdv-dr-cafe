@@ -25,11 +25,7 @@ const roomNumbers = [
 const PUBLIC_MENU_URL =
   import.meta.env.VITE_PUBLIC_MENU_URL || 'https://pdv-dr-cafe.vercel.app'
 
-const getBaseUrl = () => {
-  if (typeof window === 'undefined') return ''
-  const isLocalPreview = ['localhost', '127.0.0.1'].includes(window.location.hostname)
-  return isLocalPreview ? PUBLIC_MENU_URL : window.location.origin
-}
+const getBaseUrl = () => PUBLIC_MENU_URL
 
 export default function QrCodePrintManager() {
   const [baseUrl, setBaseUrl] = useState(getBaseUrl)
@@ -131,7 +127,7 @@ export default function QrCodePrintManager() {
       <div className="qr-manager__toolbar no-print">
         <div>
           <h2>QR Code do cardapio</h2>
-          <p>Imprima os codigos das mesas e quartos para abrir o cardapio Dr. Cafe.</p>
+          <p>Imprima os codigos das mesas e quartos para abrir o cardapio publico Dr. Cafe.</p>
         </div>
         <button onClick={printQrCodes}>Imprimir QR Codes</button>
       </div>
@@ -145,7 +141,7 @@ export default function QrCodePrintManager() {
             placeholder="https://pdv-dr-cafe.vercel.app"
           />
           <small>
-            Para celular funcionar, use o link da Vercel ou um dominio publico.
+            Para celular funcionar, use sempre o link publico. Nao use link de preview da Vercel.
           </small>
         </label>
         <label>
