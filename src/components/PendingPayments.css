@@ -133,6 +133,13 @@
   color: #fffaf5;
 }
 
+.pending-card .btn-delete-pending-item {
+  background: #9c2f45;
+  color: #fffaf5;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+}
+
 .pending-groups {
   display: grid;
   gap: 16px;

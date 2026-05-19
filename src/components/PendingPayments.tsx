@@ -41,6 +41,23 @@ const initialPending: NewPending = {
 const formatLocalDate = (date: string) =>
   date ? new Date(`${date}T00:00:00`).toLocaleDateString('pt-BR') : '-'
 
+const splitPendingItems = (itemsDetail?: string) =>
+  (itemsDetail || '-')
+    .split(/;|\n/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+const parseMoneyValue = (value?: string) =>
+  String(value ?? '').includes(',')
+    ? Number(String(value ?? '0').replace(/\./g, '').replace(',', '.') || 0)
+    : Number(value || 0)
+
+const getPendingItemAmount = (item: string, fallbackAmount: number) => {
+  const match = item.match(/R\$\s*([\d.,]+)/i)
+  const amount = parseMoneyValue(match?.[1])
+  return amount > 0 ? amount : fallbackAmount
+}
+
 const isAppPendingPayment = (pending: PendingPayment) => {
   const description = pending.description
     ?.normalize('NFD')
@@ -222,6 +239,54 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     fetchPending()
   }
 
+  const deletePendingItem = async (pending: PendingPayment, itemIndex: number) => {
+    if (!isAdmin) return
+
+    const items = splitPendingItems(pending.items_detail)
+    const item = items[itemIndex]
+    if (!item) return
+
+    const fallbackAmount = Number(pending.total_amount || 0) / Math.max(items.length, 1)
+    const itemAmount = getPendingItemAmount(item, fallbackAmount)
+    const confirmed = window.confirm(`Apagar este item de ${pending.customer_name}: ${item}?`)
+    if (!confirmed) return
+
+    const nextItems = items.filter((_, index) => index !== itemIndex)
+
+    if (nextItems.length === 0) {
+      const { error } = await supabase
+        .from('pending_payments')
+        .delete()
+        .eq('id', pending.id)
+
+      if (error) {
+        setMessage(`Nao foi possivel apagar o item: ${error.message}`)
+        return
+      }
+
+      setMessage(`Item apagado. Pendencia de ${pending.customer_name} removida porque ficou vazia.`)
+      fetchPending()
+      return
+    }
+
+    const nextTotal = Math.max(Number(pending.total_amount || 0) - itemAmount, 0)
+    const { error } = await supabase
+      .from('pending_payments')
+      .update({
+        items_detail: nextItems.join('; '),
+        total_amount: Number(nextTotal.toFixed(2)),
+      })
+      .eq('id', pending.id)
+
+    if (error) {
+      setMessage(`Nao foi possivel apagar o item: ${error.message}`)
+      return
+    }
+
+    setMessage(`Item apagado de ${pending.customer_name}.`)
+    fetchPending()
+  }
+
   return (
     <div className="pending-payments">
       <header className="pending-heading">
@@ -394,8 +459,19 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
                       <p><strong>Pagamento:</strong> {formatLocalDate(pending.due_date)}</p>
                       <div className="consumed-history">
                         <strong>Consumiu:</strong>
-                        {(pending.items_detail || '-').split('\n').map((item, index) => (
-                          <span key={`${pending.id}-${index}`}>{item}</span>
+                        {splitPendingItems(pending.items_detail).map((item, index) => (
+                          <span key={`${pending.id}-${index}`}>
+                            {item}
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                className="btn-delete-pending-item"
+                                onClick={() => deletePendingItem(pending, index)}
+                              >
+                                Excluir item
+                              </button>
+                            )}
+                          </span>
                         ))}
                       </div>
                       <p><strong>Observacao:</strong> {pending.description || '-'}</p>
