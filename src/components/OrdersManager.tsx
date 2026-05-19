@@ -634,6 +634,8 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
       ? 'App cliente'
       : `${order.source_type === 'mesa' ? 'Mesa' : order.source_type === 'comanda' ? 'Comanda' : 'Quarto'} ${order.service_number}`
   )
+  const isQrOrder = (order: OrderTicket) =>
+    (order.customer_message || '').toLowerCase().includes('qr code')
 
   return (
     <div className="orders-manager">
@@ -738,7 +740,7 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
                   </button>
                 </div>
               )}
-              {order.source_type !== 'app' && (
+              {order.source_type !== 'app' && !isQrOrder(order) && (
                 <div className="send-to-app-control">
                   <div className="send-to-app-items">
                     <strong>Enviar quais itens?</strong>

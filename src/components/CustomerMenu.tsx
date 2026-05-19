@@ -209,7 +209,7 @@ export default function CustomerMenu() {
             items: cart,
             total_amount: total,
             status: 'novo',
-            customer_message: 'Pedido enviado para o PDV.',
+            customer_message: 'Pedido enviado pelo QR Code do quarto. Pague quando receber.',
           }
         : {
             source_type: 'mesa',
@@ -223,7 +223,7 @@ export default function CustomerMenu() {
             })),
             total_amount: total,
             status: 'recebido',
-            customer_message: 'Pedido enviado pelo QR Code da mesa.',
+            customer_message: 'Pedido enviado pelo QR Code da mesa. Pague quando receber.',
           }
 
     const targetTable = menuLocation.type === 'room' ? 'room_orders' : 'service_orders'
@@ -246,8 +246,8 @@ export default function CustomerMenu() {
       setPatientName('')
       setPhone('')
       setLastOrderId(latestOrder?.id ?? null)
-      setOrderStatusMessage('Pedido enviado para o PDV.')
-      setMessage('Pedido enviado para o PDV.')
+      setOrderStatusMessage('Pedido enviado para o PDV. Pague quando receber.')
+      setMessage('Pedido enviado para o PDV. Pague quando receber.')
     }
 
     setIsSending(false)
@@ -279,6 +279,11 @@ export default function CustomerMenu() {
           placeholder="Telefone"
           maxLength={20}
         />
+      </section>
+
+      <section className="customer-menu__payment-note">
+        <strong>Pagamento no recebimento</strong>
+        <span>Escolha os produtos pelo QR Code. O pedido aparece no PDV do cafe e voce paga quando receber.</span>
       </section>
 
       <section className="customer-menu__filters">

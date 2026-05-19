@@ -78,6 +78,31 @@
   margin: 0 auto 12px;
 }
 
+.customer-menu__payment-note {
+  display: grid;
+  gap: 4px;
+  max-width: 1040px;
+  margin: 0 auto 12px;
+  padding: 12px;
+  border: 1px solid rgba(245, 190, 125, 0.35);
+  border-radius: 12px;
+  background: rgba(245, 190, 125, 0.12);
+}
+
+.customer-menu__payment-note strong,
+.customer-menu__payment-note span {
+  display: block;
+}
+
+.customer-menu__payment-note strong {
+  color: #f5be7d;
+}
+
+.customer-menu__payment-note span {
+  color: #d8c7b6;
+  font-weight: 800;
+}
+
 .customer-menu__patient input,
 .customer-menu__filters input {
   min-width: 0;
