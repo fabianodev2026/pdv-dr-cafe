@@ -282,6 +282,10 @@ export default function CustomerMenu() {
       </section>
 
       <section className="customer-menu__filters">
+        <div className="customer-menu__product-link-status">
+          <strong>Cardapio vinculado aos produtos do PDV</strong>
+          <span>{products.length} produto(s) carregado(s) do cadastro do cafe.</span>
+        </div>
         <input
           value={productSearch}
           onChange={(event) => setProductSearch(event.target.value)}
@@ -366,9 +370,11 @@ export default function CustomerMenu() {
             </article>
           ))}
         </div>
-          {visibleProducts.length === 0 && (
-            <p className="customer-menu__empty">Nenhum produto encontrado nesta aba.</p>
-          )}
+                {visibleProducts.length === 0 && (
+                  <p className="customer-menu__empty">
+                    Nenhum produto encontrado nesta aba. Confira os produtos cadastrados no PDV.
+                  </p>
+                )}
         </section>
       </section>
     </main>

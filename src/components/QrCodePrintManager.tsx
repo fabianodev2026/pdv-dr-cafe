@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 import './QrCodePrintManager.css'
 
 type QrTargetType = 'table' | 'room'
@@ -34,6 +35,8 @@ export default function QrCodePrintManager() {
   const [baseUrl, setBaseUrl] = useState(getBaseUrl)
   const [filter, setFilter] = useState<'todos' | QrTargetType>('todos')
   const [codes, setCodes] = useState<QrCodeItem[]>([])
+  const [productCount, setProductCount] = useState<number | null>(null)
+  const [productMessage, setProductMessage] = useState('')
 
   const targets = useMemo<QrTarget[]>(() => {
     const normalizedBaseUrl = baseUrl.replace(/\/$/, '')
@@ -90,6 +93,27 @@ export default function QrCodePrintManager() {
     }
   }, [targets])
 
+  useEffect(() => {
+    async function fetchProductCount() {
+      const { count, error } = await supabase
+        .from('products')
+        .select('id', { count: 'exact', head: true })
+
+      if (error) {
+        setProductCount(null)
+        setProductMessage('Nao foi possivel conferir os produtos cadastrados.')
+        return
+      }
+
+      setProductCount(count ?? 0)
+      setProductMessage(
+        `${count ?? 0} produto(s) do PDV vinculados ao cardapio do QR Code.`,
+      )
+    }
+
+    fetchProductCount()
+  }, [])
+
   const printQrCodes = () => {
     document.body.classList.add('printing-qr')
     const clearPrintMode = () => {
@@ -135,6 +159,11 @@ export default function QrCodePrintManager() {
             <option value="room">Somente quartos</option>
           </select>
         </label>
+      </div>
+
+      <div className={`qr-manager__product-status no-print ${productCount === 0 ? 'warning' : ''}`}>
+        <strong>Produtos do cafe</strong>
+        <span>{productMessage}</span>
       </div>
 
       <div className="qr-manager__print-title">

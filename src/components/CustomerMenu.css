@@ -102,8 +102,32 @@
 
 .customer-menu__tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
+}
+
+.customer-menu__product-link-status {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(245, 190, 125, 0.34);
+  border-radius: 10px;
+  background: rgba(245, 190, 125, 0.12);
+}
+
+.customer-menu__product-link-status strong,
+.customer-menu__product-link-status span {
+  display: block;
+}
+
+.customer-menu__product-link-status strong {
+  color: #f5be7d;
+}
+
+.customer-menu__product-link-status span {
+  color: #d8c7b6;
+  font-size: 0.86rem;
+  font-weight: 800;
 }
 
 .customer-menu__tabs button {

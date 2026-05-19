@@ -59,6 +59,30 @@
   color: #2b160d;
 }
 
+.qr-manager__product-status {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #ead4b9;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #2b160d;
+}
+
+.qr-manager__product-status strong,
+.qr-manager__product-status span {
+  display: block;
+}
+
+.qr-manager__product-status span {
+  color: #7b4a27;
+  font-weight: 800;
+}
+
+.qr-manager__product-status.warning {
+  border-color: #9c2f45;
+}
+
 .qr-manager__print-title {
   justify-content: flex-start;
   padding: 12px;
