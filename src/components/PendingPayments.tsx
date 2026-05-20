@@ -16,6 +16,16 @@ interface PendingPayment {
   status: string
 }
 
+interface AppOrder {
+  id: number
+  items?: Array<{
+    name?: string
+    quantity?: number
+    unit_price?: number
+  }>
+  total_amount: number
+}
+
 interface NewPending {
   customer_name: string
   phone: string
@@ -58,11 +68,28 @@ const getPendingItemAmount = (item: string, fallbackAmount: number) => {
   return amount > 0 ? amount : fallbackAmount
 }
 
-const isAppPendingPayment = (pending: PendingPayment) => {
-  const description = pending.description
-    ?.normalize('NFD')
+const normalizeText = (value?: string) =>
+  String(value ?? '')
+    .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase() ?? ''
+    .trim()
+    .toLowerCase()
+
+const parsePendingItem = (item: string) => {
+  const match = item.match(/^(\d+(?:[.,]\d+)?)x\s+(.+?)(?:\s+-\s+R\$\s*([\d.,]+))?$/i)
+  if (!match) {
+    return { quantity: 1, name: item.trim(), total: 0 }
+  }
+
+  return {
+    quantity: parseMoneyValue(match[1]) || 1,
+    name: match[2].trim(),
+    total: parseMoneyValue(match[3]),
+  }
+}
+
+const isAppPendingPayment = (pending: PendingPayment) => {
+  const description = normalizeText(pending.description)
 
   return description.includes('app') || description.includes('dr. cafe')
 }
@@ -217,6 +244,119 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     fetchPending()
   }
 
+  const fetchMatchingOpenAppOrders = async (pending: PendingPayment) => {
+    const startDate = `${pending.purchase_date}T00:00:00`
+    const endDate = new Date(`${pending.purchase_date}T00:00:00`)
+    endDate.setDate(endDate.getDate() + 1)
+
+    const { data, error } = await supabase
+      .from('app_orders')
+      .select('id, items, total_amount')
+      .eq('customer_phone', pending.phone)
+      .gte('created_at', startDate)
+      .lt('created_at', endDate.toISOString())
+      .not('status', 'in', '("entregue","cancelado")')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setMessage(`Pendencia alterada, mas nao foi possivel atualizar o app da cliente: ${error.message}`)
+      return []
+    }
+
+    return (data ?? []) as AppOrder[]
+  }
+
+  const syncDeletedPendingToAppOrder = async (pending: PendingPayment) => {
+    if (!isAppPendingPayment(pending)) return
+
+    const appOrders = await fetchMatchingOpenAppOrders(pending)
+    const pendingItems = splitPendingItems(pending.items_detail).map(parsePendingItem)
+    const pendingNames = pendingItems.map((item) => normalizeText(item.name))
+
+    for (const order of appOrders) {
+      const orderItems = order.items ?? []
+      const hasSameItems = orderItems.some((item) =>
+        pendingNames.includes(normalizeText(item.name)),
+      )
+
+      if (!hasSameItems) continue
+
+      const { error } = await supabase
+        .from('app_orders')
+        .update({
+          status: 'cancelado',
+          customer_message: 'Pedido cancelado pelo cafe.',
+        })
+        .eq('id', order.id)
+
+      if (error) {
+        setMessage(`Pendencia removida, mas o pedido ainda aparece no app: ${error.message}`)
+      }
+
+      return
+    }
+  }
+
+  const syncDeletedPendingItemToAppOrder = async (pending: PendingPayment, itemText: string) => {
+    if (!isAppPendingPayment(pending)) return
+
+    const deletedItem = parsePendingItem(itemText)
+    const deletedName = normalizeText(deletedItem.name)
+    const appOrders = await fetchMatchingOpenAppOrders(pending)
+
+    for (const order of appOrders) {
+      const orderItems = order.items ?? []
+      const targetIndex = orderItems.findIndex((item) => normalizeText(item.name) === deletedName)
+      if (targetIndex < 0) continue
+
+      const nextItems = orderItems
+        .map((item, index) => {
+          if (index !== targetIndex) return item
+
+          const currentQuantity = Number(item.quantity || 1)
+          const nextQuantity = currentQuantity - Number(deletedItem.quantity || 1)
+
+          return nextQuantity > 0 ? { ...item, quantity: nextQuantity } : null
+        })
+        .filter(Boolean) as NonNullable<AppOrder['items']>
+
+      if (nextItems.length === 0) {
+        const { error } = await supabase
+          .from('app_orders')
+          .update({
+            status: 'cancelado',
+            customer_message: 'Pedido cancelado pelo cafe.',
+          })
+          .eq('id', order.id)
+
+        if (error) {
+          setMessage(`Item removido, mas o pedido ainda aparece no app: ${error.message}`)
+        }
+
+        return
+      }
+
+      const nextTotal = nextItems.reduce(
+        (sum, item) => sum + Number(item.unit_price || 0) * Number(item.quantity || 0),
+        0,
+      )
+      const { error } = await supabase
+        .from('app_orders')
+        .update({
+          items: nextItems,
+          total_amount: Number(nextTotal.toFixed(2)),
+          customer_message: 'Um item do pedido foi cancelado pelo cafe.',
+        })
+        .eq('id', order.id)
+
+      if (error) {
+        setMessage(`Item removido, mas o pedido ainda aparece no app: ${error.message}`)
+      }
+
+      return
+    }
+  }
+
   const deleteAppPending = async (pending: PendingPayment) => {
     if (!isAdmin) return
 
@@ -235,6 +375,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
       return
     }
 
+    await syncDeletedPendingToAppOrder(pending)
     setMessage(`Pedido do app de ${pending.customer_name} apagado.`)
     fetchPending()
   }
@@ -264,6 +405,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
         return
       }
 
+      await syncDeletedPendingItemToAppOrder(pending, item)
       setMessage(`Item apagado. Pendencia de ${pending.customer_name} removida porque ficou vazia.`)
       fetchPending()
       return
@@ -283,6 +425,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
       return
     }
 
+    await syncDeletedPendingItemToAppOrder(pending, item)
     setMessage(`Item apagado de ${pending.customer_name}.`)
     fetchPending()
   }
