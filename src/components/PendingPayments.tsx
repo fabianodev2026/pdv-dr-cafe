@@ -26,6 +26,18 @@ interface AppOrder {
   total_amount: number
 }
 
+interface SaleRecord {
+  id: number
+  items?: Array<{
+    name?: string
+    quantity?: number
+    unit_price?: number
+    price?: number
+    total?: number
+  }>
+  total_amount: number
+}
+
 interface NewPending {
   customer_name: string
   phone: string
@@ -92,6 +104,14 @@ const isAppPendingPayment = (pending: PendingPayment) => {
   const description = normalizeText(pending.description)
 
   return description.includes('app') || description.includes('dr. cafe')
+}
+
+const getDayRange = (date: string) => {
+  const startDate = `${date}T00:00:00`
+  const endDate = new Date(`${date}T00:00:00`)
+  endDate.setDate(endDate.getDate() + 1)
+
+  return { startDate, endDate: endDate.toISOString() }
 }
 
 interface PendingPaymentsProps {
@@ -245,16 +265,14 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
   }
 
   const fetchMatchingOpenAppOrders = async (pending: PendingPayment) => {
-    const startDate = `${pending.purchase_date}T00:00:00`
-    const endDate = new Date(`${pending.purchase_date}T00:00:00`)
-    endDate.setDate(endDate.getDate() + 1)
+    const { startDate, endDate } = getDayRange(pending.purchase_date)
 
     const { data, error } = await supabase
       .from('app_orders')
       .select('id, items, total_amount')
       .eq('customer_phone', pending.phone)
       .gte('created_at', startDate)
-      .lt('created_at', endDate.toISOString())
+      .lt('created_at', endDate)
       .not('status', 'in', '("entregue","cancelado")')
       .order('created_at', { ascending: false })
 
@@ -264,6 +282,112 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     }
 
     return (data ?? []) as AppOrder[]
+  }
+
+  const fetchMatchingClienteAppSales = async (pending: PendingPayment) => {
+    const { startDate, endDate } = getDayRange(pending.purchase_date)
+
+    const { data, error } = await supabase
+      .from('sales')
+      .select('id, items, total_amount')
+      .eq('payment_method', 'cliente_app')
+      .eq('customer_phone', pending.phone)
+      .gte('created_at', startDate)
+      .lt('created_at', endDate)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setMessage(`Pendencia alterada, mas nao foi possivel atualizar a venda: ${error.message}`)
+      return []
+    }
+
+    return (data ?? []) as SaleRecord[]
+  }
+
+  const findSaleWithItem = (sales: SaleRecord[], itemName: string) => {
+    const targetName = normalizeText(itemName)
+
+    return sales.find((sale) =>
+      (sale.items ?? []).some((item) => normalizeText(item.name) === targetName),
+    )
+  }
+
+  const syncDeletedPendingToSales = async (pending: PendingPayment) => {
+    const pendingItems = splitPendingItems(pending.items_detail).map(parsePendingItem)
+    const sales = await fetchMatchingClienteAppSales(pending)
+
+    const targetSale = sales.find((sale) => {
+      const saleNames = (sale.items ?? []).map((item) => normalizeText(item.name))
+      return pendingItems.some((item) => saleNames.includes(normalizeText(item.name)))
+    })
+
+    if (!targetSale) return
+
+    const { error } = await supabase.from('sales').delete().eq('id', targetSale.id)
+
+    if (error) {
+      setMessage(`Pendencia removida, mas a venda ainda aparece no movimento: ${error.message}`)
+    }
+  }
+
+  const syncDeletedPendingItemToSales = async (pending: PendingPayment, itemText: string) => {
+    const deletedItem = parsePendingItem(itemText)
+    const sales = await fetchMatchingClienteAppSales(pending)
+    const targetSale = findSaleWithItem(sales, deletedItem.name)
+
+    if (!targetSale) return
+
+    let removed = false
+    const nextItems = (targetSale.items ?? [])
+      .map((item) => {
+        if (removed || normalizeText(item.name) !== normalizeText(deletedItem.name)) {
+          return item
+        }
+
+        removed = true
+        const currentQuantity = Number(item.quantity || 1)
+        const nextQuantity = currentQuantity - Number(deletedItem.quantity || 1)
+
+        if (nextQuantity <= 0) return null
+
+        const unitPrice = Number(item.unit_price ?? item.price ?? 0)
+        return {
+          ...item,
+          quantity: nextQuantity,
+          unit_price: unitPrice,
+          total: Number((unitPrice * nextQuantity).toFixed(2)),
+        }
+      })
+      .filter(Boolean) as NonNullable<SaleRecord['items']>
+
+    if (nextItems.length === 0) {
+      const { error } = await supabase.from('sales').delete().eq('id', targetSale.id)
+
+      if (error) {
+        setMessage(`Item removido da conta, mas a venda ainda aparece no movimento: ${error.message}`)
+      }
+
+      return
+    }
+
+    const nextTotal = nextItems.reduce((sum, item) => {
+      const itemTotal =
+        Number(item.total || 0) ||
+        Number(item.unit_price ?? item.price ?? 0) * Number(item.quantity || 0)
+      return sum + itemTotal
+    }, 0)
+
+    const { error } = await supabase
+      .from('sales')
+      .update({
+        items: nextItems,
+        total_amount: Number(nextTotal.toFixed(2)),
+      })
+      .eq('id', targetSale.id)
+
+    if (error) {
+      setMessage(`Item removido da conta, mas a venda nao foi recalculada: ${error.message}`)
+    }
   }
 
   const syncDeletedPendingToAppOrder = async (pending: PendingPayment) => {
@@ -376,6 +500,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     }
 
     await syncDeletedPendingToAppOrder(pending)
+    await syncDeletedPendingToSales(pending)
     setMessage(`Pedido do app de ${pending.customer_name} apagado.`)
     fetchPending()
   }
@@ -397,7 +522,12 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     if (nextItems.length === 0) {
       const { error } = await supabase
         .from('pending_payments')
-        .delete()
+        .update({
+          status: 'cancelado',
+          items_detail: '',
+          total_amount: 0,
+          description: `${pending.description || 'Pendencia'} (item cancelado pelo admin)`,
+        })
         .eq('id', pending.id)
 
       if (error) {
@@ -406,6 +536,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
       }
 
       await syncDeletedPendingItemToAppOrder(pending, item)
+      await syncDeletedPendingItemToSales(pending, item)
       setMessage(`Item apagado. Pendencia de ${pending.customer_name} removida porque ficou vazia.`)
       fetchPending()
       return
@@ -426,6 +557,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     }
 
     await syncDeletedPendingItemToAppOrder(pending, item)
+    await syncDeletedPendingItemToSales(pending, item)
     setMessage(`Item apagado de ${pending.customer_name}.`)
     fetchPending()
   }
