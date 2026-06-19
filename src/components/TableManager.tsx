@@ -63,6 +63,8 @@ interface ReceiptData {
   number: number
   items: OrderItem[]
   total: number
+  cash_received?: number
+  change_amount?: number
   customer_name: string
   customer_phone: string
   date: string
@@ -103,6 +105,11 @@ interface ReopenServiceState {
 }
 
 const LAST_RECEIPT_KEY = 'dr-cafe-last-receipt'
+
+const parseCurrencyInput = (value: string) => {
+  const normalized = value.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')
+  return Number(normalized || 0)
+}
 
 const createServiceItem = (number: number, type: ServiceType): TableItem => ({
   id: type === 'table' ? number : type === 'room' ? 1000 + number : 2000 + number,
@@ -216,6 +223,7 @@ export default function TableManager({
     readReceiptPrinterSettings(),
   )
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix')
+  const [cashReceived, setCashReceived] = useState('')
   const [payLaterDueDate, setPayLaterDueDate] = useState('')
   const [appCustomers, setAppCustomers] = useState<AppCustomer[]>([])
   const [selectedAppCustomerId, setSelectedAppCustomerId] = useState('')
@@ -786,6 +794,15 @@ export default function TableManager({
   const payCommand = () => {
     if (!activeItem) return
 
+    const cashReceivedAmount = paymentMethod === 'dinheiro' ? parseCurrencyInput(cashReceived) : 0
+    const changeAmount =
+      paymentMethod === 'dinheiro' ? Math.max(cashReceivedAmount - activeItem.total, 0) : 0
+
+    if (paymentMethod === 'dinheiro' && cashReceivedAmount < activeItem.total) {
+      alert('Valor recebido em dinheiro menor que o total da venda.')
+      return
+    }
+
     if (paymentMethod === 'pagar_depois' && !canPayLater) {
       alert('Preencha nome e telefone para usar pagar depois.')
       return
@@ -825,6 +842,8 @@ export default function TableManager({
       number: activeItem.number,
       items: [...activeItem.items],
       total: activeItem.total,
+      cash_received: paymentMethod === 'dinheiro' ? toMoney(cashReceivedAmount) : 0,
+      change_amount: toMoney(changeAmount),
       customer_name: receiptCustomerName,
       customer_phone: receiptCustomerPhone,
       date: new Date().toLocaleString('pt-BR'),
@@ -993,6 +1012,7 @@ export default function TableManager({
       setShowReceipt(false)
       setIsReprint(false)
       setSelectedAppCustomerId('')
+      setCashReceived('')
       fetchAppCustomers()
       markBackupNeededAfterClosing('Venda registrada no PDV apos as 20:00')
       void openCashDrawer(receiptData.payment_method)
@@ -1371,6 +1391,7 @@ export default function TableManager({
                             onChange={(e) => {
                               const nextPaymentMethod = e.target.value as PaymentMethod
                               setPaymentMethod(nextPaymentMethod)
+                              if (nextPaymentMethod !== 'dinheiro') setCashReceived('')
                               if (nextPaymentMethod === 'cliente_app') {
                                 fetchAppCustomers()
                                 const matchingCustomerId = getMatchingAppCustomerId(activeItem)
@@ -1391,6 +1412,31 @@ export default function TableManager({
                             <small>Preencha nome e telefone para liberar pagar depois.</small>
                           )}
                         </div>
+                        {paymentMethod === 'dinheiro' && (
+                          <div className="payment-methods cash-change-box">
+                            <label>Dinheiro recebido</label>
+                            <input
+                              value={cashReceived}
+                              onChange={(e) =>
+                                setCashReceived(e.target.value.replace(/[^\d,.]/g, ''))
+                              }
+                              placeholder="Ex: 50,00"
+                              inputMode="decimal"
+                            />
+                            <div className="cash-change-summary">
+                              <span>Total da venda</span>
+                              <strong>R$ {activeItem.total.toFixed(2)}</strong>
+                              <span>Troco</span>
+                              <strong>
+                                R${' '}
+                                {Math.max(
+                                  parseCurrencyInput(cashReceived) - activeItem.total,
+                                  0,
+                                ).toFixed(2)}
+                              </strong>
+                            </div>
+                          </div>
+                        )}
                         {paymentMethod === 'pagar_depois' && (
                           <div className="payment-methods">
                             <label>Data combinada para pagamento</label>
@@ -1554,6 +1600,16 @@ export default function TableManager({
             <div className="receipt-footer">
               <hr />
               <p>Pagamento: {receiptData?.payment_method}</p>
+              {receiptData?.payment_method === 'dinheiro' && (
+                <>
+                  <p>Recebido: R$ {Number(receiptData.cash_received || 0).toFixed(2)}</p>
+                  <p>Troco: R$ {Number(receiptData.change_amount || 0).toFixed(2)}</p>
+                </>
+              )}
+              {receiptData?.payment_method &&
+                receiptData.payment_method !== 'dinheiro' &&
+                receiptData.payment_method !== 'pagar_depois' &&
+                receiptData.payment_method !== 'cliente_app' && <p>Troco: R$ 0.00</p>}
               {receiptData?.payment_method === 'pagar_depois' && (
                 <p>Pagamento combinado somente por Pix ou dinheiro.</p>
               )}

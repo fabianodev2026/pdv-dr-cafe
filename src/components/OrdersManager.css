@@ -263,6 +263,40 @@
   padding: 8px;
 }
 
+.order-cash-change {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #ead4b9;
+  border-radius: 8px;
+  background: #fffaf5;
+  padding: 8px;
+}
+
+.order-cash-change input {
+  min-height: 38px;
+  border: 1px solid #b98554;
+  border-radius: 8px;
+  background: #fff;
+  color: #2b160d;
+  font: inherit;
+  font-weight: 800;
+  padding: 8px;
+}
+
+.order-cash-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  color: #5a2f17;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.order-cash-summary strong {
+  color: #006c67;
+  text-align: right;
+}
+
 .status-actions .btn-pay-order {
   background: #2f7d42;
   color: #fffaf5;

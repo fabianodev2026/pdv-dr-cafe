@@ -87,6 +87,11 @@ const getLocalDateInputValue = (date = new Date()) => {
 
 const toMoney = (value: number) => Number(value.toFixed(2))
 
+const parseCurrencyInput = (value: string) => {
+  const normalized = value.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')
+  return Number(normalized || 0)
+}
+
 const getFifthBusinessDay = () => {
   const now = new Date()
   const targetMonth = now.getMonth() + 1
@@ -139,6 +144,7 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
   const [selectedAppCustomerByOrder, setSelectedAppCustomerByOrder] = useState<Record<string, string>>({})
   const [selectedAppItemIndexesByOrder, setSelectedAppItemIndexesByOrder] = useState<Record<string, number[]>>({})
   const [selectedPaymentByOrder, setSelectedPaymentByOrder] = useState<Record<string, PaymentMethod>>({})
+  const [cashReceivedByOrder, setCashReceivedByOrder] = useState<Record<string, string>>({})
   const [sendingToAppOrderId, setSendingToAppOrderId] = useState<string | null>(null)
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null)
   const [showOrderLog, setShowOrderLog] = useState(false)
@@ -534,8 +540,19 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
   const paySentOrder = async (order: OrderTicket) => {
     const orderKey = `${order.tableName}-${order.id}`
     const paymentMethod = selectedPaymentByOrder[orderKey] ?? 'pix'
+    const totalAmount = Number(order.total_amount || 0)
+    const cashReceived = paymentMethod === 'dinheiro' ? parseCurrencyInput(cashReceivedByOrder[orderKey] ?? '') : 0
+    const changeAmount = paymentMethod === 'dinheiro' ? Math.max(cashReceived - totalAmount, 0) : 0
+
+    if (paymentMethod === 'dinheiro' && cashReceived < totalAmount) {
+      setMessage('Valor recebido em dinheiro menor que o total do pedido.')
+      return
+    }
+
     const confirmed = window.confirm(
-      `Registrar pagamento de ${currencyFormatter.format(Number(order.total_amount || 0))} em ${getOrderTitle(order)}?`,
+      paymentMethod === 'dinheiro'
+        ? `Registrar pagamento de ${currencyFormatter.format(totalAmount)} em ${getOrderTitle(order)}? Recebido: ${currencyFormatter.format(cashReceived)} | Troco: ${currencyFormatter.format(changeAmount)}`
+        : `Registrar pagamento de ${currencyFormatter.format(totalAmount)} em ${getOrderTitle(order)}? Troco: R$ 0,00`,
     )
     if (!confirmed) return
 
@@ -551,7 +568,7 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
     const { error: saleError } = await supabase.from('sales').insert([
       {
         table_number: order.service_number || null,
-        total_amount: Number(order.total_amount || 0),
+        total_amount: totalAmount,
         cashier_name: currentUser?.username ?? 'PDV',
         customer_name: order.customer_name || null,
         customer_phone: order.customer_phone || null,
@@ -583,6 +600,11 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
     }
 
     setMessage(`Pagamento registrado em ${getOrderTitle(order)}. Clique em Entregue para fechar.`)
+    setCashReceivedByOrder((current) => {
+      const next = { ...current }
+      delete next[orderKey]
+      return next
+    })
     fetchOrders()
   }
 
@@ -716,18 +738,61 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
                   <label>Pagamento</label>
                   <select
                     value={selectedPaymentByOrder[`${order.tableName}-${order.id}`] ?? 'pix'}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const orderKey = `${order.tableName}-${order.id}`
+                      const nextPaymentMethod = event.target.value as PaymentMethod
                       setSelectedPaymentByOrder((current) => ({
                         ...current,
-                        [`${order.tableName}-${order.id}`]: event.target.value as PaymentMethod,
+                        [orderKey]: nextPaymentMethod,
                       }))
-                    }
+                      if (nextPaymentMethod !== 'dinheiro') {
+                        setCashReceivedByOrder((current) => ({
+                          ...current,
+                          [orderKey]: '',
+                        }))
+                      }
+                    }}
                   >
                     <option value="pix">Pix</option>
                     <option value="credito">Cartao de credito</option>
                     <option value="debito">Cartao de debito</option>
                     <option value="dinheiro">Dinheiro</option>
                   </select>
+                  {(selectedPaymentByOrder[`${order.tableName}-${order.id}`] ?? 'pix') ===
+                    'dinheiro' && (
+                    <div className="order-cash-change">
+                      <label>Dinheiro recebido</label>
+                      <input
+                        value={cashReceivedByOrder[`${order.tableName}-${order.id}`] ?? ''}
+                        onChange={(event) =>
+                          setCashReceivedByOrder((current) => ({
+                            ...current,
+                            [`${order.tableName}-${order.id}`]: event.target.value.replace(
+                              /[^\d,.]/g,
+                              '',
+                            ),
+                          }))
+                        }
+                        placeholder="Ex: 50,00"
+                        inputMode="decimal"
+                      />
+                      <div className="order-cash-summary">
+                        <span>Total</span>
+                        <strong>{currencyFormatter.format(Number(order.total_amount || 0))}</strong>
+                        <span>Troco</span>
+                        <strong>
+                          {currencyFormatter.format(
+                            Math.max(
+                              parseCurrencyInput(
+                                cashReceivedByOrder[`${order.tableName}-${order.id}`] ?? '',
+                              ) - Number(order.total_amount || 0),
+                              0,
+                            ),
+                          )}
+                        </strong>
+                      </div>
+                    </div>
+                  )}
                   <button
                     type="button"
                     className="btn-pay-order"

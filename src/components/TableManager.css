@@ -586,6 +586,29 @@
   font-weight: 700;
 }
 
+.cash-change-box {
+  border: 1px solid #d9c1a6;
+  border-radius: 8px;
+  background: #fff4e7;
+  padding: 10px;
+}
+
+.cash-change-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  align-items: center;
+  border-top: 1px solid #ead4b9;
+  color: #4a2412;
+  font-weight: 800;
+  padding-top: 8px;
+}
+
+.cash-change-summary strong {
+  color: #006c67;
+  text-align: right;
+}
+
 .garcom-aviso {
   text-align: center;
   color: #d32f2f;
