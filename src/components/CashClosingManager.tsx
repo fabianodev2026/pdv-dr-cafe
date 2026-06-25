@@ -52,6 +52,11 @@ interface PendingPayment {
   status: string
 }
 
+interface SaleMovement {
+  total_amount: number
+  payment_method?: string | null
+}
+
 const denominations: Denomination[] = [
   { key: 'n100', label: 'Nota R$ 100', value: 100, group: 'notas' },
   { key: 'n50', label: 'Nota R$ 50', value: 50, group: 'notas' },
@@ -123,6 +128,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [message, setMessage] = useState('')
   const [isDraftLoaded, setIsDraftLoaded] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoadingMovement, setIsLoadingMovement] = useState(false)
 
   const notes = denominations.filter((item) => item.group === 'notas')
   const coins = denominations.filter((item) => item.group === 'moedas')
@@ -203,6 +209,51 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     setPayLaterMovements(data ?? [])
   }
 
+  const loadDailyMovementTotals = async (date = closingDate, showSuccessMessage = false) => {
+    const startDate = new Date(`${date}T00:00:00`)
+    const endDate = new Date(startDate)
+    endDate.setDate(endDate.getDate() + 1)
+
+    setIsLoadingMovement(true)
+    const { data, error } = await supabase
+      .from('sales')
+      .select('total_amount, payment_method')
+      .gte('created_at', startDate.toISOString())
+      .lt('created_at', endDate.toISOString())
+
+    setIsLoadingMovement(false)
+
+    if (error) {
+      console.error('Erro ao buscar movimento automatico:', error)
+      setMessage(`Nao foi possivel puxar movimento automatico: ${error.message}`)
+      return
+    }
+
+    const totals = ((data ?? []) as SaleMovement[]).reduce(
+      (summary, sale) => {
+        const amount = Number(sale.total_amount || 0)
+        const method = String(sale.payment_method || '').toLowerCase()
+
+        if (method === 'dinheiro') summary.cash += amount
+        if (method === 'credito') summary.credit += amount
+        if (method === 'debito') summary.debit += amount
+        if (method === 'pix') summary.pix += amount
+
+        return summary
+      },
+      { cash: 0, credit: 0, debit: 0, pix: 0 },
+    )
+
+    setCashInDay(String(toMoney(totals.cash)))
+    setCreditTotal(String(toMoney(totals.credit)))
+    setDebitTotal(String(toMoney(totals.debit)))
+    setPixTotal(String(toMoney(totals.pix)))
+
+    if (showSuccessMessage) {
+      setMessage(`Movimento de ${formatClosingDate(date)} puxado do PDV automaticamente.`)
+    }
+  }
+
   useEffect(() => {
     try {
       const savedDraft = localStorage.getItem(CASH_CLOSING_DRAFT_KEY)
@@ -232,6 +283,14 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   useEffect(() => {
     fetchPayLaterMovements(closingDate)
   }, [closingDate])
+
+  useEffect(() => {
+    if (!isDraftLoaded) return
+    const latestForDate = closings.find((closing) => closing.closing_date === closingDate)
+    if (latestForDate) return
+
+    loadDailyMovementTotals(closingDate)
+  }, [closingDate, closings, isDraftLoaded])
 
   useEffect(() => {
     if (!isDraftLoaded) return
@@ -498,7 +557,19 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         </div>
 
         <div className="cash-closing-column">
-          <h2>Movimento do dia</h2>
+          <div className="cash-column-heading">
+            <div>
+              <h2>Movimento do dia</h2>
+              <p>Dinheiro, cartao e Pix puxados das vendas registradas no PDV.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => loadDailyMovementTotals(closingDate, true)}
+              disabled={isLoadingMovement}
+            >
+              {isLoadingMovement ? 'Atualizando...' : 'Atualizar pelo PDV'}
+            </button>
+          </div>
           <div className="cash-money-grid">
             <label className="cash-money-input">
               Dinheiro do dia
