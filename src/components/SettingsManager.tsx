@@ -73,6 +73,17 @@ interface BestSeller {
 
 const parseMoney = (value?: string) => Number(String(value ?? '0').replace(',', '.') || 0)
 
+const getMonthInputValue = (date = new Date()) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+
+const isSameReportMonth = (date: Date, monthValue: string) => {
+  const [year, month] = monthValue.split('-').map(Number)
+  return date.getFullYear() === year && date.getMonth() === month - 1
+}
+
 const parsePendingItems = (payment: PendingPayment): SaleItem[] => {
   const detail = payment.items_detail?.trim()
   if (!detail) {
@@ -146,6 +157,7 @@ const initialFiscalData: FiscalProductData = {
 export default function SettingsManager() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('fiscal')
   const [salesPeriod, setSalesPeriod] = useState<SalesPeriod>('mes')
+  const [reportMonth, setReportMonth] = useState(getMonthInputValue())
   const [backupState, setBackupState] = useState<BackupState>(() => readBackupState())
   const [backupRunning, setBackupRunning] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
@@ -202,10 +214,7 @@ export default function SettingsManager() {
           totals.day += amount
         }
 
-        if (
-          saleDate.getMonth() === now.getMonth() &&
-          saleDate.getFullYear() === now.getFullYear()
-        ) {
+        if (isSameReportMonth(saleDate, reportMonth)) {
           totals.month += amount
         }
 
@@ -217,7 +226,7 @@ export default function SettingsManager() {
       },
       { day: 0, month: 0, year: 0 },
     )
-  }, [sales])
+  }, [reportMonth, sales])
 
   const appPendingBalance = useMemo(() => {
     const now = new Date()
@@ -234,10 +243,7 @@ export default function SettingsManager() {
             totals.day += amount
           }
 
-          if (
-            paymentDate.getMonth() === now.getMonth() &&
-            paymentDate.getFullYear() === now.getFullYear()
-          ) {
+          if (isSameReportMonth(paymentDate, reportMonth)) {
             totals.month += amount
           }
 
@@ -249,7 +255,7 @@ export default function SettingsManager() {
         },
         { day: 0, month: 0, year: 0 },
       )
-  }, [pendingPayments])
+  }, [pendingPayments, reportMonth])
 
   const movementBalance = useMemo(
     () => ({
@@ -273,14 +279,12 @@ export default function SettingsManager() {
       }
 
       if (salesPeriod === 'mes') {
-        return (
-          saleDate.getMonth() === now.getMonth() && saleDate.getFullYear() === now.getFullYear()
-        )
+        return isSameReportMonth(saleDate, reportMonth)
       }
 
       return saleDate.getFullYear() === now.getFullYear()
     })
-  }, [sales, salesPeriod])
+  }, [reportMonth, sales, salesPeriod])
 
   const filteredPendingPayments = useMemo(() => {
     const now = new Date()
@@ -295,15 +299,12 @@ export default function SettingsManager() {
       }
 
       if (salesPeriod === 'mes') {
-        return (
-          paymentDate.getMonth() === now.getMonth() &&
-          paymentDate.getFullYear() === now.getFullYear()
-        )
+        return isSameReportMonth(paymentDate, reportMonth)
       }
 
       return paymentDate.getFullYear() === now.getFullYear()
     })
-  }, [pendingPayments, salesPeriod])
+  }, [pendingPayments, reportMonth, salesPeriod])
 
   const bestSellers = useMemo(() => {
     const ranking = new Map<string, BestSeller>()
@@ -877,14 +878,27 @@ export default function SettingsManager() {
       )}
       {activeTab === 'balanco' && (
         <section className="settings-panel">
-          <h2>Balancos</h2>
+          <div className="settings-panel-heading">
+            <div>
+              <h2>Balancos</h2>
+              <p>Consulte o mes atual ou um mes ja fechado sem perder o historico.</p>
+            </div>
+            <label>
+              Mes do relatorio
+              <input
+                type="month"
+                value={reportMonth}
+                onChange={(e) => setReportMonth(e.target.value || getMonthInputValue())}
+              />
+            </label>
+          </div>
           <div className="balance-grid">
             <article>
               <span>Diario</span>
               <strong>R$ {movementBalance.day.toFixed(2)}</strong>
             </article>
             <article>
-              <span>Mensal</span>
+              <span>Mes selecionado</span>
               <strong>R$ {movementBalance.month.toFixed(2)}</strong>
             </article>
             <article>
@@ -924,6 +938,16 @@ export default function SettingsManager() {
               <h2>Produtos mais vendidos</h2>
               <p>Ranking calculado pelas vendas registradas no PDV.</p>
             </div>
+            {salesPeriod === 'mes' && (
+              <label>
+                Mes do relatorio
+                <input
+                  type="month"
+                  value={reportMonth}
+                  onChange={(e) => setReportMonth(e.target.value || getMonthInputValue())}
+                />
+              </label>
+            )}
             <label>
               Periodo
               <select
@@ -931,7 +955,7 @@ export default function SettingsManager() {
                 onChange={(e) => setSalesPeriod(e.target.value as SalesPeriod)}
               >
                 <option value="dia">Hoje</option>
-                <option value="mes">Mes atual</option>
+                <option value="mes">Mes selecionado</option>
                 <option value="ano">Ano atual</option>
                 <option value="todos">Todos</option>
               </select>

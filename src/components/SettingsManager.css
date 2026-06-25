@@ -111,6 +111,17 @@
   font-weight: 800;
 }
 
+.settings-panel-heading input,
+.settings-panel-heading select {
+  min-height: 42px;
+  border: 1px solid #b98554;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #2b160d;
+  font: inherit;
+  padding: 10px;
+}
+
 .settings-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

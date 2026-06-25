@@ -81,6 +81,19 @@ const today = () => {
   const day = String(now.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
+const getMonthInputValue = (date = new Date()) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+const getMonthRange = (monthValue: string) => {
+  const [year, month] = monthValue.split('-').map(Number)
+  const start = `${year}-${String(month).padStart(2, '0')}-01`
+  const endDate = new Date(year, month, 1)
+  const endYear = endDate.getFullYear()
+  const endMonth = String(endDate.getMonth() + 1).padStart(2, '0')
+  return { start, end: `${endYear}-${endMonth}-01` }
+}
 const formatClosingDate = (value: string) =>
   new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR')
 const addDaysToDate = (value: string, days: number) => {
@@ -105,6 +118,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [pixTotal, setPixTotal] = useState('')
   const [counts, setCounts] = useState<Record<string, string>>(initialCounts)
   const [closings, setClosings] = useState<CashClosing[]>([])
+  const [closingReportMonth, setClosingReportMonth] = useState(getMonthInputValue())
   const [payLaterMovements, setPayLaterMovements] = useState<PendingPayment[]>([])
   const [message, setMessage] = useState('')
   const [isDraftLoaded, setIsDraftLoaded] = useState(false)
@@ -137,13 +151,31 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const payLaterTotal = toMoney(
     payLaterMovements.reduce((sum, payment) => sum + Number(payment.total_amount || 0), 0),
   )
+  const monthlyClosingSummary = useMemo(
+    () =>
+      closings.reduce(
+        (totals, closing) => ({
+          days: totals.days + 1,
+          cash: toMoney(totals.cash + Number(closing.cash_in_day || 0)),
+          expenses: toMoney(totals.expenses + Number(closing.cash_expenses || 0)),
+          credit: toMoney(totals.credit + Number(closing.credit_total ?? closing.card_total ?? 0)),
+          debit: toMoney(totals.debit + Number(closing.debit_total || 0)),
+          pix: toMoney(totals.pix + Number(closing.pix_total || 0)),
+          total: toMoney(totals.total + Number(closing.grand_total || 0)),
+        }),
+        { days: 0, cash: 0, expenses: 0, credit: 0, debit: 0, pix: 0, total: 0 },
+      ),
+    [closings],
+  )
 
-  const fetchClosings = async () => {
+  const fetchClosings = async (monthValue = closingReportMonth) => {
+    const { start, end } = getMonthRange(monthValue)
     const { data, error } = await supabase
       .from('cash_closings')
       .select('*')
+      .gte('closing_date', start)
+      .lt('closing_date', end)
       .order('closing_date', { ascending: false })
-      .limit(10)
 
     if (error) {
       console.error('Erro ao buscar fechamentos de caixa:', error)
@@ -194,8 +226,8 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   }, [currentUser?.username])
 
   useEffect(() => {
-    fetchClosings()
-  }, [])
+    fetchClosings(closingReportMonth)
+  }, [closingReportMonth])
 
   useEffect(() => {
     fetchPayLaterMovements(closingDate)
@@ -306,7 +338,9 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         return
       }
 
-      await fetchClosings()
+      const savedMonth = closingDate.slice(0, 7)
+      setClosingReportMonth(savedMonth)
+      await fetchClosings(savedMonth)
       if (resetForNextDay) {
         const nextClosingDate = addDaysToDate(closingDate, 1)
         setClosingDate(nextClosingDate)
@@ -669,9 +703,54 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       </section>
 
       <section className="cash-closing-history">
-        <h2>Ultimos fechamentos</h2>
+        <div className="cash-closing-history-heading">
+          <div>
+            <h2>Fechamentos do mes</h2>
+            <p>Consulte meses ja fechados para relatorio mensal.</p>
+          </div>
+          <label>
+            Mes do relatorio
+            <input
+              type="month"
+              value={closingReportMonth}
+              onChange={(event) =>
+                setClosingReportMonth(event.target.value || getMonthInputValue())
+              }
+            />
+          </label>
+        </div>
+        <div className="cash-month-summary">
+          <article>
+            <span>Dias fechados</span>
+            <strong>{monthlyClosingSummary.days}</strong>
+          </article>
+          <article>
+            <span>Dinheiro do mes</span>
+            <strong>{currencyFormatter.format(monthlyClosingSummary.cash)}</strong>
+          </article>
+          <article>
+            <span>Despesas do mes</span>
+            <strong>{currencyFormatter.format(monthlyClosingSummary.expenses)}</strong>
+          </article>
+          <article>
+            <span>Credito</span>
+            <strong>{currencyFormatter.format(monthlyClosingSummary.credit)}</strong>
+          </article>
+          <article>
+            <span>Debito</span>
+            <strong>{currencyFormatter.format(monthlyClosingSummary.debit)}</strong>
+          </article>
+          <article>
+            <span>Pix</span>
+            <strong>{currencyFormatter.format(monthlyClosingSummary.pix)}</strong>
+          </article>
+          <article>
+            <span>Total do mes</span>
+            <strong>{currencyFormatter.format(monthlyClosingSummary.total)}</strong>
+          </article>
+        </div>
         {closings.length === 0 ? (
-          <p>Nenhum fechamento salvo ainda.</p>
+          <p>Nenhum fechamento salvo para este mes.</p>
         ) : (
           <div className="cash-history-grid">
             {closings.map((closing) => (
