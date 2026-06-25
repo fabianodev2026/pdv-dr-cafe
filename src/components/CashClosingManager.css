@@ -380,10 +380,58 @@
   display: none;
 }
 
-.cash-history-grid {
+.cash-month-buttons {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(94px, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.cash-month-buttons button,
+.cash-closing-calendar button {
+  border: 1px solid #d8a66b;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #5a2f17;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+}
+
+.cash-month-buttons button {
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
+.cash-month-buttons button.active,
+.cash-closing-calendar button.active {
+  background: #2b160d;
+  border-color: #2b160d;
+  color: #f8dfbf;
+}
+
+.cash-closing-calendar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.cash-closing-calendar button {
+  display: grid;
+  gap: 4px;
+  min-height: 72px;
+  padding: 9px;
+  text-align: left;
+}
+
+.cash-closing-calendar span {
+  font-size: 1.25rem;
+}
+
+.cash-closing-calendar strong {
+  font-size: 0.78rem;
+  line-height: 1.15;
 }
 
 .cash-history-card {
@@ -393,6 +441,21 @@
   border-radius: 8px;
   background: #fffaf5;
   padding: 12px;
+}
+
+.cash-history-card--selected {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  border-left: 4px solid #006c67;
+}
+
+.cash-history-card--selected > strong,
+.cash-history-card--selected > b {
+  grid-column: 1 / -1;
+}
+
+.cash-history-card--selected b {
+  color: #006c67;
+  font-size: 1.2rem;
 }
 
 @media (max-width: 900px) {

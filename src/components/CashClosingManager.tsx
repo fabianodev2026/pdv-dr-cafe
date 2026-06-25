@@ -91,6 +91,27 @@ const getMonthInputValue = (date = new Date()) => {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   return `${year}-${month}`
 }
+const monthNames = [
+  'Janeiro',
+  'Fevereiro',
+  'Marco',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+]
+const getMonthButtons = (baseMonth: string) => {
+  const [year] = baseMonth.split('-').map(Number)
+  return monthNames.map((label, index) => ({
+    label,
+    value: `${year}-${String(index + 1).padStart(2, '0')}`,
+  }))
+}
 const getMonthRange = (monthValue: string) => {
   const [year, month] = monthValue.split('-').map(Number)
   const start = `${year}-${String(month).padStart(2, '0')}-01`
@@ -124,6 +145,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [counts, setCounts] = useState<Record<string, string>>(initialCounts)
   const [closings, setClosings] = useState<CashClosing[]>([])
   const [closingReportMonth, setClosingReportMonth] = useState(getMonthInputValue())
+  const [selectedClosingDate, setSelectedClosingDate] = useState('')
   const [payLaterMovements, setPayLaterMovements] = useState<PendingPayment[]>([])
   const [message, setMessage] = useState('')
   const [isDraftLoaded, setIsDraftLoaded] = useState(false)
@@ -172,6 +194,14 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         { days: 0, cash: 0, expenses: 0, credit: 0, debit: 0, pix: 0, total: 0 },
       ),
     [closings],
+  )
+  const monthButtons = useMemo(() => getMonthButtons(closingReportMonth), [closingReportMonth])
+  const selectedClosing = useMemo(
+    () =>
+      closings.find((closing) => closing.closing_date === selectedClosingDate) ??
+      closings[0] ??
+      null,
+    [closings, selectedClosingDate],
   )
 
   const fetchClosings = async (monthValue = closingReportMonth) => {
@@ -283,6 +313,20 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   useEffect(() => {
     fetchPayLaterMovements(closingDate)
   }, [closingDate])
+
+  useEffect(() => {
+    if (closings.length === 0) {
+      setSelectedClosingDate('')
+      return
+    }
+
+    const selectedStillExists = closings.some(
+      (closing) => closing.closing_date === selectedClosingDate,
+    )
+    if (!selectedStillExists) {
+      setSelectedClosingDate(closings[0].closing_date)
+    }
+  }, [closings, selectedClosingDate])
 
   useEffect(() => {
     if (!isDraftLoaded) return
@@ -779,16 +823,19 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
             <h2>Fechamentos do mes</h2>
             <p>Consulte meses ja fechados para relatorio mensal.</p>
           </div>
-          <label>
-            Mes do relatorio
-            <input
-              type="month"
-              value={closingReportMonth}
-              onChange={(event) =>
-                setClosingReportMonth(event.target.value || getMonthInputValue())
-              }
-            />
-          </label>
+          <strong>{closingReportMonth.split('-')[0]}</strong>
+        </div>
+        <div className="cash-month-buttons" aria-label="Meses do relatorio">
+          {monthButtons.map((month) => (
+            <button
+              key={month.value}
+              type="button"
+              className={month.value === closingReportMonth ? 'active' : ''}
+              onClick={() => setClosingReportMonth(month.value)}
+            >
+              {month.label}
+            </button>
+          ))}
         </div>
         <div className="cash-month-summary">
           <article>
@@ -823,22 +870,36 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         {closings.length === 0 ? (
           <p>Nenhum fechamento salvo para este mes.</p>
         ) : (
-          <div className="cash-history-grid">
-            {closings.map((closing) => (
-              <article key={closing.id} className="cash-history-card">
-                <strong>{formatClosingDate(closing.closing_date)}</strong>
-                <span>Abertura: {closing.opening_cashier_name || '-'}</span>
-                <span>Caixa: {closing.cashier_name}</span>
-                <span>Dinheiro: {currencyFormatter.format(Number(closing.counted_cash))}</span>
-                <span>Dinheiro dia: {currencyFormatter.format(Number(closing.cash_in_day || 0))}</span>
-                <span>Despesas: {currencyFormatter.format(Number(closing.cash_expenses || 0))}</span>
-                <span>Credito: {currencyFormatter.format(Number(closing.credit_total ?? closing.card_total ?? 0))}</span>
-                <span>Debito: {currencyFormatter.format(Number(closing.debit_total || 0))}</span>
-                <span>Pix: {currencyFormatter.format(Number(closing.pix_total))}</span>
-                <b>Total: {currencyFormatter.format(Number(closing.grand_total))}</b>
+          <>
+            <div className="cash-closing-calendar" aria-label="Dias fechados no mes">
+              {closings.map((closing) => (
+                <button
+                  key={closing.id}
+                  type="button"
+                  className={closing.closing_date === selectedClosing?.closing_date ? 'active' : ''}
+                  onClick={() => setSelectedClosingDate(closing.closing_date)}
+                >
+                  <span>{new Date(`${closing.closing_date}T12:00:00`).getDate()}</span>
+                  <strong>{currencyFormatter.format(Number(closing.grand_total))}</strong>
+                </button>
+              ))}
+            </div>
+            {selectedClosing && (
+              <article className="cash-history-card cash-history-card--selected">
+                <strong>{formatClosingDate(selectedClosing.closing_date)}</strong>
+                <span>Abertura: {selectedClosing.opening_cashier_name || '-'}</span>
+                <span>Caixa: {selectedClosing.cashier_name}</span>
+                <span>Dinheiro contado: {currencyFormatter.format(Number(selectedClosing.counted_cash))}</span>
+                <span>Dinheiro dia: {currencyFormatter.format(Number(selectedClosing.cash_in_day || 0))}</span>
+                <span>Despesas: {currencyFormatter.format(Number(selectedClosing.cash_expenses || 0))}</span>
+                <span>Credito: {currencyFormatter.format(Number(selectedClosing.credit_total ?? selectedClosing.card_total ?? 0))}</span>
+                <span>Debito: {currencyFormatter.format(Number(selectedClosing.debit_total || 0))}</span>
+                <span>Pix: {currencyFormatter.format(Number(selectedClosing.pix_total))}</span>
+                <span>Diferenca: {currencyFormatter.format(Number(selectedClosing.cash_difference || 0))}</span>
+                <b>Total: {currencyFormatter.format(Number(selectedClosing.grand_total))}</b>
               </article>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </section>
     </div>
