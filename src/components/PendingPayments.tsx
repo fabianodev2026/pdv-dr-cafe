@@ -16,6 +16,15 @@ interface PendingPayment {
   status: string
 }
 
+interface PdvCustomer {
+  id: number
+  name: string
+  phone: string
+  position?: string | null
+  notes?: string | null
+  status: 'ativo' | 'bloqueado'
+}
+
 interface AppOrder {
   id: number
   items?: Array<{
@@ -36,6 +45,13 @@ interface SaleRecord {
     total?: number
   }>
   total_amount: number
+}
+
+const initialPdvCustomer = {
+  name: '',
+  phone: '',
+  position: '',
+  notes: '',
 }
 
 interface NewPending {
@@ -80,7 +96,7 @@ const getPendingItemAmount = (item: string, fallbackAmount: number) => {
   return amount > 0 ? amount : fallbackAmount
 }
 
-const normalizeText = (value?: string) =>
+const normalizeText = (value?: string | null) =>
   String(value ?? '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -120,6 +136,9 @@ interface PendingPaymentsProps {
 
 export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
   const [pendingList, setPendingList] = useState<PendingPayment[]>([])
+  const [pdvCustomers, setPdvCustomers] = useState<PdvCustomer[]>([])
+  const [newPdvCustomer, setNewPdvCustomer] = useState(initialPdvCustomer)
+  const [customerSearch, setCustomerSearch] = useState('')
   const [newPending, setNewPending] = useState<NewPending>(initialPending)
   const [pendingItem, setPendingItem] = useState('')
   const [pendingItems, setPendingItems] = useState<string[]>([])
@@ -127,6 +146,21 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const isAdmin = Boolean(currentUser && hasRole(currentUser, ADMIN_ROLES))
+
+  const filteredPdvCustomers = useMemo(() => {
+    const search = normalizeText(customerSearch)
+    const customers = [...pdvCustomers].sort((first, second) =>
+      first.name.localeCompare(second.name, 'pt-BR', { sensitivity: 'base' }),
+    )
+
+    if (!search) return customers
+
+    return customers.filter((customer) =>
+      [customer.name, customer.phone, customer.position, customer.notes]
+        .filter(Boolean)
+        .some((value) => normalizeText(value).includes(search)),
+    )
+  }, [customerSearch, pdvCustomers])
 
   const totalPending = useMemo(
     () =>
@@ -186,9 +220,82 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     }
   }
 
+  const fetchPdvCustomers = async () => {
+    const { data, error } = await supabase
+      .from('pdv_customers')
+      .select('id, name, phone, position, notes, status')
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao buscar clientes PDV:', error)
+      setMessage('Execute o SQL pdv-customers.sql no Supabase para liberar cadastro de clientes PDV.')
+      return
+    }
+
+    setPdvCustomers((data ?? []) as PdvCustomer[])
+  }
+
   useEffect(() => {
     fetchPending()
+    fetchPdvCustomers()
   }, [])
+
+  const selectPdvCustomerForPending = (customer: PdvCustomer) => {
+    setNewPending((current) => ({
+      ...current,
+      customer_name: customer.name,
+      phone: customer.phone,
+      position: customer.position || '',
+    }))
+    setMessage(`Cliente ${customer.name} selecionado para nova pendencia.`)
+  }
+
+  const savePdvCustomer = async () => {
+    const name = newPdvCustomer.name.trim()
+    const phone = newPdvCustomer.phone.trim()
+
+    if (!name || !phone) {
+      setMessage('Informe nome e telefone para cadastrar cliente PDV.')
+      return
+    }
+
+    const payload = {
+      name,
+      phone,
+      position: newPdvCustomer.position.trim(),
+      notes: newPdvCustomer.notes.trim(),
+      status: 'ativo',
+    }
+
+    const { error } = await supabase
+      .from('pdv_customers')
+      .upsert([payload], { onConflict: 'phone' })
+
+    if (error) {
+      setMessage(`Nao foi possivel salvar cliente PDV: ${error.message}`)
+      return
+    }
+
+    setNewPdvCustomer(initialPdvCustomer)
+    setMessage(`Cliente PDV ${name} salvo.`)
+    fetchPdvCustomers()
+  }
+
+  const updatePdvCustomerStatus = async (customer: PdvCustomer) => {
+    const nextStatus = customer.status === 'ativo' ? 'bloqueado' : 'ativo'
+    const { error } = await supabase
+      .from('pdv_customers')
+      .update({ status: nextStatus })
+      .eq('id', customer.id)
+
+    if (error) {
+      setMessage(`Nao foi possivel atualizar cliente PDV: ${error.message}`)
+      return
+    }
+
+    setMessage(`${customer.name} ${nextStatus === 'ativo' ? 'ativado' : 'bloqueado'}.`)
+    fetchPdvCustomers()
+  }
 
   const handleAddPending = async () => {
     if (!newPending.customer_name.trim() || !newPending.phone.trim() || !newPending.due_date) {
@@ -573,6 +680,99 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
       </header>
 
       {message && <div className="payment-note">{message}</div>}
+
+      <section className="add-form pdv-customer-section">
+        <div className="pending-list-header">
+          <div>
+            <h2>Clientes PDV</h2>
+            <p>Cadastre clientes que querem marcar compra sem usar o app.</p>
+          </div>
+          <label>
+            Buscar cliente
+            <input
+              value={customerSearch}
+              onChange={(event) => setCustomerSearch(event.target.value)}
+              placeholder="Nome, telefone ou observacao"
+            />
+          </label>
+        </div>
+        <div className="form-grid">
+          <label>
+            Nome
+            <input
+              value={newPdvCustomer.name}
+              onChange={(event) =>
+                setNewPdvCustomer({ ...newPdvCustomer, name: event.target.value })
+              }
+              placeholder="Nome completo"
+              maxLength={60}
+            />
+          </label>
+          <label>
+            Telefone
+            <input
+              value={newPdvCustomer.phone}
+              onChange={(event) =>
+                setNewPdvCustomer({ ...newPdvCustomer, phone: event.target.value })
+              }
+              placeholder="Telefone"
+              maxLength={25}
+            />
+          </label>
+          <label>
+            Cargo/Referencia
+            <input
+              value={newPdvCustomer.position}
+              onChange={(event) =>
+                setNewPdvCustomer({ ...newPdvCustomer, position: event.target.value })
+              }
+              placeholder="Empresa, cargo ou referencia"
+              maxLength={40}
+            />
+          </label>
+          <label>
+            Observacao
+            <input
+              value={newPdvCustomer.notes}
+              onChange={(event) =>
+                setNewPdvCustomer({ ...newPdvCustomer, notes: event.target.value })
+              }
+              placeholder="Ex: cliente retira no balcão"
+              maxLength={80}
+            />
+          </label>
+        </div>
+        <button type="button" className="btn-primary" onClick={savePdvCustomer}>
+          Salvar cliente PDV
+        </button>
+
+        <div className="pdv-customers-list">
+          {filteredPdvCustomers.length === 0 ? (
+            <p className="pending-empty">Nenhum cliente PDV cadastrado.</p>
+          ) : (
+            filteredPdvCustomers.map((customer) => (
+              <article key={customer.id} className={`pdv-customer-card ${customer.status}`}>
+                <div>
+                  <strong>{customer.name}</strong>
+                  <span>{customer.phone}</span>
+                  <small>{customer.position || 'Sem referencia'}</small>
+                  {customer.notes && <small>{customer.notes}</small>}
+                </div>
+                <div className="pdv-customer-actions">
+                  <button type="button" onClick={() => selectPdvCustomerForPending(customer)}>
+                    Usar na pendencia
+                  </button>
+                  {isAdmin && (
+                    <button type="button" onClick={() => updatePdvCustomerStatus(customer)}>
+                      {customer.status === 'ativo' ? 'Bloquear' : 'Ativar'}
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
 
       <section className="add-form">
         <h2>Nova pendencia</h2>

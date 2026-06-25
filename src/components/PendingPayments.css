@@ -43,6 +43,10 @@
   font-weight: 800;
 }
 
+.pdv-customer-section {
+  border-left: 5px solid #006c67;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -199,6 +203,63 @@
 
 .pending-empty {
   margin: 0;
+}
+
+.pdv-customers-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pdv-customer-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #ead4b9;
+  border-left: 4px solid #006c67;
+  border-radius: 8px;
+  background: #fffaf5;
+  padding: 12px;
+}
+
+.pdv-customer-card.bloqueado {
+  border-left-color: #9c2f45;
+  opacity: 0.72;
+}
+
+.pdv-customer-card strong,
+.pdv-customer-card span,
+.pdv-customer-card small {
+  display: block;
+}
+
+.pdv-customer-card strong {
+  color: #2b160d;
+}
+
+.pdv-customer-card span,
+.pdv-customer-card small {
+  margin-top: 4px;
+  color: #7b4a27;
+  font-weight: 700;
+}
+
+.pdv-customer-actions {
+  display: grid;
+  gap: 7px;
+}
+
+.pdv-customer-actions button {
+  border: 0;
+  border-radius: 8px;
+  background: #2b160d;
+  color: #f8dfbf;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 8px 10px;
 }
 
 .pending-person {

@@ -31,6 +31,14 @@ interface AppCustomer {
   pending_total?: number
 }
 
+interface PdvCustomer {
+  id: number
+  name: string
+  phone: string
+  position?: string | null
+  status: 'ativo' | 'bloqueado'
+}
+
 interface OrderItem {
   id: number
   name: string
@@ -226,6 +234,8 @@ export default function TableManager({
   const [cashReceived, setCashReceived] = useState('')
   const [payLaterDueDate, setPayLaterDueDate] = useState('')
   const [appCustomers, setAppCustomers] = useState<AppCustomer[]>([])
+  const [pdvCustomers, setPdvCustomers] = useState<PdvCustomer[]>([])
+  const [selectedPdvCustomerId, setSelectedPdvCustomerId] = useState('')
   const [selectedAppCustomerId, setSelectedAppCustomerId] = useState('')
   const [fiscalCpf, setFiscalCpf] = useState('')
   const [selectedFloor, setSelectedFloor] = useState('todos')
@@ -270,6 +280,22 @@ export default function TableManager({
         pending_total: pendingByPhone[customer.phone] ?? 0,
       })),
     )
+  }
+
+  const fetchPdvCustomers = async () => {
+    const { data, error } = await supabase
+      .from('pdv_customers')
+      .select('id, name, phone, position, status')
+      .eq('status', 'ativo')
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao buscar clientes PDV:', error)
+      setPdvCustomers([])
+      return
+    }
+
+    setPdvCustomers((data ?? []) as PdvCustomer[])
   }
 
   const markServiceOccupied = (
@@ -412,6 +438,7 @@ export default function TableManager({
   useEffect(() => {
     fetchProducts()
     fetchAppCustomers()
+    fetchPdvCustomers()
     fetchOpenPreparationServices()
   }, [])
 
@@ -527,6 +554,23 @@ export default function TableManager({
     persistServiceItem(updatedItem)
   }
 
+  const selectPdvCustomerForActiveItem = (customerId: string) => {
+    setSelectedPdvCustomerId(customerId)
+    if (!activeItem) return
+
+    const customer = pdvCustomers.find((pdvCustomer) => String(pdvCustomer.id) === customerId)
+    if (!customer) return
+
+    const updatedItem = {
+      ...activeItem,
+      customer_name: customer.name,
+      customer_phone: customer.phone,
+    }
+
+    setActiveItem(updatedItem)
+    persistServiceItem(updatedItem)
+  }
+
   const openItem = (item: TableItem) => {
     const updatedItem = { ...item }
     if (updatedItem.status === 'Livre') {
@@ -535,6 +579,7 @@ export default function TableManager({
     setPaymentMethod('pix')
     setPayLaterDueDate('')
     setSelectedAppCustomerId(getMatchingAppCustomerId(updatedItem))
+    setSelectedPdvCustomerId('')
     setFiscalCpf('')
     setOrderMessage('')
     setActiveItem(updatedItem)
@@ -1011,6 +1056,7 @@ export default function TableManager({
       setActiveItem(null)
       setShowReceipt(false)
       setIsReprint(false)
+      setSelectedPdvCustomerId('')
       setSelectedAppCustomerId('')
       setCashReceived('')
       fetchAppCustomers()
@@ -1269,6 +1315,23 @@ export default function TableManager({
             <div className="active-command-panel">
               {activeItem.type === 'room' && (
                 <div className="glass-panel hospital-fields">
+                  <div className="app-customer-command-picker">
+                    <label>Cliente PDV para marcar</label>
+                    <select
+                      value={selectedPdvCustomerId}
+                      onChange={(e) => selectPdvCustomerForActiveItem(e.target.value)}
+                    >
+                      <option value="">Selecionar cliente salvo</option>
+                      {pdvCustomers.map((customer) => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.name} - {customer.phone}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={fetchPdvCustomers}>
+                      Atualizar clientes PDV
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={activeItem.customer_name}
@@ -1309,6 +1372,23 @@ export default function TableManager({
                       </button>
                     </div>
                   )}
+                  <div className="app-customer-command-picker">
+                    <label>Cliente PDV para marcar</label>
+                    <select
+                      value={selectedPdvCustomerId}
+                      onChange={(e) => selectPdvCustomerForActiveItem(e.target.value)}
+                    >
+                      <option value="">Selecionar cliente salvo</option>
+                      {pdvCustomers.map((customer) => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.name} - {customer.phone}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={fetchPdvCustomers}>
+                      Atualizar clientes PDV
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={activeItem.customer_name}
