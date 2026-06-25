@@ -237,6 +237,8 @@ export default function TableManager({
   const [pdvCustomers, setPdvCustomers] = useState<PdvCustomer[]>([])
   const [selectedPdvCustomerId, setSelectedPdvCustomerId] = useState('')
   const [selectedAppCustomerId, setSelectedAppCustomerId] = useState('')
+  const [appCustomerSearchInput, setAppCustomerSearchInput] = useState('')
+  const [appCustomerSearchTerm, setAppCustomerSearchTerm] = useState('')
   const [fiscalCpf, setFiscalCpf] = useState('')
   const [selectedFloor, setSelectedFloor] = useState('todos')
   const [roomSearch, setRoomSearch] = useState('')
@@ -1096,6 +1098,16 @@ export default function TableManager({
         0,
       )
     : 0
+  const filteredAppCustomers = useMemo(() => {
+    const search = appCustomerSearchTerm.trim().toLowerCase()
+    if (!search) return appCustomers
+
+    return appCustomers.filter((customer) =>
+      [customer.name, customer.phone, customer.position]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search)),
+    )
+  }, [appCustomerSearchTerm, appCustomers])
 
   const roomFloors = useMemo(() => {
     return Array.from(new Set(rooms.map((room) => Math.floor(room.number / 100))))
@@ -1531,12 +1543,38 @@ export default function TableManager({
                         {paymentMethod === 'cliente_app' && (
                           <div className="payment-methods app-customer-charge">
                             <label>Cliente do app</label>
+                            <div className="app-customer-search-row">
+                              <input
+                                value={appCustomerSearchInput}
+                                onChange={(event) => setAppCustomerSearchInput(event.target.value)}
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter') {
+                                    setAppCustomerSearchTerm(appCustomerSearchInput)
+                                  }
+                                }}
+                                placeholder="Pesquisar nome ou telefone"
+                              />
+                              <button
+                                type="button"
+                                className="btn-refresh-app-customers"
+                                onClick={() => setAppCustomerSearchTerm(appCustomerSearchInput)}
+                              >
+                                Pesquisar cliente
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-refresh-app-customers"
+                                onClick={fetchAppCustomers}
+                              >
+                                Atualizar clientes
+                              </button>
+                            </div>
                             <select
                               value={selectedAppCustomerId}
                               onChange={(e) => selectAppCustomerForActiveItem(e.target.value)}
                             >
                               <option value="">Escolha o cliente</option>
-                              {appCustomers.map((customer) => {
+                              {filteredAppCustomers.map((customer) => {
                                 const available = Math.max(
                                   Number(customer.credit_limit || 0) -
                                     Number(customer.pending_total || 0),
@@ -1557,13 +1595,9 @@ export default function TableManager({
                                 )
                               })}
                             </select>
-                            <button
-                              type="button"
-                              className="btn-refresh-app-customers"
-                              onClick={fetchAppCustomers}
-                            >
-                              Atualizar clientes
-                            </button>
+                            {appCustomerSearchTerm && filteredAppCustomers.length === 0 && (
+                              <small>Nenhum cliente app encontrado nesta busca.</small>
+                            )}
                             {selectedAppCustomer && (
                               <small>
                                 Sera lancado no app de {selectedAppCustomer.name}. Saldo apos esta

@@ -65,6 +65,12 @@
   gap: 8px;
 }
 
+.app-customer-search-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto auto;
+  gap: 8px;
+}
+
 .btn-refresh-app-customers {
   border: 0;
   border-radius: 8px;
@@ -75,6 +81,7 @@
   font-weight: 800;
   min-height: 42px;
   padding: 9px 12px;
+  white-space: nowrap;
 }
 
 .commands-toolbar {
