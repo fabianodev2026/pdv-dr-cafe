@@ -47,6 +47,17 @@ interface PdvCustomer {
   status: 'ativo' | 'bloqueado'
 }
 
+interface ChargeCustomer {
+  key: string
+  source: 'app' | 'pdv'
+  id: number
+  name: string
+  phone: string
+  position: string
+  credit_limit: number
+  pending_total: number
+}
+
 interface SaleRecord {
   id: number
   created_at: string
@@ -170,6 +181,36 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
     [orders],
   )
   const isAdmin = Boolean(currentUser && hasRole(currentUser, ADMIN_ROLES))
+
+  const chargeCustomers = useMemo<ChargeCustomer[]>(() => {
+    const appCustomerOptions = appCustomers.map((customer) => ({
+      key: `app-${customer.id}`,
+      source: 'app' as const,
+      id: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      position: customer.position,
+      credit_limit: Number(customer.credit_limit || 0),
+      pending_total: Number(customer.pending_total || 0),
+    }))
+    const appCustomerPhones = new Set(appCustomers.map((customer) => customer.phone))
+    const pdvCustomerOptions = pdvCustomers
+      .filter((customer) => !appCustomerPhones.has(customer.phone))
+      .map((customer) => ({
+        key: `pdv-${customer.id}`,
+        source: 'pdv' as const,
+        id: customer.id,
+        name: customer.name,
+        phone: customer.phone,
+        position: customer.position || '',
+        credit_limit: 0,
+        pending_total: 0,
+      }))
+
+    return [...appCustomerOptions, ...pdvCustomerOptions].sort((first, second) =>
+      first.name.localeCompare(second.name, 'pt-BR', { sensitivity: 'base' }),
+    )
+  }, [appCustomers, pdvCustomers])
 
   const fetchOrders = async () => {
     const roomResult = await supabase
@@ -420,14 +461,14 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
   const sendOrderToAppCustomer = async (order: OrderTicket) => {
     const orderKey = `${order.tableName}-${order.id}`
     const selectedCustomerId = selectedAppCustomerByOrder[orderKey]
-    const customer = appCustomers.find((appCustomer) => String(appCustomer.id) === selectedCustomerId)
+    const customer = chargeCustomers.find((chargeCustomer) => chargeCustomer.key === selectedCustomerId)
     const selectedIndexes =
       selectedAppItemIndexesByOrder[orderKey] ?? order.items.map((_, index) => index)
     const selectedItems = order.items.filter((_, index) => selectedIndexes.includes(index))
     const remainingItems = order.items.filter((_, index) => !selectedIndexes.includes(index))
 
     if (!customer) {
-      setMessage('Escolha o cliente app para lancar esta compra.')
+      setMessage('Escolha o cliente app ou cliente PDV para lancar esta compra.')
       return
     }
 
@@ -458,7 +499,9 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
     }
 
     const confirmed = window.confirm(
-      `Lancar ${currencyFormatter.format(selectedTotal)} no app de ${customer.name}?`,
+      customer.source === 'pdv'
+        ? `Marcar ${currencyFormatter.format(selectedTotal)} para ${customer.name} pagar depois?`
+        : `Lancar ${currencyFormatter.format(selectedTotal)} no app de ${customer.name}?`,
     )
     if (!confirmed) return
 
@@ -482,7 +525,10 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
         customer_name: customer.name,
         phone: customer.phone,
         position: customer.position,
-        description: `Compra lancada pelo caixa em ${getOrderTitle(order)}`,
+        description:
+          customer.source === 'pdv'
+            ? `Compra marcada pelo caixa em ${getOrderTitle(order)}`
+            : `Compra lancada pelo caixa em ${getOrderTitle(order)}`,
         items_detail: itemsDetail,
         total_amount: selectedTotal,
         purchase_date: new Date().toISOString().slice(0, 10),
@@ -505,7 +551,7 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
         customer_name: customer.name,
         customer_phone: customer.phone,
         items: saleItems,
-        payment_method: 'cliente_app',
+        payment_method: customer.source === 'pdv' ? 'pagar_depois' : 'cliente_app',
       },
     ])
 
@@ -522,7 +568,10 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
         .update({
           items: remainingItems,
           total_amount: remainingTotal,
-          customer_message: `Parte da compra foi lancada no app de ${customer.name}.`,
+          customer_message:
+            customer.source === 'pdv'
+              ? `Parte da compra foi marcada para ${customer.name} pagar depois.`
+              : `Parte da compra foi lancada no app de ${customer.name}.`,
         })
         .eq('id', order.id)
 
@@ -541,7 +590,10 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
         .from(order.tableName)
         .update({
           status: 'entregue',
-          customer_message: `Compra lancada no app de ${customer.name}.`,
+          customer_message:
+            customer.source === 'pdv'
+              ? `Compra marcada para ${customer.name} pagar depois.`
+              : `Compra lancada no app de ${customer.name}.`,
         })
         .in('id', targetIds)
     }
@@ -557,8 +609,12 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
     setSendingToAppOrderId(null)
     setMessage(
       remainingItems.length > 0
-        ? `Itens selecionados lancados no app de ${customer.name}. O restante continua na comanda.`
-        : `Compra lancada no app de ${customer.name}.`,
+        ? customer.source === 'pdv'
+          ? `Itens selecionados marcados para ${customer.name}. O restante continua na comanda.`
+          : `Itens selecionados lancados no app de ${customer.name}. O restante continua na comanda.`
+        : customer.source === 'pdv'
+          ? `Compra marcada para ${customer.name} pagar depois.`
+          : `Compra lancada no app de ${customer.name}.`,
     )
     fetchAppCustomers()
     fetchOrders()
@@ -1015,8 +1071,8 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
                         selectedAppItemIndexesByOrder[orderKey] ??
                         order.items.map((_, itemIndex) => itemIndex)
                       const selectedCustomerId = selectedAppCustomerByOrder[orderKey]
-                      const selectedCustomer = appCustomers.find(
-                        (customer) => String(customer.id) === selectedCustomerId,
+                      const selectedCustomer = chargeCustomers.find(
+                        (customer) => customer.key === selectedCustomerId,
                       )
                       const selectedTotal = toMoney(
                         order.items
@@ -1067,7 +1123,7 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
                     }
                   >
                     <option value="">Cliente app</option>
-                    {appCustomers.map((customer) => {
+                    {chargeCustomers.map((customer) => {
                       const available = Math.max(
                         Number(customer.credit_limit || 0) -
                           Number(customer.pending_total || 0),
@@ -1075,8 +1131,10 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
                       )
 
                       return (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name} - {currencyFormatter.format(available)}
+                        <option key={customer.key} value={customer.key}>
+                          {customer.name} - {customer.source === 'pdv'
+                            ? 'Cliente PDV'
+                            : currencyFormatter.format(available)}
                         </option>
                       )
                     })}
