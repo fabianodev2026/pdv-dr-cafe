@@ -6,6 +6,12 @@
   font-family: 'Poppins', sans-serif;
 }
 
+.pdv-container *,
+.pdv-container *::before,
+.pdv-container *::after {
+  box-sizing: border-box;
+}
+
 .mode-selector {
   display: flex;
   justify-content: center;
@@ -53,6 +59,7 @@
 .room-filters input,
 .payment-methods select,
 .payment-methods input {
+  width: 100%;
   padding: 11px;
   border: 1px solid #8d6e63;
   border-radius: 8px;
@@ -67,8 +74,14 @@
 
 .app-customer-search-row {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
+  min-width: 0;
+}
+
+.app-customer-search-row input {
+  min-width: 0;
+  width: 100%;
 }
 
 .btn-refresh-app-customers {
@@ -211,18 +224,52 @@
   border-radius: 15px;
   margin-bottom: 20px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  min-width: 0;
 }
 
 /* SPLIT LAYOUT */
 .split-layout {
   display: grid;
-  grid-template-columns: 3fr 2fr;
+  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
   gap: 20px;
+  align-items: start;
 }
 
 @media (max-width: 900px) {
   .split-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1180px) {
+  .split-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .active-command-panel {
+    order: 1;
+  }
+
+  .products-showcase {
+    order: 2;
+  }
+
+  .products-showcase-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .visual-menu {
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  }
+
+  .app-customer-search-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .btn-refresh-app-customers {
+    width: 100%;
+    white-space: normal;
   }
 }
 
@@ -240,6 +287,8 @@
 }
 
 .products-showcase-header input {
+  width: 100%;
+  min-width: 0;
   min-height: 42px;
   border: 1px solid #8d6e63;
   border-radius: 8px;
@@ -266,6 +315,8 @@
   font-weight: 800;
   min-height: 38px;
   padding: 8px 14px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .product-tabs button.active {
@@ -275,7 +326,7 @@
 
 .visual-menu {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
   gap: 10px;
   margin-top: 12px;
 }
@@ -284,6 +335,7 @@
   background: white;
   border-radius: 10px;
   overflow: hidden;
+  min-width: 0;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
   cursor: pointer;
   transition:
@@ -363,6 +415,7 @@
   margin-bottom: 4px;
   color: #5d4037;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .p-price {
@@ -392,6 +445,8 @@
 }
 
 .hospital-fields input {
+  width: 100%;
+  min-width: 0;
   padding: 12px;
   border: 1px solid #8d6e63;
   border-radius: 8px;
@@ -400,6 +455,8 @@
 }
 
 .hospital-fields select {
+  width: 100%;
+  min-width: 0;
   padding: 12px;
   border: 1px solid #8d6e63;
   border-radius: 8px;
@@ -423,6 +480,7 @@
   border-radius: 8px;
   background: #fff8ef;
   padding: 12px;
+  min-width: 0;
 }
 
 .app-customer-command-picker label {
