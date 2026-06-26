@@ -61,6 +61,8 @@ interface TableItem {
   items: OrderItem[]
   customer_name: string
   customer_phone: string
+  pdv_customer_id?: number
+  pdv_customer_position?: string
   preparation_order_id?: number
   preparation_order_ids?: number[]
   preparation_order_table?: 'service_orders' | 'room_orders'
@@ -567,8 +569,12 @@ export default function TableManager({
       ...activeItem,
       customer_name: customer.name,
       customer_phone: customer.phone,
+      pdv_customer_id: customer.id,
+      pdv_customer_position: customer.position || '',
     }
 
+    setPaymentMethod('pagar_depois')
+    setPayLaterDueDate((current) => current || new Date().toISOString().slice(0, 10))
     setActiveItem(updatedItem)
     persistServiceItem(updatedItem)
   }
@@ -992,11 +998,16 @@ export default function TableManager({
         const pendingPayload = {
           customer_name: receiptData.customer_name,
           phone: receiptData.customer_phone,
-          position: receiptData.app_customer_position || getServiceLabel(activeItem),
+          position:
+            receiptData.app_customer_position ||
+            activeItem.pdv_customer_position ||
+            getServiceLabel(activeItem),
           description:
             receiptData.payment_method === 'cliente_app'
               ? `Compra lancada pelo caixa em ${getServiceLabel(activeItem)}`
-              : `Venda registrada em ${receiptData.date}`,
+              : activeItem.pdv_customer_id
+                ? `Venda registrada para cliente PDV em ${getServiceLabel(activeItem)}`
+                : `Venda registrada em ${receiptData.date}`,
           items_detail: itemsDetail,
           total_amount: receiptData.total,
           purchase_date: new Date().toISOString().slice(0, 10),
@@ -1343,6 +1354,9 @@ export default function TableManager({
                     <button type="button" onClick={fetchPdvCustomers}>
                       Atualizar clientes PDV
                     </button>
+                    {activeItem.pdv_customer_id && (
+                      <small>Cliente PDV selecionado. Os produtos serao marcados em Pagar depois.</small>
+                    )}
                   </div>
                   <input
                     type="text"
@@ -1400,6 +1414,9 @@ export default function TableManager({
                     <button type="button" onClick={fetchPdvCustomers}>
                       Atualizar clientes PDV
                     </button>
+                    {activeItem.pdv_customer_id && (
+                      <small>Cliente PDV selecionado. Os produtos serao marcados em Pagar depois.</small>
+                    )}
                   </div>
                   <input
                     type="text"
