@@ -77,6 +77,7 @@
   background: #fffaf5;
   border-left: 5px solid #b98554;
   border-radius: 8px;
+  min-width: 0;
   padding: 16px;
   box-shadow: 0 8px 22px rgba(43, 22, 13, 0.08);
 }
@@ -137,6 +138,7 @@
   flex-wrap: wrap;
   gap: 8px;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .status-actions button {
@@ -149,6 +151,7 @@
   font-size: 0.92rem;
   font-weight: 800;
   cursor: pointer;
+  overflow-wrap: anywhere;
 }
 
 .status-actions .btn-delivered {
@@ -170,13 +173,17 @@
 }
 
 .send-to-app-control {
+  box-sizing: border-box;
   display: grid;
-  flex: 1 1 260px;
-  max-width: 380px;
+  flex: 1 1 100%;
   gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
 }
 
 .send-to-app-items {
+  box-sizing: border-box;
   display: grid;
   gap: 6px;
   border: 1px solid #ead4b9;
@@ -197,11 +204,18 @@
   color: #2b160d;
   font-size: 0.92rem;
   font-weight: 800;
+  min-width: 0;
 }
 
 .send-to-app-items input {
+  flex: 0 0 auto;
   width: 18px;
   height: 18px;
+}
+
+.send-to-app-items span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .send-to-app-summary {
@@ -216,6 +230,9 @@
 }
 
 .send-to-app-control select {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
   min-height: 40px;
   border: 1px solid #b98554;
   border-radius: 8px;
@@ -261,9 +278,12 @@
 }
 
 .order-payment-control {
+  box-sizing: border-box;
   display: grid;
-  flex: 1 1 260px;
-  max-width: 380px;
+  flex: 1 1 100%;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
   gap: 6px;
   border: 1px solid #d9c1a6;
   border-radius: 8px;
@@ -277,6 +297,9 @@
 }
 
 .order-payment-control select {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
   min-height: 40px;
   border: 1px solid #b98554;
   border-radius: 8px;
