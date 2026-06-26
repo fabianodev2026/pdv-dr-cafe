@@ -5,6 +5,12 @@
   color: #2b160d;
 }
 
+.orders-manager *,
+.orders-manager *::before,
+.orders-manager *::after {
+  box-sizing: border-box;
+}
+
 .orders-heading {
   display: flex;
   align-items: center;
@@ -60,8 +66,9 @@
 
 .orders-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
   gap: 14px;
+  align-items: start;
 }
 
 .orders-empty {
@@ -78,6 +85,7 @@
   border-left: 5px solid #b98554;
   border-radius: 8px;
   min-width: 0;
+  overflow: hidden;
   padding: 16px;
   box-shadow: 0 8px 22px rgba(43, 22, 13, 0.08);
 }
@@ -129,15 +137,20 @@
   margin: 12px 0;
 }
 
+.order-items span,
+.customer-message {
+  overflow-wrap: anywhere;
+}
+
 .order-total {
   font-weight: 900;
 }
 
 .status-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  align-items: flex-start;
+  align-items: stretch;
   min-width: 0;
 }
 
@@ -152,6 +165,7 @@
   font-weight: 800;
   cursor: pointer;
   overflow-wrap: anywhere;
+  width: 100%;
 }
 
 .status-actions .btn-delivered {
@@ -173,17 +187,15 @@
 }
 
 .send-to-app-control {
-  box-sizing: border-box;
   display: grid;
-  flex: 1 1 100%;
   gap: 6px;
+  grid-column: 1 / -1;
   max-width: 100%;
   min-width: 0;
   width: 100%;
 }
 
 .send-to-app-items {
-  box-sizing: border-box;
   display: grid;
   gap: 6px;
   border: 1px solid #ead4b9;
@@ -278,9 +290,8 @@
 }
 
 .order-payment-control {
-  box-sizing: border-box;
   display: grid;
-  flex: 1 1 100%;
+  grid-column: 1 / -1;
   max-width: 100%;
   min-width: 0;
   width: 100%;
