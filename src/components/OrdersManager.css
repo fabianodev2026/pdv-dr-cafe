@@ -231,7 +231,31 @@
   color: #fffaf5;
 }
 
-.status-actions .btn-send-to-app:disabled {
+.send-to-pdv-divider {
+  display: grid;
+  gap: 3px;
+  border-top: 1px solid #ead4b9;
+  margin-top: 6px;
+  padding-top: 8px;
+  color: #5a2f17;
+}
+
+.send-to-pdv-divider strong {
+  font-weight: 900;
+}
+
+.send-to-pdv-divider span {
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.status-actions .btn-send-to-pdv {
+  background: #7b4a27;
+  color: #fffaf5;
+}
+
+.status-actions .btn-send-to-app:disabled,
+.status-actions .btn-send-to-pdv:disabled {
   cursor: wait;
   opacity: 0.7;
 }

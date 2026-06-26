@@ -39,6 +39,14 @@ interface AppCustomer {
   pending_total?: number
 }
 
+interface PdvCustomer {
+  id: number
+  name: string
+  phone: string
+  position?: string | null
+  status: 'ativo' | 'bloqueado'
+}
+
 interface SaleRecord {
   id: number
   created_at: string
@@ -141,11 +149,14 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
   const navigate = useNavigate()
   const [orders, setOrders] = useState<OrderTicket[]>([])
   const [appCustomers, setAppCustomers] = useState<AppCustomer[]>([])
+  const [pdvCustomers, setPdvCustomers] = useState<PdvCustomer[]>([])
   const [selectedAppCustomerByOrder, setSelectedAppCustomerByOrder] = useState<Record<string, string>>({})
+  const [selectedPdvCustomerByOrder, setSelectedPdvCustomerByOrder] = useState<Record<string, string>>({})
   const [selectedAppItemIndexesByOrder, setSelectedAppItemIndexesByOrder] = useState<Record<string, number[]>>({})
   const [selectedPaymentByOrder, setSelectedPaymentByOrder] = useState<Record<string, PaymentMethod>>({})
   const [cashReceivedByOrder, setCashReceivedByOrder] = useState<Record<string, string>>({})
   const [sendingToAppOrderId, setSendingToAppOrderId] = useState<string | null>(null)
+  const [sendingToPdvOrderId, setSendingToPdvOrderId] = useState<string | null>(null)
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null)
   const [showOrderLog, setShowOrderLog] = useState(false)
   const [orderLog, setOrderLog] = useState<SaleRecord[]>([])
@@ -280,9 +291,25 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
     )
   }
 
+  const fetchPdvCustomers = async () => {
+    const { data, error } = await supabase
+      .from('pdv_customers')
+      .select('id, name, phone, position, status')
+      .eq('status', 'ativo')
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao buscar clientes PDV:', error)
+      return
+    }
+
+    setPdvCustomers((data ?? []) as PdvCustomer[])
+  }
+
   useEffect(() => {
     fetchOrders()
     fetchAppCustomers()
+    fetchPdvCustomers()
     const interval = window.setInterval(fetchOrders, 10000)
 
     return () => window.clearInterval(interval)
@@ -534,6 +561,143 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
         : `Compra lancada no app de ${customer.name}.`,
     )
     fetchAppCustomers()
+    fetchOrders()
+  }
+
+  const sendOrderToPdvCustomer = async (order: OrderTicket) => {
+    const orderKey = `${order.tableName}-${order.id}`
+    const selectedCustomerId = selectedPdvCustomerByOrder[orderKey]
+    const customer = pdvCustomers.find((pdvCustomer) => String(pdvCustomer.id) === selectedCustomerId)
+    const selectedIndexes =
+      selectedAppItemIndexesByOrder[orderKey] ?? order.items.map((_, index) => index)
+    const selectedItems = order.items.filter((_, index) => selectedIndexes.includes(index))
+    const remainingItems = order.items.filter((_, index) => !selectedIndexes.includes(index))
+
+    if (!customer) {
+      setMessage('Escolha o cliente PDV para marcar em Pagar depois.')
+      return
+    }
+
+    if (selectedItems.length === 0) {
+      setMessage('Escolha pelo menos um item para marcar em Pagar depois.')
+      return
+    }
+
+    const selectedTotal = toMoney(
+      selectedItems.reduce(
+        (sum, item) => sum + Number(item.unit_price || 0) * Number(item.quantity || 0),
+        0,
+      ),
+    )
+    const remainingTotal = toMoney(
+      remainingItems.reduce(
+        (sum, item) => sum + Number(item.unit_price || 0) * Number(item.quantity || 0),
+        0,
+      ),
+    )
+    const confirmed = window.confirm(
+      `Marcar ${currencyFormatter.format(selectedTotal)} para ${customer.name} pagar depois?`,
+    )
+    if (!confirmed) return
+
+    setSendingToPdvOrderId(orderKey)
+
+    const itemsDetail = selectedItems
+      .map(
+        (item) =>
+          `${item.quantity}x ${item.name} - R$ ${(Number(item.unit_price) * Number(item.quantity)).toFixed(2)}`,
+      )
+      .join('; ')
+    const saleItems = selectedItems.map((item) => ({
+      name: item.name,
+      quantity: Number(item.quantity || 0),
+      unit_price: Number(item.unit_price || 0),
+      total: toMoney(Number(item.unit_price || 0) * Number(item.quantity || 0)),
+    }))
+
+    const { error: pendingError } = await supabase.from('pending_payments').insert([
+      {
+        customer_name: customer.name,
+        phone: customer.phone,
+        position: customer.position || '',
+        description: `Compra marcada pelo caixa em ${getOrderTitle(order)}`,
+        items_detail: itemsDetail,
+        total_amount: selectedTotal,
+        purchase_date: new Date().toISOString().slice(0, 10),
+        due_date: getFifthBusinessDay(),
+        status: 'pendente',
+      },
+    ])
+
+    if (pendingError) {
+      setSendingToPdvOrderId(null)
+      setMessage(`Nao foi possivel marcar para pagar depois: ${pendingError.message}`)
+      return
+    }
+
+    const { error: saleError } = await supabase.from('sales').insert([
+      {
+        table_number: order.service_number || null,
+        total_amount: selectedTotal,
+        cashier_name: currentUser?.username ?? 'PDV',
+        customer_name: customer.name,
+        customer_phone: customer.phone,
+        items: saleItems,
+        payment_method: 'pagar_depois',
+      },
+    ])
+
+    if (saleError) {
+      setSendingToPdvOrderId(null)
+      setMessage(`Compra marcada em pagar depois, mas nao entrou no relatorio: ${saleError.message}`)
+      return
+    }
+
+    const targetIds = order.ids.length > 0 ? order.ids : [order.id]
+    if (remainingItems.length > 0) {
+      await supabase
+        .from(order.tableName)
+        .update({
+          items: remainingItems,
+          total_amount: remainingTotal,
+          customer_message: `Parte da compra foi marcada para ${customer.name} pagar depois.`,
+        })
+        .eq('id', order.id)
+
+      const duplicateIds = targetIds.filter((id) => id !== order.id)
+      if (duplicateIds.length > 0) {
+        await supabase
+          .from(order.tableName)
+          .update({
+            status: 'cancelado',
+            customer_message: 'Pedido unificado no lancamento parcial.',
+          })
+          .in('id', duplicateIds)
+      }
+    } else {
+      await supabase
+        .from(order.tableName)
+        .update({
+          status: 'pago',
+          customer_message: `Compra marcada para ${customer.name} pagar depois. Clique em Entregue para fechar.`,
+        })
+        .in('id', targetIds)
+    }
+
+    setSelectedPdvCustomerByOrder((current) => ({
+      ...current,
+      [orderKey]: '',
+    }))
+    setSelectedAppItemIndexesByOrder((current) => ({
+      ...current,
+      [orderKey]: remainingItems.map((_, index) => index),
+    }))
+    setSendingToPdvOrderId(null)
+    setMessage(
+      remainingItems.length > 0
+        ? `Itens selecionados marcados para ${customer.name}. O restante continua na comanda.`
+        : `Compra marcada para ${customer.name} pagar depois.`,
+    )
     fetchOrders()
   }
 
@@ -926,6 +1090,36 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
                     {sendingToAppOrderId === `${order.tableName}-${order.id}`
                       ? 'Enviando...'
                       : 'Enviar para app'}
+                  </button>
+                  <div className="send-to-pdv-divider">
+                    <strong>Cliente PDV / Pagar depois</strong>
+                    <span>Use para clientes cadastrados sem app, como Leandro.</span>
+                  </div>
+                  <select
+                    value={selectedPdvCustomerByOrder[`${order.tableName}-${order.id}`] ?? ''}
+                    onChange={(event) =>
+                      setSelectedPdvCustomerByOrder((current) => ({
+                        ...current,
+                        [`${order.tableName}-${order.id}`]: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Cliente PDV para marcar</option>
+                    {pdvCustomers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name} - {customer.phone}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-send-to-pdv"
+                    onClick={() => sendOrderToPdvCustomer(order)}
+                    disabled={sendingToPdvOrderId === `${order.tableName}-${order.id}`}
+                  >
+                    {sendingToPdvOrderId === `${order.tableName}-${order.id}`
+                      ? 'Marcando...'
+                      : 'Marcar para pagar depois'}
                   </button>
                 </div>
               )}
