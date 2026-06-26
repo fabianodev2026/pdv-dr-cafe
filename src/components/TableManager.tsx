@@ -238,6 +238,8 @@ export default function TableManager({
   const [appCustomers, setAppCustomers] = useState<AppCustomer[]>([])
   const [pdvCustomers, setPdvCustomers] = useState<PdvCustomer[]>([])
   const [selectedPdvCustomerId, setSelectedPdvCustomerId] = useState('')
+  const [pdvCustomerSearchInput, setPdvCustomerSearchInput] = useState('')
+  const [pdvCustomerSearchTerm, setPdvCustomerSearchTerm] = useState('')
   const [selectedAppCustomerId, setSelectedAppCustomerId] = useState('')
   const [appCustomerSearchInput, setAppCustomerSearchInput] = useState('')
   const [appCustomerSearchTerm, setAppCustomerSearchTerm] = useState('')
@@ -1119,6 +1121,16 @@ export default function TableManager({
         .some((value) => String(value).toLowerCase().includes(search)),
     )
   }, [appCustomerSearchTerm, appCustomers])
+  const filteredPdvCustomers = useMemo(() => {
+    const search = pdvCustomerSearchTerm.trim().toLowerCase()
+    if (!search) return pdvCustomers
+
+    return pdvCustomers.filter((customer) =>
+      [customer.name, customer.phone, customer.position]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search)),
+    )
+  }, [pdvCustomerSearchTerm, pdvCustomers])
 
   const roomFloors = useMemo(() => {
     return Array.from(new Set(rooms.map((room) => Math.floor(room.number / 100))))
@@ -1340,20 +1352,46 @@ export default function TableManager({
                 <div className="glass-panel hospital-fields">
                   <div className="app-customer-command-picker">
                     <label>Cliente PDV para marcar</label>
+                    <div className="app-customer-search-row">
+                      <input
+                        value={pdvCustomerSearchInput}
+                        onChange={(event) => setPdvCustomerSearchInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            setPdvCustomerSearchTerm(pdvCustomerSearchInput)
+                          }
+                        }}
+                        placeholder="Pesquisar Leandro, telefone..."
+                      />
+                      <button
+                        type="button"
+                        className="btn-refresh-app-customers"
+                        onClick={() => setPdvCustomerSearchTerm(pdvCustomerSearchInput)}
+                      >
+                        Pesquisar cliente
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-refresh-app-customers"
+                        onClick={fetchPdvCustomers}
+                      >
+                        Atualizar clientes PDV
+                      </button>
+                    </div>
                     <select
                       value={selectedPdvCustomerId}
                       onChange={(e) => selectPdvCustomerForActiveItem(e.target.value)}
                     >
                       <option value="">Selecionar cliente salvo</option>
-                      {pdvCustomers.map((customer) => (
+                      {filteredPdvCustomers.map((customer) => (
                         <option key={customer.id} value={customer.id}>
                           {customer.name} - {customer.phone}
                         </option>
                       ))}
                     </select>
-                    <button type="button" onClick={fetchPdvCustomers}>
-                      Atualizar clientes PDV
-                    </button>
+                    {pdvCustomerSearchTerm && filteredPdvCustomers.length === 0 && (
+                      <small>Nenhum cliente PDV encontrado. Clique em Atualizar clientes PDV.</small>
+                    )}
                     {activeItem.pdv_customer_id && (
                       <small>Cliente PDV selecionado. Os produtos serao marcados em Pagar depois.</small>
                     )}
@@ -1400,20 +1438,46 @@ export default function TableManager({
                   )}
                   <div className="app-customer-command-picker">
                     <label>Cliente PDV para marcar</label>
+                    <div className="app-customer-search-row">
+                      <input
+                        value={pdvCustomerSearchInput}
+                        onChange={(event) => setPdvCustomerSearchInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            setPdvCustomerSearchTerm(pdvCustomerSearchInput)
+                          }
+                        }}
+                        placeholder="Pesquisar Leandro, telefone..."
+                      />
+                      <button
+                        type="button"
+                        className="btn-refresh-app-customers"
+                        onClick={() => setPdvCustomerSearchTerm(pdvCustomerSearchInput)}
+                      >
+                        Pesquisar cliente
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-refresh-app-customers"
+                        onClick={fetchPdvCustomers}
+                      >
+                        Atualizar clientes PDV
+                      </button>
+                    </div>
                     <select
                       value={selectedPdvCustomerId}
                       onChange={(e) => selectPdvCustomerForActiveItem(e.target.value)}
                     >
                       <option value="">Selecionar cliente salvo</option>
-                      {pdvCustomers.map((customer) => (
+                      {filteredPdvCustomers.map((customer) => (
                         <option key={customer.id} value={customer.id}>
                           {customer.name} - {customer.phone}
                         </option>
                       ))}
                     </select>
-                    <button type="button" onClick={fetchPdvCustomers}>
-                      Atualizar clientes PDV
-                    </button>
+                    {pdvCustomerSearchTerm && filteredPdvCustomers.length === 0 && (
+                      <small>Nenhum cliente PDV encontrado. Clique em Atualizar clientes PDV.</small>
+                    )}
                     {activeItem.pdv_customer_id && (
                       <small>Cliente PDV selecionado. Os produtos serao marcados em Pagar depois.</small>
                     )}
