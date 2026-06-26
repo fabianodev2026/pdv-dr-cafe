@@ -138,6 +138,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
   const [pendingList, setPendingList] = useState<PendingPayment[]>([])
   const [pdvCustomers, setPdvCustomers] = useState<PdvCustomer[]>([])
   const [newPdvCustomer, setNewPdvCustomer] = useState(initialPdvCustomer)
+  const [editingPdvCustomerId, setEditingPdvCustomerId] = useState<number | null>(null)
   const [customerSearch, setCustomerSearch] = useState('')
   const [newPending, setNewPending] = useState<NewPending>(initialPending)
   const [pendingItem, setPendingItem] = useState('')
@@ -267,9 +268,19 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
       status: 'ativo',
     }
 
-    const { error } = await supabase
-      .from('pdv_customers')
-      .upsert([payload], { onConflict: 'phone' })
+    const { error } = editingPdvCustomerId
+      ? await supabase
+          .from('pdv_customers')
+          .update({
+            name: payload.name,
+            phone: payload.phone,
+            position: payload.position,
+            notes: payload.notes,
+          })
+          .eq('id', editingPdvCustomerId)
+      : await supabase
+          .from('pdv_customers')
+          .upsert([payload], { onConflict: 'phone' })
 
     if (error) {
       setMessage(`Nao foi possivel salvar cliente PDV: ${error.message}`)
@@ -277,8 +288,26 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     }
 
     setNewPdvCustomer(initialPdvCustomer)
-    setMessage(`Cliente PDV ${name} salvo.`)
+    setEditingPdvCustomerId(null)
+    setMessage(`Cliente PDV ${name} ${editingPdvCustomerId ? 'atualizado' : 'salvo'}.`)
     fetchPdvCustomers()
+  }
+
+  const editPdvCustomer = (customer: PdvCustomer) => {
+    setEditingPdvCustomerId(customer.id)
+    setNewPdvCustomer({
+      name: customer.name,
+      phone: customer.phone,
+      position: customer.position || '',
+      notes: customer.notes || '',
+    })
+    setMessage(`Editando cliente PDV ${customer.name}.`)
+  }
+
+  const cancelPdvCustomerEdit = () => {
+    setEditingPdvCustomerId(null)
+    setNewPdvCustomer(initialPdvCustomer)
+    setMessage('Edicao cancelada.')
   }
 
   const updatePdvCustomerStatus = async (customer: PdvCustomer) => {
@@ -742,9 +771,16 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
             />
           </label>
         </div>
-        <button type="button" className="btn-primary" onClick={savePdvCustomer}>
-          Salvar cliente PDV
-        </button>
+        <div className="pdv-customer-form-actions">
+          <button type="button" className="btn-primary" onClick={savePdvCustomer}>
+            {editingPdvCustomerId ? 'Salvar alteracoes' : 'Salvar cliente PDV'}
+          </button>
+          {editingPdvCustomerId && (
+            <button type="button" className="btn-secondary" onClick={cancelPdvCustomerEdit}>
+              Cancelar edicao
+            </button>
+          )}
+        </div>
 
         <div className="pdv-customers-list">
           {filteredPdvCustomers.length === 0 ? (
@@ -759,6 +795,9 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
                   {customer.notes && <small>{customer.notes}</small>}
                 </div>
                 <div className="pdv-customer-actions">
+                  <button type="button" onClick={() => editPdvCustomer(customer)}>
+                    Editar cadastro
+                  </button>
                   <button type="button" onClick={() => selectPdvCustomerForPending(customer)}>
                     Usar na pendencia
                   </button>

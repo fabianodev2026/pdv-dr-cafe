@@ -116,6 +116,7 @@
 }
 
 .btn-primary,
+.btn-secondary,
 .pending-card button,
 .person-header button {
   border: 0;
@@ -125,6 +126,17 @@
   padding: 11px 14px;
   font-weight: 800;
   cursor: pointer;
+}
+
+.btn-secondary {
+  background: #7b4a27;
+  color: #fff8ef;
+}
+
+.pdv-customer-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .person-header button {
