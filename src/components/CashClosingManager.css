@@ -458,6 +458,21 @@
   font-size: 1.2rem;
 }
 
+.cash-history-pay-later {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #ead4b9;
+  border-left: 4px solid #7b4a27;
+  border-radius: 8px;
+  background: #fffaf5;
+  padding: 12px;
+}
+
+.cash-history-pay-later h3 {
+  margin: 0;
+  color: #5d4037;
+}
+
 @media (max-width: 900px) {
   .cash-closing-columns {
     grid-template-columns: 1fr;

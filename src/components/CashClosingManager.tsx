@@ -147,6 +147,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [closingReportMonth, setClosingReportMonth] = useState(getMonthInputValue())
   const [selectedClosingDate, setSelectedClosingDate] = useState('')
   const [payLaterMovements, setPayLaterMovements] = useState<PendingPayment[]>([])
+  const [monthlyPayLaterMovements, setMonthlyPayLaterMovements] = useState<PendingPayment[]>([])
   const [message, setMessage] = useState('')
   const [isDraftLoaded, setIsDraftLoaded] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -179,6 +180,12 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const payLaterTotal = toMoney(
     payLaterMovements.reduce((sum, payment) => sum + Number(payment.total_amount || 0), 0),
   )
+  const monthlyPayLaterTotal = toMoney(
+    monthlyPayLaterMovements.reduce(
+      (sum, payment) => sum + Number(payment.total_amount || 0),
+      0,
+    ),
+  )
   const monthlyClosingSummary = useMemo(
     () =>
       closings.reduce(
@@ -202,6 +209,21 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       closings[0] ??
       null,
     [closings, selectedClosingDate],
+  )
+  const selectedClosingPayLaterMovements = useMemo(
+    () =>
+      selectedClosing
+        ? monthlyPayLaterMovements.filter(
+            (payment) => payment.purchase_date === selectedClosing.closing_date,
+          )
+        : [],
+    [monthlyPayLaterMovements, selectedClosing],
+  )
+  const selectedClosingPayLaterTotal = toMoney(
+    selectedClosingPayLaterMovements.reduce(
+      (sum, payment) => sum + Number(payment.total_amount || 0),
+      0,
+    ),
   )
 
   const fetchClosings = async (monthValue = closingReportMonth) => {
@@ -237,6 +259,25 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     }
 
     setPayLaterMovements(data ?? [])
+  }
+
+  const fetchMonthlyPayLaterMovements = async (monthValue = closingReportMonth) => {
+    const { start, end } = getMonthRange(monthValue)
+    const { data, error } = await supabase
+      .from('pending_payments')
+      .select('id, created_at, customer_name, phone, position, description, items_detail, total_amount, purchase_date, due_date, status')
+      .gte('purchase_date', start)
+      .lt('purchase_date', end)
+      .order('purchase_date', { ascending: false })
+      .order('customer_name', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao buscar pagar depois mensal:', error)
+      setMonthlyPayLaterMovements([])
+      return
+    }
+
+    setMonthlyPayLaterMovements(data ?? [])
   }
 
   const loadDailyMovementTotals = async (date = closingDate, showSuccessMessage = false) => {
@@ -308,6 +349,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
 
   useEffect(() => {
     fetchClosings(closingReportMonth)
+    fetchMonthlyPayLaterMovements(closingReportMonth)
   }, [closingReportMonth])
 
   useEffect(() => {
@@ -444,6 +486,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       const savedMonth = closingDate.slice(0, 7)
       setClosingReportMonth(savedMonth)
       await fetchClosings(savedMonth)
+      await fetchMonthlyPayLaterMovements(savedMonth)
       if (resetForNextDay) {
         const nextClosingDate = addDaysToDate(closingDate, 1)
         setClosingDate(nextClosingDate)
@@ -756,6 +799,10 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
             <strong>{currencyFormatter.format(pixTotalValue)}</strong>
           </div>
           <div>
+            <span>Pagar depois</span>
+            <strong>{currencyFormatter.format(payLaterTotal)}</strong>
+          </div>
+          <div>
             <span>Diferenca</span>
             <strong>{currencyFormatter.format(cashDifference)}</strong>
           </div>
@@ -863,6 +910,10 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
             <strong>{currencyFormatter.format(monthlyClosingSummary.pix)}</strong>
           </article>
           <article>
+            <span>Pagar depois do mes</span>
+            <strong>{currencyFormatter.format(monthlyPayLaterTotal)}</strong>
+          </article>
+          <article>
             <span>Total do mes</span>
             <strong>{currencyFormatter.format(monthlyClosingSummary.total)}</strong>
           </article>
@@ -895,9 +946,39 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
                 <span>Credito: {currencyFormatter.format(Number(selectedClosing.credit_total ?? selectedClosing.card_total ?? 0))}</span>
                 <span>Debito: {currencyFormatter.format(Number(selectedClosing.debit_total || 0))}</span>
                 <span>Pix: {currencyFormatter.format(Number(selectedClosing.pix_total))}</span>
+                <span>Pagar depois: {currencyFormatter.format(selectedClosingPayLaterTotal)}</span>
                 <span>Diferenca: {currencyFormatter.format(Number(selectedClosing.cash_difference || 0))}</span>
                 <b>Total: {currencyFormatter.format(Number(selectedClosing.grand_total))}</b>
               </article>
+            )}
+            {selectedClosing && (
+              <section className="cash-history-pay-later">
+                <div className="cash-pay-later-heading">
+                  <div>
+                    <h3>Pagar depois em {formatClosingDate(selectedClosing.closing_date)}</h3>
+                    <p>Itens marcados para pagamento posterior neste dia.</p>
+                  </div>
+                  <strong>{currencyFormatter.format(selectedClosingPayLaterTotal)}</strong>
+                </div>
+                {selectedClosingPayLaterMovements.length === 0 ? (
+                  <p className="cash-pay-later-empty">Nenhum pagar depois neste dia.</p>
+                ) : (
+                  <div className="cash-pay-later-list">
+                    {selectedClosingPayLaterMovements.map((payment) => (
+                      <article key={payment.id} className="cash-pay-later-card">
+                        <div>
+                          <strong>{payment.customer_name || 'Cliente nao informado'}</strong>
+                          <span>{payment.description || 'Pagar depois'}</span>
+                          {payment.phone && <span>Telefone: {payment.phone}</span>}
+                          <span>Status: {payment.status || 'pendente'}</span>
+                        </div>
+                        <p>{payment.items_detail || '-'}</p>
+                        <b>{currencyFormatter.format(Number(payment.total_amount || 0))}</b>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
             )}
           </>
         )}

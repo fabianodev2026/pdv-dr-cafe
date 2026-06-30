@@ -180,6 +180,29 @@
   gap: 12px;
 }
 
+.pay-later-report {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.settings-section-title h3,
+.settings-section-title p {
+  margin: 0;
+}
+
+.settings-section-title p {
+  margin-top: 5px;
+  color: #7b4a27;
+  font-weight: 700;
+}
+
+.pay-later-report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
 .best-seller-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));

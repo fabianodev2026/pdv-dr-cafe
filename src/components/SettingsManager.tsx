@@ -50,10 +50,14 @@ interface Sale {
 interface PendingPayment {
   id: number
   created_at: string
+  customer_name?: string
+  phone?: string
   description?: string
   items_detail?: string
   total_amount: number
   purchase_date: string
+  due_date?: string
+  status?: string
 }
 
 interface SaleItem {
@@ -83,6 +87,9 @@ const isSameReportMonth = (date: Date, monthValue: string) => {
   const [year, month] = monthValue.split('-').map(Number)
   return date.getFullYear() === year && date.getMonth() === month - 1
 }
+
+const formatReportDate = (date?: string) =>
+  date ? new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR') : '-'
 
 const parsePendingItems = (payment: PendingPayment): SaleItem[] => {
   const detail = payment.items_detail?.trim()
@@ -189,7 +196,9 @@ export default function SettingsManager() {
         supabase.from('sales').select('*').order('created_at', { ascending: false }),
         supabase
           .from('pending_payments')
-          .select('id, created_at, description, items_detail, total_amount, purchase_date')
+          .select(
+            'id, created_at, customer_name, phone, description, items_detail, total_amount, purchase_date, due_date, status',
+          )
           .order('created_at', { ascending: false }),
       ])
 
@@ -257,6 +266,33 @@ export default function SettingsManager() {
       )
   }, [pendingPayments, reportMonth])
 
+  const payLaterBalance = useMemo(() => {
+    const now = new Date()
+    const today = now.toLocaleDateString('pt-BR')
+
+    return pendingPayments.reduce(
+      (totals, payment) => {
+        const paymentDate = new Date(`${payment.purchase_date}T12:00:00`)
+        const amount = Number(payment.total_amount || 0)
+
+        if (paymentDate.toLocaleDateString('pt-BR') === today) {
+          totals.day += amount
+        }
+
+        if (isSameReportMonth(paymentDate, reportMonth)) {
+          totals.month += amount
+        }
+
+        if (paymentDate.getFullYear() === now.getFullYear()) {
+          totals.year += amount
+        }
+
+        return totals
+      },
+      { day: 0, month: 0, year: 0 },
+    )
+  }, [pendingPayments, reportMonth])
+
   const movementBalance = useMemo(
     () => ({
       day: balance.day + appPendingBalance.day,
@@ -306,6 +342,23 @@ export default function SettingsManager() {
     })
   }, [pendingPayments, reportMonth, salesPeriod])
 
+  const todayPendingPayments = useMemo(() => {
+    const today = new Date().toLocaleDateString('pt-BR')
+
+    return pendingPayments.filter((payment) => {
+      const paymentDate = new Date(`${payment.purchase_date}T12:00:00`)
+      return paymentDate.toLocaleDateString('pt-BR') === today
+    })
+  }, [pendingPayments])
+
+  const monthlyPendingPayments = useMemo(
+    () =>
+      pendingPayments.filter((payment) =>
+        isSameReportMonth(new Date(`${payment.purchase_date}T12:00:00`), reportMonth),
+      ),
+    [pendingPayments, reportMonth],
+  )
+
   const bestSellers = useMemo(() => {
     const ranking = new Map<string, BestSeller>()
 
@@ -332,30 +385,28 @@ export default function SettingsManager() {
       })
     })
 
-    filteredPendingPayments
-      .filter((payment) => payment.description === 'Compra pelo app Dr. Cafe')
-      .forEach((payment) => {
-        parsePendingItems(payment).forEach((item) => {
-          const name = item.name?.trim()
-          if (!name) return
+    filteredPendingPayments.forEach((payment) => {
+      parsePendingItems(payment).forEach((item) => {
+        const name = item.name?.trim()
+        if (!name) return
 
-          const quantity = Number(item.quantity || 1)
-          const revenue = Number(item.total ?? Number(item.price ?? item.unit_price ?? 0) * quantity)
-          const current = ranking.get(name) ?? {
-            name,
-            quantity: 0,
-            revenue: 0,
-            orders: 0,
-          }
+        const quantity = Number(item.quantity || 1)
+        const revenue = Number(item.total ?? Number(item.price ?? item.unit_price ?? 0) * quantity)
+        const current = ranking.get(name) ?? {
+          name,
+          quantity: 0,
+          revenue: 0,
+          orders: 0,
+        }
 
-          ranking.set(name, {
-            ...current,
-            quantity: current.quantity + quantity,
-            revenue: current.revenue + revenue,
-            orders: current.orders + 1,
-          })
+        ranking.set(name, {
+          ...current,
+          quantity: current.quantity + quantity,
+          revenue: current.revenue + revenue,
+          orders: current.orders + 1,
         })
       })
+    })
 
     return Array.from(ranking.values()).sort((a, b) => {
       if (b.quantity !== a.quantity) return b.quantity - a.quantity
@@ -905,6 +956,82 @@ export default function SettingsManager() {
               <span>Anual</span>
               <strong>R$ {movementBalance.year.toFixed(2)}</strong>
             </article>
+          </div>
+          <div className="pay-later-report">
+            <div className="settings-section-title">
+              <h3>Pagar depois</h3>
+              <p>Controle do que foi marcado para receber depois.</p>
+            </div>
+            <div className="balance-grid">
+              <article>
+                <span>Pagar depois diario</span>
+                <strong>R$ {payLaterBalance.day.toFixed(2)}</strong>
+              </article>
+              <article>
+                <span>Pagar depois do mes</span>
+                <strong>R$ {payLaterBalance.month.toFixed(2)}</strong>
+              </article>
+              <article>
+                <span>Pagar depois anual</span>
+                <strong>R$ {payLaterBalance.year.toFixed(2)}</strong>
+              </article>
+            </div>
+            <div className="pay-later-report-grid">
+              <div className="history-section">
+                <h3>Pagar depois de hoje</h3>
+                {todayPendingPayments.length === 0 ? (
+                  <div className="settings-empty">Nenhum pagar depois lancado hoje.</div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Cliente</th>
+                        <th>Consumiu</th>
+                        <th>Status</th>
+                        <th>Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {todayPendingPayments.map((payment) => (
+                        <tr key={payment.id}>
+                          <td>{payment.customer_name || '-'}</td>
+                          <td>{payment.items_detail || payment.description || '-'}</td>
+                          <td>{payment.status || 'pendente'}</td>
+                          <td>R$ {Number(payment.total_amount || 0).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div className="history-section">
+                <h3>Pagar depois do mes selecionado</h3>
+                {monthlyPendingPayments.length === 0 ? (
+                  <div className="settings-empty">Nenhum pagar depois neste mes.</div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Compra</th>
+                        <th>Cliente</th>
+                        <th>Vencimento</th>
+                        <th>Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthlyPendingPayments.map((payment) => (
+                        <tr key={payment.id}>
+                          <td>{formatReportDate(payment.purchase_date)}</td>
+                          <td>{payment.customer_name || '-'}</td>
+                          <td>{formatReportDate(payment.due_date)}</td>
+                          <td>R$ {Number(payment.total_amount || 0).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
           </div>
           <div className="history-section">
             <h3>Ultimas vendas</h3>
