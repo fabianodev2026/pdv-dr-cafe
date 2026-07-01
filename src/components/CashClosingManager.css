@@ -302,7 +302,7 @@
 
 .cash-pay-later-heading h2,
 .cash-pay-later-heading p,
-.cash-pay-later-card p,
+.cash-pay-later-details p,
 .cash-pay-later-empty {
   margin: 0;
 }
@@ -312,8 +312,8 @@
 }
 
 .cash-pay-later-heading p,
-.cash-pay-later-card span,
-.cash-pay-later-card p,
+.cash-pay-later-details span,
+.cash-pay-later-details p,
 .cash-pay-later-empty {
   color: #7b4a27;
   font-weight: 800;
@@ -326,31 +326,74 @@
 
 .cash-pay-later-list {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
   gap: 10px;
 }
 
 .cash-pay-later-card {
   display: grid;
-  grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1fr) auto;
-  gap: 12px;
   border: 1px solid #ead4b9;
   border-radius: 8px;
   background: #fffaf5;
-  padding: 12px;
+  overflow: hidden;
 }
 
-.cash-pay-later-card div {
+.cash-pay-later-card.expanded {
+  grid-column: span 2;
+}
+
+.cash-pay-later-toggle {
   display: grid;
-  gap: 4px;
+  gap: 6px;
+  align-content: center;
+  min-height: 112px;
+  width: 100%;
+  border: 0;
+  background: #fffaf5;
+  color: #2b160d;
+  cursor: pointer;
+  font: inherit;
+  padding: 12px;
+  text-align: left;
 }
 
-.cash-pay-later-card p {
+.cash-pay-later-toggle:hover {
+  background: #fff2df;
+}
+
+.cash-pay-later-toggle span,
+.cash-pay-later-toggle strong,
+.cash-pay-later-toggle small {
+  display: block;
+}
+
+.cash-pay-later-toggle span {
+  color: #2b160d;
+  font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.cash-pay-later-toggle strong {
+  color: #006c67;
+  font-size: 1.08rem;
+}
+
+.cash-pay-later-toggle small {
+  color: #7b4a27;
+  font-weight: 800;
+}
+
+.cash-pay-later-details {
+  display: grid;
+  gap: 5px;
+  border-top: 1px solid #ead4b9;
+  padding: 10px 12px 12px;
+}
+
+.cash-pay-later-details p {
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
-}
-
-.cash-pay-later-card b {
-  align-self: center;
-  white-space: nowrap;
 }
 
 .cash-closing-actions {
@@ -511,10 +554,17 @@
     width: 100%;
   }
 
-  .cash-pay-later-heading,
-  .cash-pay-later-card {
+  .cash-pay-later-heading {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .cash-pay-later-list {
+    grid-template-columns: 1fr;
+  }
+
+  .cash-pay-later-card.expanded {
+    grid-column: 1 / -1;
   }
 }
 

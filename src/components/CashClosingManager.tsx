@@ -148,6 +148,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [selectedClosingDate, setSelectedClosingDate] = useState('')
   const [payLaterMovements, setPayLaterMovements] = useState<PendingPayment[]>([])
   const [monthlyPayLaterMovements, setMonthlyPayLaterMovements] = useState<PendingPayment[]>([])
+  const [expandedPayLaterIds, setExpandedPayLaterIds] = useState<Record<number, boolean>>({})
   const [message, setMessage] = useState('')
   const [isDraftLoaded, setIsDraftLoaded] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -551,6 +552,44 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     </div>
   )
 
+  const togglePayLaterDetails = (paymentId: number) => {
+    setExpandedPayLaterIds((current) => ({
+      ...current,
+      [paymentId]: !current[paymentId],
+    }))
+  }
+
+  const renderPayLaterCard = (payment: PendingPayment) => {
+    const isExpanded = Boolean(expandedPayLaterIds[payment.id])
+
+    return (
+      <article
+        key={payment.id}
+        className={`cash-pay-later-card ${isExpanded ? 'expanded' : ''}`}
+      >
+        <button
+          type="button"
+          className="cash-pay-later-toggle"
+          onClick={() => togglePayLaterDetails(payment.id)}
+          aria-expanded={isExpanded}
+        >
+          <span>{payment.customer_name || 'Cliente nao informado'}</span>
+          <strong>{currencyFormatter.format(Number(payment.total_amount || 0))}</strong>
+          <small>{isExpanded ? 'Ocultar detalhes' : 'Ver detalhes'}</small>
+        </button>
+        {isExpanded && (
+          <div className="cash-pay-later-details">
+            <span>{payment.description || 'Pagar depois'}</span>
+            {payment.phone && <span>Telefone: {payment.phone}</span>}
+            {payment.due_date && <span>Vencimento: {formatClosingDate(payment.due_date)}</span>}
+            <span>Status: {payment.status || 'pendente'}</span>
+            <p>{payment.items_detail || '-'}</p>
+          </div>
+        )}
+      </article>
+    )
+  }
+
   const printClosing = () => {
     document.body.classList.add('printing-cash-closing')
     const clearPrintMode = () => {
@@ -727,18 +766,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
           <p className="cash-pay-later-empty">Nenhum pagar depois lancado nesta data.</p>
         ) : (
           <div className="cash-pay-later-list">
-            {payLaterMovements.map((payment) => (
-              <article key={payment.id} className="cash-pay-later-card">
-                <div>
-                  <strong>{payment.customer_name || 'Cliente nao informado'}</strong>
-                  <span>{payment.description || 'Pagar depois'}</span>
-                  {payment.phone && <span>Telefone: {payment.phone}</span>}
-                  <span>Vencimento: {formatClosingDate(payment.due_date)}</span>
-                </div>
-                <p>{payment.items_detail || '-'}</p>
-                <b>{currencyFormatter.format(Number(payment.total_amount || 0))}</b>
-              </article>
-            ))}
+            {payLaterMovements.map(renderPayLaterCard)}
           </div>
         )}
       </section>
@@ -964,18 +992,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
                   <p className="cash-pay-later-empty">Nenhum pagar depois neste dia.</p>
                 ) : (
                   <div className="cash-pay-later-list">
-                    {selectedClosingPayLaterMovements.map((payment) => (
-                      <article key={payment.id} className="cash-pay-later-card">
-                        <div>
-                          <strong>{payment.customer_name || 'Cliente nao informado'}</strong>
-                          <span>{payment.description || 'Pagar depois'}</span>
-                          {payment.phone && <span>Telefone: {payment.phone}</span>}
-                          <span>Status: {payment.status || 'pendente'}</span>
-                        </div>
-                        <p>{payment.items_detail || '-'}</p>
-                        <b>{currencyFormatter.format(Number(payment.total_amount || 0))}</b>
-                      </article>
-                    ))}
+                    {selectedClosingPayLaterMovements.map(renderPayLaterCard)}
                   </div>
                 )}
               </section>
