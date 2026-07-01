@@ -265,7 +265,7 @@ export default function ProductManager() {
               maxLength={20}
             />
           </div>
-          <div className="form-group">
+          <div className="form-group stock-field">
             <label>Estoque atual</label>
             <input
               type="number"
@@ -278,7 +278,7 @@ export default function ProductManager() {
               placeholder="Ex: 30"
             />
           </div>
-          <div className="form-group">
+          <div className="form-group stock-field">
             <label>Avisar estoque baixo em</label>
             <input
               type="number"

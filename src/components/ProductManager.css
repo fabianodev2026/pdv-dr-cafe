@@ -4,6 +4,12 @@
   min-height: 100vh;
 }
 
+.product-manager *,
+.product-manager *::before,
+.product-manager *::after {
+  box-sizing: border-box;
+}
+
 .product-heading {
   display: flex;
   align-items: center;
@@ -47,14 +53,19 @@
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+}
+
+.form-group.stock-field {
+  grid-column: span 2;
 }
 
 .form-group.full-width {
@@ -71,6 +82,8 @@
 .form-group input,
 .form-group textarea,
 .form-group select {
+  width: 100%;
+  min-height: 42px;
   padding: 10px;
   border: 1px solid #bcaaa4;
   border-radius: 6px;
@@ -88,9 +101,10 @@
 }
 
 .button-group {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 10px;
-  flex-wrap: wrap;
+  align-items: stretch;
 }
 
 .btn-primary,
@@ -107,8 +121,7 @@
 .btn-primary {
   background: #2b160d;
   color: white;
-  flex: 1;
-  min-width: 150px;
+  width: 100%;
 }
 
 .btn-primary:hover {
@@ -120,8 +133,7 @@
 .btn-secondary {
   background: #d7ccc8;
   color: #5d4037;
-  flex: 1;
-  min-width: 150px;
+  width: 100%;
 }
 
 .btn-secondary:hover {
@@ -377,7 +389,33 @@
   background: #ffab91;
 }
 
+@media (max-width: 960px) {
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-group.stock-field {
+    grid-column: span 1;
+  }
+}
+
 @media (max-width: 640px) {
+  .product-manager {
+    padding: 14px;
+  }
+
+  .product-heading {
+    align-items: flex-start;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group.stock-field {
+    grid-column: 1 / -1;
+  }
+
   .products-search {
     grid-template-columns: 1fr;
   }
