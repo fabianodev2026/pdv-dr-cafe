@@ -775,7 +775,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
             </label>
           </div>
           <div className="cash-column-total">
-            <span>Total cartao</span>
+            <span>TOTAL CARTAO</span>
             <strong>{currencyFormatter.format(cardTotalValue)}</strong>
           </div>
           <div className="cash-column-total cash-column-total--grand">
