@@ -10,6 +10,7 @@ create table if not exists public.cash_closings (
   opening_cash numeric(10,2) not null default 0,
   cash_in_day numeric(10,2) not null default 0,
   cash_expenses numeric(10,2) not null default 0,
+  store_card_expenses numeric(10,2) not null default 0,
   counted_cash numeric(10,2) not null default 0,
   card_total numeric(10,2) not null default 0,
   credit_total numeric(10,2) not null default 0,
@@ -25,6 +26,7 @@ alter table public.cash_closings
   add column if not exists opening_cashier_name text,
   add column if not exists cash_in_day numeric(10,2) not null default 0,
   add column if not exists cash_expenses numeric(10,2) not null default 0,
+  add column if not exists store_card_expenses numeric(10,2) not null default 0,
   add column if not exists credit_total numeric(10,2) not null default 0,
   add column if not exists debit_total numeric(10,2) not null default 0;
 

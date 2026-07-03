@@ -26,6 +26,7 @@ interface CashClosing {
   opening_cash: number
   cash_in_day?: number
   cash_expenses?: number
+  store_card_expenses?: number
   counted_cash: number
   card_total: number
   credit_total?: number
@@ -139,6 +140,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [openingCash, setOpeningCash] = useState('')
   const [cashInDay, setCashInDay] = useState('0')
   const [cashExpenses, setCashExpenses] = useState('')
+  const [storeCardExpenses, setStoreCardExpenses] = useState('')
   const [creditTotal, setCreditTotal] = useState('')
   const [debitTotal, setDebitTotal] = useState('')
   const [pixTotal, setPixTotal] = useState('')
@@ -171,6 +173,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const openingCashValue = toMoney(toNumber(openingCash))
   const cashInDayValue = toMoney(toNumber(cashInDay))
   const cashExpensesValue = toMoney(toNumber(cashExpenses))
+  const storeCardExpensesValue = toMoney(toNumber(storeCardExpenses))
   const creditTotalValue = toMoney(toNumber(creditTotal))
   const debitTotalValue = toMoney(toNumber(debitTotal))
   const cardTotalValue = toMoney(creditTotalValue + debitTotalValue)
@@ -194,12 +197,24 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
           days: totals.days + 1,
           cash: toMoney(totals.cash + Number(closing.cash_in_day || 0)),
           expenses: toMoney(totals.expenses + Number(closing.cash_expenses || 0)),
+          storeCardExpenses: toMoney(
+            totals.storeCardExpenses + Number(closing.store_card_expenses || 0),
+          ),
           credit: toMoney(totals.credit + Number(closing.credit_total ?? closing.card_total ?? 0)),
           debit: toMoney(totals.debit + Number(closing.debit_total || 0)),
           pix: toMoney(totals.pix + Number(closing.pix_total || 0)),
           total: toMoney(totals.total + Number(closing.grand_total || 0)),
         }),
-        { days: 0, cash: 0, expenses: 0, credit: 0, debit: 0, pix: 0, total: 0 },
+        {
+          days: 0,
+          cash: 0,
+          expenses: 0,
+          storeCardExpenses: 0,
+          credit: 0,
+          debit: 0,
+          pix: 0,
+          total: 0,
+        },
       ),
     [closings],
   )
@@ -337,6 +352,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       setOpeningCash(draft.openingCash || '')
       setCashInDay(draft.cashInDay || '0')
       setCashExpenses(draft.cashExpenses || '')
+      setStoreCardExpenses(draft.storeCardExpenses || '')
       setCreditTotal(draft.creditTotal || draft.cardTotal || '')
       setDebitTotal(draft.debitTotal || '')
       setPixTotal(draft.pixTotal || '')
@@ -390,6 +406,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         openingCash,
         cashInDay,
         cashExpenses,
+        storeCardExpenses,
         creditTotal,
         debitTotal,
         pixTotal,
@@ -399,6 +416,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   }, [
     cashInDay,
     cashExpenses,
+    storeCardExpenses,
     closingDate,
     counts,
     creditTotal,
@@ -424,6 +442,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     setOpeningCash(String(Number(latestForDate.opening_cash || 0)))
     setCashInDay(String(Number(latestForDate.cash_in_day || 0)))
     setCashExpenses(String(Number(latestForDate.cash_expenses || 0)))
+    setStoreCardExpenses(String(Number(latestForDate.store_card_expenses || 0)))
     setCreditTotal(String(Number(latestForDate.credit_total ?? latestForDate.card_total ?? 0)))
     setDebitTotal(String(Number(latestForDate.debit_total || 0)))
     setPixTotal(String(Number(latestForDate.pix_total || 0)))
@@ -460,6 +479,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
       opening_cash: openingCashValue,
       cash_in_day: cashInDayValue,
       cash_expenses: cashExpensesValue,
+      store_card_expenses: storeCardExpensesValue,
       counted_cash: countedCash,
       card_total: cardTotalValue,
       credit_total: creditTotalValue,
@@ -494,6 +514,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         setOpeningCash(String(countedCash))
         setCashInDay('0')
         setCashExpenses('')
+        setStoreCardExpenses('')
         setCreditTotal('')
         setDebitTotal('')
         setPixTotal('')
@@ -716,6 +737,16 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
               />
             </label>
             <label className="cash-money-input">
+              Despesas cartao loja
+              <input
+                value={storeCardExpenses}
+                onChange={(event) => setStoreCardExpenses(event.target.value)}
+                inputMode="decimal"
+                placeholder="0,00"
+              />
+              <small>Registro mensal. Nao altera o caixa do dia.</small>
+            </label>
+            <label className="cash-money-input">
               Credito
               <input
                 value={creditTotal}
@@ -809,6 +840,10 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
           <div>
             <span>Despesas</span>
             <strong>{currencyFormatter.format(cashExpensesValue)}</strong>
+          </div>
+          <div>
+            <span>Despesas cartao loja</span>
+            <strong>{currencyFormatter.format(storeCardExpensesValue)}</strong>
           </div>
           <div>
             <span>Dinheiro contado</span>
@@ -926,6 +961,10 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
             <strong>{currencyFormatter.format(monthlyClosingSummary.expenses)}</strong>
           </article>
           <article>
+            <span>Despesas cartao loja</span>
+            <strong>{currencyFormatter.format(monthlyClosingSummary.storeCardExpenses)}</strong>
+          </article>
+          <article>
             <span>Credito</span>
             <strong>{currencyFormatter.format(monthlyClosingSummary.credit)}</strong>
           </article>
@@ -971,6 +1010,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
                 <span>Dinheiro contado: {currencyFormatter.format(Number(selectedClosing.counted_cash))}</span>
                 <span>Dinheiro dia: {currencyFormatter.format(Number(selectedClosing.cash_in_day || 0))}</span>
                 <span>Despesas: {currencyFormatter.format(Number(selectedClosing.cash_expenses || 0))}</span>
+                <span>Despesas cartao loja: {currencyFormatter.format(Number(selectedClosing.store_card_expenses || 0))}</span>
                 <span>Credito: {currencyFormatter.format(Number(selectedClosing.credit_total ?? selectedClosing.card_total ?? 0))}</span>
                 <span>Debito: {currencyFormatter.format(Number(selectedClosing.debit_total || 0))}</span>
                 <span>Pix: {currencyFormatter.format(Number(selectedClosing.pix_total))}</span>

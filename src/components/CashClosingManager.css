@@ -89,6 +89,13 @@
   font: inherit;
 }
 
+.cash-money-input small {
+  color: #7b4a27;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
 .cash-closing-columns {
   display: grid;
   grid-template-columns: minmax(520px, 1.45fr) minmax(260px, 0.75fr);
