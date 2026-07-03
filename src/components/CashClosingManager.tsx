@@ -737,17 +737,17 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
               />
             </label>
             <label className="cash-money-input">
-              Despesas cartao loja
+              DESPESAS CARTAO LOJA
               <input
                 value={storeCardExpenses}
                 onChange={(event) => setStoreCardExpenses(event.target.value)}
                 inputMode="decimal"
                 placeholder="0,00"
               />
-              <small>Registro mensal. Nao altera o caixa do dia.</small>
+              <small>Registro Mensal. Nao Altera o Caixa do Dia.</small>
             </label>
             <label className="cash-money-input">
-              Credito
+              CREDITO
               <input
                 value={creditTotal}
                 onChange={(event) => setCreditTotal(event.target.value)}
