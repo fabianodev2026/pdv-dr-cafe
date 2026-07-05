@@ -133,6 +133,8 @@ const addDaysToDate = (value: string, days: number) => {
 }
 const toMoney = (value: number) => Number(value.toFixed(2))
 const toNumber = (value: string) => Number(value.replace(',', '.') || 0)
+const isMissingStoreCardExpensesColumn = (message = '') =>
+  message.includes('store_card_expenses') && message.includes('cash_closings')
 
 export default function CashClosingManager({ currentUser }: CashClosingManagerProps) {
   const [closingDate, setClosingDate] = useState(today())
@@ -500,6 +502,14 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         .upsert([payload], { onConflict: 'closing_date' })
 
       if (error) {
+        if (isMissingStoreCardExpensesColumn(error.message)) {
+          setMessage(
+            'Nao foi possivel salvar o fechamento: falta executar o SQL de Despesas cartao loja no Supabase. ' +
+              'Execute o arquivo supabase/sql/cash-closing-card-cash-fields.sql e tente salvar novamente.',
+          )
+          return
+        }
+
         setMessage(`Nao foi possivel salvar o fechamento: ${error.message}`)
         return
       }
@@ -779,7 +789,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
             <strong>{currencyFormatter.format(cardTotalValue)}</strong>
           </div>
           <div className="cash-column-total cash-column-total--grand">
-            <span>Total</span>
+            <span>TOTAL</span>
             <strong>{currencyFormatter.format(grandTotal)}</strong>
           </div>
         </div>
