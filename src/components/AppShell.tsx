@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ADMIN_ROLES,
   CASHIER_ROLES,
@@ -26,6 +26,10 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
   const canUseCashier = hasRole(currentUser, CASHIER_ROLES)
   const canManage = hasRole(currentUser, MANAGER_ROLES)
   const canAdmin = hasRole(currentUser, ADMIN_ROLES)
+  const [connectionNotice, setConnectionNotice] = useState(() => ({
+    status: navigator.onLine ? 'online' : 'offline',
+    visible: !navigator.onLine,
+  }))
 
   useEffect(() => {
     const intervalId = startBackupScheduler()
@@ -33,6 +37,23 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
     return () => {
       window.clearInterval(intervalId)
       stopOfflineAutoSync()
+    }
+  }, [])
+
+  useEffect(() => {
+    const showOnline = () => {
+      setConnectionNotice({ status: 'online', visible: true })
+    }
+    const showOffline = () => {
+      setConnectionNotice({ status: 'offline', visible: true })
+    }
+
+    window.addEventListener('online', showOnline)
+    window.addEventListener('offline', showOffline)
+
+    return () => {
+      window.removeEventListener('online', showOnline)
+      window.removeEventListener('offline', showOffline)
     }
   }, [])
 
@@ -71,6 +92,28 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
       <section className="app-content">
         <Outlet />
       </section>
+      {connectionNotice.visible && (
+        <div
+          className={`connection-notice ${connectionNotice.status}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span>
+            {connectionNotice.status === 'online'
+              ? 'Operando online'
+              : 'Operando offline'}
+          </span>
+          <button
+            type="button"
+            aria-label="Fechar aviso de conexao"
+            onClick={() =>
+              setConnectionNotice((current) => ({ ...current, visible: false }))
+            }
+          >
+            x
+          </button>
+        </div>
+      )}
     </div>
   )
 }
