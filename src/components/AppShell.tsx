@@ -8,6 +8,7 @@ import {
   hasRole,
 } from '../lib/rolePermissions'
 import { startBackupScheduler } from '../lib/backupService'
+import { startOfflineAutoSync } from '../lib/offlineSyncService'
 import './AppShell.css'
 
 interface CurrentUser {
@@ -28,7 +29,11 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
 
   useEffect(() => {
     const intervalId = startBackupScheduler()
-    return () => window.clearInterval(intervalId)
+    const stopOfflineAutoSync = startOfflineAutoSync()
+    return () => {
+      window.clearInterval(intervalId)
+      stopOfflineAutoSync()
+    }
   }, [])
 
   return (

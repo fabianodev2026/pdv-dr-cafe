@@ -15,8 +15,8 @@ import { logAppError, logAppEvent, readAppLogs } from '../lib/appLogger'
 import {
   getOfflineRetentionDays,
   readOfflineSales,
-  syncOfflineRecords as syncQueuedOfflineRecords,
 } from '../lib/offlineQueue'
+import { syncOfflineQueue } from '../lib/offlineSyncService'
 import './SupportAiManager.css'
 
 const SUPPORT_QUEUE_KEY = 'dr-cafe-ai-support-queue'
@@ -65,24 +65,9 @@ export default function SupportAiManager() {
   const syncOfflineRecords = async () => {
     setSyncMessage('Sincronizando vendas e pendencias offline...')
 
-    const result = await syncQueuedOfflineRecords(async (sale) => {
-      const { error } = await supabase.from(sale.targetTable).insert([sale.payload])
-      return { error }
-    })
-
-    result.errors.forEach((entry) => {
-      logAppError({
-        source: 'SupportAiManager',
-        action: 'syncOfflineRecords',
-        error: entry.error,
-        details: { offlineId: entry.id, targetTable: entry.targetTable },
-      })
-    })
-
+    const result = await syncOfflineQueue('Botao de suporte tecnico')
     refreshQueues()
-    setSyncMessage(
-      `Offline: ${result.synced} sincronizado(s), ${result.failed} com erro, ${result.remaining} restante(s).`,
-    )
+    setSyncMessage(result.message)
   }
 
   const syncFiscalRequests = async () => {
