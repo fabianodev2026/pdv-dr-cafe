@@ -2097,7 +2097,7 @@ dependencies = [
 
 [[package]]
 name = "pdv-dr-cafe"
-version = "2.4.0"
+version = "2.5.0"
 dependencies = [
  "serde",
  "serde_json",

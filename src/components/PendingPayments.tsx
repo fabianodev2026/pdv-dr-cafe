@@ -15,7 +15,6 @@ interface PendingPayment {
   due_date: string
   status: string
 }
-
 interface PdvCustomer {
   id: number
   name: string
@@ -146,6 +145,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
   const [message, setMessage] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [expandedPendingGroups, setExpandedPendingGroups] = useState<Record<string, boolean>>({})
   const isAdmin = Boolean(currentUser && hasRole(currentUser, ADMIN_ROLES))
 
   const filteredPdvCustomers = useMemo(() => {
@@ -369,6 +369,17 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
   const clearSearch = () => {
     setSearchInput('')
     setSearchTerm('')
+  }
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const togglePendingGroup = (groupKey: string) => {
+    setExpandedPendingGroups((current) => ({
+      ...current,
+      [groupKey]: !current[groupKey],
+    }))
   }
 
   const markCustomerAsPaid = async (entries: PendingPayment[]) => {
@@ -949,20 +960,31 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
           {Object.entries(groupedPending).map(([key, entries]) => {
             const first = entries[0]
             const personTotal = entries.reduce((sum, entry) => sum + Number(entry.total_amount), 0)
+            const isExpanded = Boolean(expandedPendingGroups[key])
 
             return (
-              <section key={key} className="pending-person">
+              <section key={key} className={`pending-person ${isExpanded ? 'expanded' : ''}`}>
                 <div className="person-header">
                   <div>
                     <h3>{first.customer_name}</h3>
-                    <p>{first.phone} · {first.position || 'Sem cargo'}</p>
+                    <p>{first.phone} - {first.position || 'Sem cargo'}</p>
                   </div>
-                  <strong>Aberto: R$ {personTotal.toFixed(2)}</strong>
-                  <button type="button" onClick={() => markCustomerAsPaid(entries)}>
-                    Marcar tudo como pago
+                  <div className="person-summary">
+                    <span>Aberto</span>
+                    <strong>R$ {personTotal.toFixed(2)}</strong>
+                  </div>
+                  <button type="button" onClick={() => togglePendingGroup(key)}>
+                    {isExpanded ? 'Ocultar' : 'Consultar'}
                   </button>
                 </div>
-                <div className="pending-grid">
+                {isExpanded && (
+                  <div className="pending-person-details">
+                    <div className="pending-person-actions">
+                      <button type="button" onClick={() => markCustomerAsPaid(entries)}>
+                        Marcar tudo como pago
+                      </button>
+                    </div>
+                    <div className="pending-grid">
                   {entries.map((pending) => (
                     <article key={pending.id} className={`pending-card ${pending.status}`}>
                       <div className="card-header">
@@ -1001,12 +1023,17 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
                       )}
                     </article>
                   ))}
-                </div>
+                    </div>
+                  </div>
+                )}
               </section>
             )
           })}
         </div>
       </section>
+      <button type="button" className="pending-scroll-top" onClick={scrollToTop}>
+        Voltar ao topo
+      </button>
     </div>
   )
 }

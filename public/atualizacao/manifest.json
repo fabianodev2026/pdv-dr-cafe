@@ -1,7 +1,7 @@
 {
-  "version": "2.4.0",
-  "displayVersion": "2.4",
-  "releasedAt": "2026-07-08T16:07:00-03:00",
+  "version": "2.5.0",
+  "displayVersion": "2.5",
+  "releasedAt": "2026-07-08T16:27:00-03:00",
   "installerUrl": "https://pdv-dr-cafe.vercel.app/atualizacao/INSTALADOR-PDV-DR-CAFE.exe",
-  "notes": "Instalador em portugues e atualizacao automatica usando modo de update."
+  "notes": "Pagar depois com clientes em caixas menores, consulta por detalhes e botao voltar ao topo."
 }
