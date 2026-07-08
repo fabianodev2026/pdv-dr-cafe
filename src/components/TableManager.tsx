@@ -633,7 +633,7 @@ export default function TableManager({
     setActiveItem(updatedItem)
     setProductQuantities((current) => ({
       ...current,
-      [product.id]: '1',
+      [product.id]: '',
     }))
     persistServiceItem(updatedItem)
   }
@@ -1357,15 +1357,11 @@ export default function TableManager({
                         <label>
                           Qtd.
                           <input
-                            value={productQuantities[product.id] || '1'}
+                            value={productQuantities[product.id] ?? ''}
                             onChange={(event) =>
                               updateProductQuantity(product.id, event.target.value)
                             }
-                            onBlur={() => {
-                              if (!productQuantities[product.id]) {
-                                updateProductQuantity(product.id, '1')
-                              }
-                            }}
+                            onFocus={(event) => event.currentTarget.select()}
                             inputMode="numeric"
                             placeholder="1"
                           />
