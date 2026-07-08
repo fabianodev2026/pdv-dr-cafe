@@ -284,6 +284,44 @@
   padding: 16px;
 }
 
+.update-success-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  justify-self: center;
+  width: min(100%, 620px);
+  border: 1px solid #d8b58d;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fff7ed 0%, #f3dfc3 100%);
+  box-shadow: 0 14px 30px rgba(49, 20, 9, 0.14);
+  color: #35180c;
+  padding: 18px 20px;
+  text-align: left;
+}
+
+.update-success-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: #2f7d42;
+  color: #fffaf5;
+  font-size: 0.84rem;
+  font-weight: 950;
+}
+
+.update-success-card strong {
+  color: #2b160d;
+  display: block;
+  font-size: 1.35rem;
+}
+
+.update-success-card p {
+  margin-top: 5px;
+}
+
 .update-version-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -375,5 +413,11 @@
 
   .update-version-grid {
     grid-template-columns: 1fr;
+  }
+
+  .update-success-card {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
   }
 }

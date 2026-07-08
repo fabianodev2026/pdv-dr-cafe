@@ -77,8 +77,8 @@ interface BestSeller {
 }
 
 const parseMoney = (value?: string) => Number(String(value ?? '0').replace(',', '.') || 0)
-const CURRENT_APP_VERSION = '2.0.0'
-const CURRENT_APP_DISPLAY_VERSION = '2.0'
+const CURRENT_APP_VERSION = '2.1.0'
+const CURRENT_APP_DISPLAY_VERSION = '2.1'
 const LATEST_INSTALLER_URL =
   'https://pdv-dr-cafe.vercel.app/atualizacao/INSTALADOR-PDV-DR-CAFE.exe'
 const UPDATE_MANIFEST_URL = 'https://pdv-dr-cafe.vercel.app/atualizacao/manifest.json'
@@ -1314,6 +1314,18 @@ export default function SettingsManager() {
           </div>
 
           <div className="update-box">
+            {isCurrentPackageInstalled && (
+              <div className="update-success-card" role="status" aria-live="polite">
+                <span className="update-success-icon">OK</span>
+                <div>
+                  <strong>Atualizacao feita com sucesso.</strong>
+                  <p>
+                    O PDV esta na versao {CURRENT_APP_DISPLAY_VERSION} e nao ha
+                    pacote pendente para instalar.
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="update-version-grid">
               <div>
                 <span>Versao instalada</span>
