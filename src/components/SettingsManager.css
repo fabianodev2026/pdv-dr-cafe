@@ -312,6 +312,14 @@
   font-weight: 950;
 }
 
+.update-installing-card {
+  background: linear-gradient(135deg, #fffaf5 0%, #ead3b1 100%);
+}
+
+.update-installing-card .update-success-icon {
+  background: #7b4a27;
+}
+
 .update-success-card strong {
   color: #2b160d;
   display: block;

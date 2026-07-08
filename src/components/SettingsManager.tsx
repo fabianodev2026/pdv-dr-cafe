@@ -17,6 +17,7 @@ import {
   saveNfceIssuerConfig,
   type NfceIssuerConfig,
 } from '../lib/nfceService'
+import { invokeDesktopCommand, isDesktopApp } from '../lib/desktopNative'
 import DiagnosticsManager from './DiagnosticsManager'
 import QrCodePrintManager from './QrCodePrintManager'
 import SupportAiManager from './SupportAiManager'
@@ -77,8 +78,8 @@ interface BestSeller {
 }
 
 const parseMoney = (value?: string) => Number(String(value ?? '0').replace(',', '.') || 0)
-const CURRENT_APP_VERSION = '2.1.0'
-const CURRENT_APP_DISPLAY_VERSION = '2.1'
+const CURRENT_APP_VERSION = '2.2.0'
+const CURRENT_APP_DISPLAY_VERSION = '2.2'
 const LATEST_INSTALLER_URL =
   'https://pdv-dr-cafe.vercel.app/atualizacao/INSTALADOR-PDV-DR-CAFE.exe'
 const UPDATE_MANIFEST_URL = 'https://pdv-dr-cafe.vercel.app/atualizacao/manifest.json'
@@ -215,6 +216,7 @@ export default function SettingsManager() {
   const [updateCheckedAt, setUpdateCheckedAt] = useState('')
   const [lastUpdateStarted, setLastUpdateStarted] = useState('')
   const [updateLoading, setUpdateLoading] = useState(false)
+  const [updateInstalling, setUpdateInstalling] = useState(false)
   const [fiscalData, setFiscalData] = useState<FiscalProductData>(initialFiscalData)
   const [printer, setPrinter] = useState<PrinterSettings>({
     connectionType: 'usb',
@@ -544,7 +546,7 @@ export default function SettingsManager() {
     setMessage('Suporte liberado com sucesso.')
   }
 
-  const openSystemUpdater = () => {
+  const openSystemUpdater = async () => {
     if (!navigator.onLine) {
       setMessage('Conecte a internet para baixar a atualizacao do sistema.')
       return
@@ -552,17 +554,39 @@ export default function SettingsManager() {
 
     const nextVersion = updateManifest?.displayVersion || updateManifest?.version || 'mais nova'
     const startedAt = new Date().toISOString()
+    const installerUrl = updateManifest?.installerUrl || LATEST_INSTALLER_URL
     localStorage.setItem(LAST_UPDATE_STARTED_KEY, startedAt)
     setLastUpdateStarted(startedAt)
-    setMessage(
-      `Abrindo atualizacao ${nextVersion}. Depois de baixar, feche o PDV e execute o instalador.`,
-    )
+    setUpdateInstalling(true)
 
-    const installerUrl = updateManifest?.installerUrl || LATEST_INSTALLER_URL
+    if (isDesktopApp()) {
+      setMessage(`Atualizacao ${nextVersion} iniciada. O PDV vai reiniciar sozinho.`)
+      const result = await invokeDesktopCommand<string>('start_system_update', {
+        installerUrl,
+        version: updateManifest?.version || CURRENT_APP_VERSION,
+      })
+
+      if (result.available && !result.error) {
+        setMessage(result.result || 'Atualizacao iniciada. O PDV vai fechar e abrir sozinho.')
+        return
+      }
+
+      setUpdateInstalling(false)
+      setMessage(
+        `Nao foi possivel atualizar automaticamente. ${
+          result.available && result.error instanceof Error
+            ? result.error.message
+            : 'Vou abrir o instalador para baixar manualmente.'
+        }`,
+      )
+    }
+
+    setMessage(`Abrindo atualizacao ${nextVersion}. Baixe e execute o instalador.`)
     const opened = window.open(installerUrl, '_blank', 'noopener,noreferrer')
     if (!opened) {
       window.location.href = installerUrl
     }
+    setUpdateInstalling(false)
   }
 
   const schedule = getBackupSchedule()
@@ -1307,13 +1331,29 @@ export default function SettingsManager() {
               <p>Confira a versao instalada e baixe somente quando existir pacote novo.</p>
             </div>
             {hasUpdateAvailable && (
-              <button className="settings-save" onClick={openSystemUpdater}>
-                Atualizar sistema
+              <button
+                className="settings-save"
+                onClick={openSystemUpdater}
+                disabled={updateInstalling}
+              >
+                {updateInstalling ? 'Atualizando...' : 'Atualizar sistema'}
               </button>
             )}
           </div>
 
           <div className="update-box">
+            {updateInstalling && (
+              <div className="update-success-card update-installing-card" role="status" aria-live="polite">
+                <span className="update-success-icon">...</span>
+                <div>
+                  <strong>Atualizacao em andamento.</strong>
+                  <p>
+                    Aguarde. O PDV vai fechar, instalar a nova versao e abrir
+                    novamente sozinho.
+                  </p>
+                </div>
+              </div>
+            )}
             {isCurrentPackageInstalled && (
               <div className="update-success-card" role="status" aria-live="polite">
                 <span className="update-success-icon">OK</span>
