@@ -77,8 +77,43 @@ interface BestSeller {
 }
 
 const parseMoney = (value?: string) => Number(String(value ?? '0').replace(',', '.') || 0)
+const CURRENT_APP_VERSION = '2.0.0'
+const CURRENT_APP_DISPLAY_VERSION = '2.0'
 const LATEST_INSTALLER_URL =
   'https://pdv-dr-cafe.vercel.app/atualizacao/INSTALADOR-PDV-DR-CAFE.exe'
+const UPDATE_MANIFEST_URL = 'https://pdv-dr-cafe.vercel.app/atualizacao/manifest.json'
+const LAST_UPDATE_STARTED_KEY = 'dr-cafe-last-update-started'
+
+interface UpdateManifest {
+  version: string
+  displayVersion?: string
+  releasedAt?: string
+  installerUrl?: string
+  notes?: string
+}
+
+const versionToNumber = (version: string) =>
+  version
+    .split('.')
+    .map((part) => Number.parseInt(part, 10) || 0)
+    .reduce((total, part, index) => total + part * Math.pow(1000, 2 - index), 0)
+
+const isNewerVersion = (availableVersion?: string) =>
+  availableVersion
+    ? versionToNumber(availableVersion) > versionToNumber(CURRENT_APP_VERSION)
+    : false
+
+const formatUpdateDate = (date?: string) => {
+  if (!date) return 'Nao informada'
+
+  return new Date(date).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 const getMonthInputValue = (date = new Date()) => {
   const year = date.getFullYear()
@@ -176,6 +211,10 @@ export default function SettingsManager() {
   const [message, setMessage] = useState('')
   const [supportUnlocked, setSupportUnlocked] = useState(false)
   const [supportPassword, setSupportPassword] = useState('')
+  const [updateManifest, setUpdateManifest] = useState<UpdateManifest | null>(null)
+  const [updateCheckedAt, setUpdateCheckedAt] = useState('')
+  const [lastUpdateStarted, setLastUpdateStarted] = useState('')
+  const [updateLoading, setUpdateLoading] = useState(false)
   const [fiscalData, setFiscalData] = useState<FiscalProductData>(initialFiscalData)
   const [printer, setPrinter] = useState<PrinterSettings>({
     connectionType: 'usb',
@@ -211,6 +250,34 @@ export default function SettingsManager() {
     }
 
     fetchData()
+  }, [])
+
+  useEffect(() => {
+    setLastUpdateStarted(localStorage.getItem(LAST_UPDATE_STARTED_KEY) || '')
+
+    async function fetchUpdateManifest() {
+      setUpdateLoading(true)
+      try {
+        const response = await fetch(`${UPDATE_MANIFEST_URL}?t=${Date.now()}`, {
+          cache: 'no-store',
+        })
+
+        if (!response.ok) {
+          throw new Error('Nao foi possivel consultar o pacote online.')
+        }
+
+        const data = (await response.json()) as UpdateManifest
+        setUpdateManifest(data)
+        setUpdateCheckedAt(new Date().toISOString())
+      } catch (error) {
+        setUpdateManifest(null)
+        setUpdateCheckedAt('')
+      } finally {
+        setUpdateLoading(false)
+      }
+    }
+
+    fetchUpdateManifest()
   }, [])
 
   const balance = useMemo(() => {
@@ -483,15 +550,29 @@ export default function SettingsManager() {
       return
     }
 
-    setMessage('Abrindo atualizacao do sistema. Depois de baixar, execute o instalador.')
-    const opened = window.open(LATEST_INSTALLER_URL, '_blank', 'noopener,noreferrer')
+    const nextVersion = updateManifest?.displayVersion || updateManifest?.version || 'mais nova'
+    const startedAt = new Date().toISOString()
+    localStorage.setItem(LAST_UPDATE_STARTED_KEY, startedAt)
+    setLastUpdateStarted(startedAt)
+    setMessage(
+      `Abrindo atualizacao ${nextVersion}. Depois de baixar, feche o PDV e execute o instalador.`,
+    )
+
+    const installerUrl = updateManifest?.installerUrl || LATEST_INSTALLER_URL
+    const opened = window.open(installerUrl, '_blank', 'noopener,noreferrer')
     if (!opened) {
-      window.location.href = LATEST_INSTALLER_URL
+      window.location.href = installerUrl
     }
   }
 
   const schedule = getBackupSchedule()
   const lastSnapshot = getLastBackupSnapshot()
+  const availableVersion = updateManifest?.version || CURRENT_APP_VERSION
+  const availableDisplayVersion =
+    updateManifest?.displayVersion || updateManifest?.version || CURRENT_APP_DISPLAY_VERSION
+  const hasUpdateAvailable = isNewerVersion(updateManifest?.version)
+  const isCurrentPackageInstalled =
+    !updateLoading && updateManifest?.version === CURRENT_APP_VERSION
 
   return (
     <div className="settings-manager">
@@ -1223,18 +1304,71 @@ export default function SettingsManager() {
           <div className="settings-panel-heading">
             <div>
               <h2>Atualizacao do sistema</h2>
-              <p>Baixe a versao mais nova do PDV instalado no computador.</p>
+              <p>Confira a versao instalada e baixe somente quando existir pacote novo.</p>
             </div>
-            <button className="settings-save" onClick={openSystemUpdater}>
-              Atualizar sistema
-            </button>
+            {hasUpdateAvailable && (
+              <button className="settings-save" onClick={openSystemUpdater}>
+                Atualizar sistema
+              </button>
+            )}
           </div>
 
           <div className="update-box">
-            <strong>Como funciona</strong>
+            <div className="update-version-grid">
+              <div>
+                <span>Versao instalada</span>
+                <strong>{CURRENT_APP_DISPLAY_VERSION}</strong>
+              </div>
+              <div>
+                <span>Versao disponivel</span>
+                <strong>{availableDisplayVersion}</strong>
+              </div>
+              <div>
+                <span>Data da atualizacao</span>
+                <strong>{formatUpdateDate(updateManifest?.releasedAt)}</strong>
+              </div>
+              <div>
+                <span>Status</span>
+                <strong>
+                  {updateLoading
+                    ? 'Verificando...'
+                    : hasUpdateAvailable
+                      ? 'Atualizacao disponivel'
+                      : isCurrentPackageInstalled
+                        ? 'Sistema atualizado'
+                        : 'Nao foi possivel conferir online'}
+                </strong>
+              </div>
+            </div>
+            {isCurrentPackageInstalled ? (
+              <p>
+                Este computador ja esta na versao {CURRENT_APP_DISPLAY_VERSION}. O pacote
+                instalado nao aparece como pendente de novo.
+              </p>
+            ) : hasUpdateAvailable ? (
+              <p>
+                Existe um pacote novo ({availableVersion}). Clique em Atualizar sistema,
+                feche o PDV e execute o instalador baixado.
+              </p>
+            ) : (
+              <p>
+                Sem internet ou sem resposta do servidor agora. Quando conectar, o PDV
+                confere automaticamente a versao publicada.
+              </p>
+            )}
+            {updateManifest?.notes && <small>Pacote: {updateManifest.notes}</small>}
+            {lastUpdateStarted && (
+              <small>
+                Ultima atualizacao iniciada neste computador:{' '}
+                {formatUpdateDate(lastUpdateStarted)}
+              </small>
+            )}
+            {updateCheckedAt && (
+              <small>Ultima conferencia online: {formatUpdateDate(updateCheckedAt)}</small>
+            )}
             <p>
-              Clique em Atualizar sistema, baixe o instalador e execute por cima
-              da versao atual. Nao precisa apagar o PDV antigo.
+              Apos instalar a versao nova, abra o PDV novamente. Se a versao instalada
+              for igual a disponivel, o botao de atualizar fica oculto.
             </p>
             <small>
               Antes de atualizar, feche o PDV no computador do cafe e confira se

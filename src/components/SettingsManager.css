@@ -276,12 +276,33 @@
 
 .update-box {
   display: grid;
-  gap: 8px;
+  gap: 12px;
   border-left: 4px solid #2f7d42;
   border-radius: 8px;
   background: #fffaf5;
   color: #5a2f17;
   padding: 16px;
+}
+
+.update-version-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.update-version-grid div {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #e2c6a7;
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+}
+
+.update-version-grid span {
+  color: #7b4a27;
+  font-size: 0.84rem;
+  font-weight: 900;
 }
 
 .update-box strong {
@@ -350,5 +371,9 @@
   .settings-panel-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .update-version-grid {
+    grid-template-columns: 1fr;
   }
 }
