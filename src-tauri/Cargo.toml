@@ -1,6 +1,6 @@
 [package]
 name = "pdv-dr-cafe"
-version = "2.3.0"
+version = "2.4.0"
 description = "PDV Dr. Cafe desktop"
 authors = ["Dr. Cafe"]
 edition = "2021"

@@ -59,7 +59,7 @@ try {{
     Wait-Process -Id $AppPid -ErrorAction SilentlyContinue
   }} catch {{}}
   Invoke-WebRequest -UseBasicParsing -Uri $InstallerUrl -OutFile $InstallerPath
-  Start-Process -FilePath $InstallerPath -ArgumentList '/S' -Wait
+  Start-Process -FilePath $InstallerPath -ArgumentList '/S /UPDATE' -Wait
   Start-Sleep -Seconds 2
   Start-Process -FilePath $AppPath
 }} catch {{

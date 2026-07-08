@@ -78,8 +78,8 @@ interface BestSeller {
 }
 
 const parseMoney = (value?: string) => Number(String(value ?? '0').replace(',', '.') || 0)
-const CURRENT_APP_VERSION = '2.3.0'
-const CURRENT_APP_DISPLAY_VERSION = '2.3'
+const CURRENT_APP_VERSION = '2.4.0'
+const CURRENT_APP_DISPLAY_VERSION = '2.4'
 const LATEST_INSTALLER_URL =
   'https://pdv-dr-cafe.vercel.app/atualizacao/INSTALADOR-PDV-DR-CAFE.exe'
 const UPDATE_MANIFEST_URL = 'https://pdv-dr-cafe.vercel.app/atualizacao/manifest.json'
