@@ -247,7 +247,7 @@ export default function TableManager({
   const [selectedFloor, setSelectedFloor] = useState('todos')
   const [roomSearch, setRoomSearch] = useState('')
   const [productSearch, setProductSearch] = useState('')
-  const [productQuantity, setProductQuantity] = useState('1')
+  const [productQuantities, setProductQuantities] = useState<Record<number, string>>({})
   const [productTab, setProductTab] = useState<ProductTab>('todos')
   const [orderMessage, setOrderMessage] = useState('')
 
@@ -601,9 +601,20 @@ export default function TableManager({
     setActiveItem(null)
   }
 
+  const getProductQuantity = (productId: number) =>
+    Math.max(1, Number.parseInt(productQuantities[productId] || '1', 10) || 1)
+
+  const updateProductQuantity = (productId: number, value: string) => {
+    const numericValue = value.replace(/\D/g, '')
+    setProductQuantities((current) => ({
+      ...current,
+      [productId]: numericValue,
+    }))
+  }
+
   const addProductToTable = (product: Product) => {
     if (!activeItem) return
-    const quantity = Math.max(1, Number.parseInt(productQuantity || '1', 10) || 1)
+    const quantity = getProductQuantity(product.id)
 
     const newItem: OrderItem = {
       id: Date.now(),
@@ -620,7 +631,10 @@ export default function TableManager({
 
     updatedItem.total = toMoney(updatedItem.items.reduce((sum, i) => sum + i.total, 0))
     setActiveItem(updatedItem)
-    setProductQuantity('1')
+    setProductQuantities((current) => ({
+      ...current,
+      [product.id]: '1',
+    }))
     persistServiceItem(updatedItem)
   }
 
@@ -1277,29 +1291,11 @@ export default function TableManager({
             <div className="products-showcase glass-panel">
               <div className="products-showcase-header">
                 <h3>Produtos</h3>
-                <div className="product-add-controls">
-                  <label>
-                    Qtd.
-                    <input
-                      value={productQuantity}
-                      onChange={(event) =>
-                        setProductQuantity(event.target.value.replace(/\D/g, ''))
-                      }
-                      onBlur={() => {
-                        if (!productQuantity || Number.parseInt(productQuantity, 10) < 1) {
-                          setProductQuantity('1')
-                        }
-                      }}
-                      inputMode="numeric"
-                      placeholder="1"
-                    />
-                  </label>
-                  <input
-                    value={productSearch}
-                    onChange={(event) => setProductSearch(event.target.value)}
-                    placeholder="Pesquisar produto"
-                  />
-                </div>
+                <input
+                  value={productSearch}
+                  onChange={(event) => setProductSearch(event.target.value)}
+                  placeholder="Pesquisar produto"
+                />
               </div>
               <div className="product-tabs" aria-label="Filtro de produtos">
                 <button
@@ -1354,6 +1350,38 @@ export default function TableManager({
                       <span className="p-price">
                         R$ {product.unit_price.toFixed(2)}
                       </span>
+                      <div
+                        className="product-card-quantity"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <label>
+                          Qtd.
+                          <input
+                            value={productQuantities[product.id] || '1'}
+                            onChange={(event) =>
+                              updateProductQuantity(product.id, event.target.value)
+                            }
+                            onBlur={() => {
+                              if (!productQuantities[product.id]) {
+                                updateProductQuantity(product.id, '1')
+                              }
+                            }}
+                            inputMode="numeric"
+                            placeholder="1"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          aria-label={`Adicionar ${product.name}`}
+                          title="Adicionar"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            addProductToTable(product)
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
                       {Number(product.low_stock_threshold || 0) > 0 &&
                         Number(product.stock_quantity || 0) <=
                           Number(product.low_stock_threshold || 0) && (
