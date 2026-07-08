@@ -25,23 +25,15 @@ fn powershell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
 }
 
-fn sanitize_version(value: &str) -> String {
-    value
-        .chars()
-        .filter(|character| character.is_ascii_alphanumeric() || *character == '.' || *character == '-')
-        .collect()
-}
-
 #[tauri::command]
 fn start_system_update(
     app_handle: tauri::AppHandle,
     installer_url: String,
-    version: String,
+    _version: String,
 ) -> Result<String, String> {
-    let safe_version = sanitize_version(&version);
     let temp_dir = std::env::temp_dir();
-    let installer_path = temp_dir.join(format!("PDV-Dr-Cafe-atualizacao-{safe_version}.exe"));
-    let script_path = temp_dir.join(format!("PDV-Dr-Cafe-atualizacao-{safe_version}.ps1"));
+    let installer_path = temp_dir.join("INSTALADOR-PDV-DR-CAFE-ATUALIZACAO.exe");
+    let script_path = temp_dir.join("ATUALIZAR-PDV-DR-CAFE.ps1");
     let app_path = std::env::current_exe()
         .map_err(|error| format!("Nao foi possivel localizar o executavel atual: {error}"))?;
     let app_pid = std::process::id();
@@ -58,6 +50,9 @@ try {{
   try {{
     Wait-Process -Id $AppPid -ErrorAction SilentlyContinue
   }} catch {{}}
+  $TempDir = Split-Path -Parent $InstallerPath
+  Get-ChildItem -LiteralPath $TempDir -Filter 'PDV-Dr-Cafe-atualizacao-*' -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+  Get-ChildItem -LiteralPath $TempDir -Filter 'INSTALADOR-PDV-DR-CAFE-ATUALIZACAO*.exe' -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
   Invoke-WebRequest -UseBasicParsing -Uri $InstallerUrl -OutFile $InstallerPath
   Start-Process -FilePath $InstallerPath -ArgumentList '/S /UPDATE' -Wait
   Start-Sleep -Seconds 2

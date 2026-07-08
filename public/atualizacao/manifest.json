@@ -1,7 +1,7 @@
 {
-  "version": "2.5.0",
-  "displayVersion": "2.5",
-  "releasedAt": "2026-07-08T16:27:00-03:00",
+  "version": "2.6.0",
+  "displayVersion": "2.6",
+  "releasedAt": "2026-07-08T16:36:00-03:00",
   "installerUrl": "https://pdv-dr-cafe.vercel.app/atualizacao/INSTALADOR-PDV-DR-CAFE.exe",
-  "notes": "Pagar depois com clientes em caixas menores, consulta por detalhes e botao voltar ao topo."
+  "notes": "Atualizacao usando pacote unico definitivo, sem acumular arquivos antigos no pacote local."
 }
