@@ -274,6 +274,31 @@
   margin: 6px 0;
 }
 
+.update-box {
+  display: grid;
+  gap: 8px;
+  border-left: 4px solid #2f7d42;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #5a2f17;
+  padding: 16px;
+}
+
+.update-box strong {
+  color: #2b160d;
+  font-size: 1.1rem;
+}
+
+.update-box p,
+.update-box small {
+  margin: 0;
+  font-weight: 800;
+}
+
+.update-box small {
+  color: #7b4a27;
+}
+
 .settings-support-panel .diagnostics-page,
 .settings-support-panel .support-ai-page {
   min-height: auto;

@@ -30,6 +30,7 @@ type SettingsTab =
   | 'mais-vendidos'
   | 'qrcodes'
   | 'backup'
+  | 'atualizacao'
   | 'suporte'
 type SalesPeriod = 'dia' | 'mes' | 'ano' | 'todos'
 
@@ -76,6 +77,8 @@ interface BestSeller {
 }
 
 const parseMoney = (value?: string) => Number(String(value ?? '0').replace(',', '.') || 0)
+const LATEST_INSTALLER_URL =
+  'https://pdv-dr-cafe.vercel.app/atualizacao/INSTALADOR-PDV-DR-CAFE.exe'
 
 const getMonthInputValue = (date = new Date()) => {
   const year = date.getFullYear()
@@ -474,6 +477,19 @@ export default function SettingsManager() {
     setMessage('Suporte liberado com sucesso.')
   }
 
+  const openSystemUpdater = () => {
+    if (!navigator.onLine) {
+      setMessage('Conecte a internet para baixar a atualizacao do sistema.')
+      return
+    }
+
+    setMessage('Abrindo atualizacao do sistema. Depois de baixar, execute o instalador.')
+    const opened = window.open(LATEST_INSTALLER_URL, '_blank', 'noopener,noreferrer')
+    if (!opened) {
+      window.location.href = LATEST_INSTALLER_URL
+    }
+  }
+
   const schedule = getBackupSchedule()
   const lastSnapshot = getLastBackupSnapshot()
 
@@ -529,6 +545,12 @@ export default function SettingsManager() {
           onClick={() => setActiveTab('backup')}
         >
           Backup automatico
+        </button>
+        <button
+          className={activeTab === 'atualizacao' ? 'active' : ''}
+          onClick={() => setActiveTab('atualizacao')}
+        >
+          Atualizacao
         </button>
         <button
           className={activeTab === 'suporte' ? 'active' : ''}
@@ -1193,6 +1215,31 @@ export default function SettingsManager() {
                 {new Date(lastSnapshot.createdAt).toLocaleString('pt-BR')}
               </p>
             )}
+          </div>
+        </section>
+      )}
+      {activeTab === 'atualizacao' && (
+        <section className="settings-panel update-panel">
+          <div className="settings-panel-heading">
+            <div>
+              <h2>Atualizacao do sistema</h2>
+              <p>Baixe a versao mais nova do PDV instalado no computador.</p>
+            </div>
+            <button className="settings-save" onClick={openSystemUpdater}>
+              Atualizar sistema
+            </button>
+          </div>
+
+          <div className="update-box">
+            <strong>Como funciona</strong>
+            <p>
+              Clique em Atualizar sistema, baixe o instalador e execute por cima
+              da versao atual. Nao precisa apagar o PDV antigo.
+            </p>
+            <small>
+              Antes de atualizar, feche o PDV no computador do cafe e confira se
+              nao ficou venda offline pendente.
+            </small>
           </div>
         </section>
       )}
