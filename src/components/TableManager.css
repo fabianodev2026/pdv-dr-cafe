@@ -289,6 +289,25 @@
   color: #5d4037;
 }
 
+.product-add-controls {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+
+.product-add-controls label {
+  display: grid;
+  gap: 3px;
+  color: #5d4037;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.product-add-controls label input {
+  text-align: center;
+}
+
 .products-showcase-header input {
   width: 100%;
   min-width: 0;
@@ -1095,6 +1114,10 @@
 
   .products-showcase-header {
     grid-template-columns: 1fr;
+  }
+
+  .product-add-controls {
+    grid-template-columns: 72px minmax(0, 1fr);
   }
 
   .product-tabs {

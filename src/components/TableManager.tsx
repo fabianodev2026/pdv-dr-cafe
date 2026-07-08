@@ -247,6 +247,7 @@ export default function TableManager({
   const [selectedFloor, setSelectedFloor] = useState('todos')
   const [roomSearch, setRoomSearch] = useState('')
   const [productSearch, setProductSearch] = useState('')
+  const [productQuantity, setProductQuantity] = useState('1')
   const [productTab, setProductTab] = useState<ProductTab>('todos')
   const [orderMessage, setOrderMessage] = useState('')
 
@@ -602,13 +603,14 @@ export default function TableManager({
 
   const addProductToTable = (product: Product) => {
     if (!activeItem) return
+    const quantity = Math.max(1, Number.parseInt(productQuantity || '1', 10) || 1)
 
     const newItem: OrderItem = {
       id: Date.now(),
       name: product.name,
       price: product.unit_price,
-      quantity: 1,
-      total: product.unit_price,
+      quantity,
+      total: toMoney(product.unit_price * quantity),
     }
 
     const updatedItem = {
@@ -618,6 +620,7 @@ export default function TableManager({
 
     updatedItem.total = toMoney(updatedItem.items.reduce((sum, i) => sum + i.total, 0))
     setActiveItem(updatedItem)
+    setProductQuantity('1')
     persistServiceItem(updatedItem)
   }
 
@@ -1274,11 +1277,29 @@ export default function TableManager({
             <div className="products-showcase glass-panel">
               <div className="products-showcase-header">
                 <h3>Produtos</h3>
-                <input
-                  value={productSearch}
-                  onChange={(event) => setProductSearch(event.target.value)}
-                  placeholder="Pesquisar produto"
-                />
+                <div className="product-add-controls">
+                  <label>
+                    Qtd.
+                    <input
+                      value={productQuantity}
+                      onChange={(event) =>
+                        setProductQuantity(event.target.value.replace(/\D/g, ''))
+                      }
+                      onBlur={() => {
+                        if (!productQuantity || Number.parseInt(productQuantity, 10) < 1) {
+                          setProductQuantity('1')
+                        }
+                      }}
+                      inputMode="numeric"
+                      placeholder="1"
+                    />
+                  </label>
+                  <input
+                    value={productSearch}
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="Pesquisar produto"
+                  />
+                </div>
               </div>
               <div className="product-tabs" aria-label="Filtro de produtos">
                 <button
