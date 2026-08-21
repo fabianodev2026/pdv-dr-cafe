@@ -1,6 +1,7 @@
--- Execute somente o SQL abaixo no Supabase SQL Editor.
--- Nao cole o caminho do arquivo no editor.
--- Ele permite login do PDV com bcrypt, sem liberar leitura direta da tabela pdv_users.
+-- Dr. Cafe - Correcao do login do PDV
+-- Execute TODO este SQL no Supabase SQL Editor.
+-- Esta versao corrige a busca das funcoes crypt/gen_salt do pgcrypto
+-- quando a extensao esta instalada no schema "extensions".
 
 create extension if not exists pgcrypto;
 
@@ -27,6 +28,7 @@ drop function if exists public.login_pdv_user(text, text);
 drop function if exists public.list_pdv_users();
 drop function if exists public.create_pdv_user(text, text, text);
 
+-- Login: crypt() pode estar no schema extensions no Supabase.
 create or replace function public.login_pdv_user(
   p_username text,
   p_password text
@@ -37,7 +39,7 @@ returns table (
 )
 language sql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
   select u.username, u.role
   from public.pdv_users as u
@@ -70,6 +72,8 @@ revoke all on function public.list_pdv_users() from public;
 grant execute on function public.list_pdv_users() to anon;
 grant execute on function public.list_pdv_users() to authenticated;
 
+-- Criacao/reset de usuario: gen_salt() e crypt() ficam disponiveis
+-- mesmo quando o pgcrypto esta instalado no schema extensions.
 create or replace function public.create_pdv_user(
   p_username text,
   p_password text,
@@ -81,7 +85,7 @@ returns table (
 )
 language sql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
   insert into public.pdv_users (username, password_hash, role)
   values (trim(p_username), crypt(p_password, gen_salt('bf', 10)), p_role)
@@ -96,13 +100,12 @@ grant execute on function public.create_pdv_user(text, text, text) to anon;
 grant execute on function public.create_pdv_user(text, text, text) to authenticated;
 
 -- Cria ou reseta o primeiro admin.
--- Troque a senha abaixo antes de executar, se quiser.
 insert into public.pdv_users (username, password_hash, role)
 values ('admin', crypt('admin123', gen_salt('bf', 10)), 'admin')
 on conflict (username) do update
 set password_hash = excluded.password_hash,
     role = excluded.role;
 
--- Teste esperado: deve retornar uma linha com username = admin e role = admin.
+-- Teste esperado: uma linha com admin / admin.
 select * from public.login_pdv_user('admin', 'admin123');
 select * from public.list_pdv_users();
