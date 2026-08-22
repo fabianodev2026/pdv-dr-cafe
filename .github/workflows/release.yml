@@ -44,6 +44,6 @@ jobs:
             Esta versao inclui correcoes de estabilidade e melhorias no sistema de atualizacao.
           releaseDraft: false
           prerelease: false
-          includeUpdaterJson: true
+          uploadUpdaterJson: true
           uploadUpdaterSignatures: true
           generateReleaseNotes: true
