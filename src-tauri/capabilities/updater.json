@@ -5,6 +5,6 @@
   "windows": ["main"],
   "permissions": [
     "updater:default",
-    "process:allow-relaunch"
+    "process:allow-restart"
   ]
 }
