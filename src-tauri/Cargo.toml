@@ -1,6 +1,6 @@
 [package]
 name = "pdv-dr-cafe"
-version = "2.6.0"
+version = "2.6.1"
 description = "PDV Dr. Cafe desktop"
 authors = ["Dr. Cafe"]
 edition = "2021"
@@ -16,3 +16,4 @@ tauri-build = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri = { version = "2", features = [] }
+tauri-plugin-updater = "2"
