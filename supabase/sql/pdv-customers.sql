@@ -53,7 +53,13 @@ for update
 using (true)
 with check (true);
 
-grant select, insert, update on public.pdv_customers to anon, authenticated;
+drop policy if exists "pdv customers app delete" on public.pdv_customers;
+create policy "pdv customers app delete"
+on public.pdv_customers
+for delete
+using (true);
+
+grant select, insert, update, delete on public.pdv_customers to anon, authenticated;
 grant usage, select on sequence public.pdv_customers_id_seq to anon, authenticated;
 
 notify pgrst, 'reload schema';

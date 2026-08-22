@@ -156,6 +156,11 @@
   font-size: 0.82rem;
 }
 
+.pdv-customer-actions .btn-delete-pdv-customer {
+  background: #9c2f45;
+  color: #fffaf5;
+}
+
 .pending-groups {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

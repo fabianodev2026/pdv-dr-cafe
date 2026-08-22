@@ -326,6 +326,28 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     fetchPdvCustomers()
   }
 
+  const deletePdvCustomer = async (customer: PdvCustomer) => {
+    if (!isAdmin) return
+
+    const confirmed = window.confirm(`Excluir o cadastro de ${customer.name}? Esta acao nao pode ser desfeita.`)
+    if (!confirmed) return
+
+    const { error } = await supabase.from('pdv_customers').delete().eq('id', customer.id)
+
+    if (error) {
+      setMessage(`Nao foi possivel excluir cliente PDV: ${error.message}`)
+      return
+    }
+
+    if (editingPdvCustomerId === customer.id) {
+      setEditingPdvCustomerId(null)
+      setNewPdvCustomer(initialPdvCustomer)
+    }
+
+    setMessage(`Cliente PDV ${customer.name} excluido.`)
+    fetchPdvCustomers()
+  }
+
   const handleAddPending = async () => {
     if (!newPending.customer_name.trim() || !newPending.phone.trim() || !newPending.due_date) {
       setMessage('Informe nome, telefone e data de pagamento.')
@@ -815,6 +837,15 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
                   {isAdmin && (
                     <button type="button" onClick={() => updatePdvCustomerStatus(customer)}>
                       {customer.status === 'ativo' ? 'Bloquear' : 'Ativar'}
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      className="btn-delete-pdv-customer"
+                      onClick={() => deletePdvCustomer(customer)}
+                    >
+                      Excluir
                     </button>
                   )}
                 </div>
