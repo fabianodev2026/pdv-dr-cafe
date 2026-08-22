@@ -4,6 +4,7 @@
   "description": "Permissoes do atualizador oficial do Dr. Cafe",
   "windows": ["main"],
   "permissions": [
-    "updater:default"
+    "updater:default",
+    "process:allow-relaunch"
   ]
 }
