@@ -39,15 +39,13 @@ export default function SupportAiManager() {
 
   const offlineByType = useMemo(
     () =>
-      offlineSales.reduce(
-        (summary, sale) => ({
-          ...summary,
-          [sale.targetTable]: (summary[sale.targetTable] ?? 0) + 1,
-        }),
-        { sales: 0, pending_payments: 0 },
-      ),
+      offlineSales.reduce<Record<string, number>>((summary, sale) => {
+        summary[sale.targetTable] = (summary[sale.targetTable] ?? 0) + 1
+        return summary
+      }, {}),
     [offlineSales],
   )
+  const offlineOthersCount = offlineSales.length - (offlineByType.sales ?? 0) - (offlineByType.pending_payments ?? 0)
 
   const refreshQueues = () => {
     setLogs(readAppLogs())
@@ -163,7 +161,8 @@ export default function SupportAiManager() {
           <span>Vendas offline</span>
           <strong>{offlineSales.length}</strong>
           <small>
-            vendas {offlineByType.sales} / pendencias {offlineByType.pending_payments}
+            vendas {offlineByType.sales ?? 0} / pendencias {offlineByType.pending_payments ?? 0}
+            {offlineOthersCount > 0 ? ` / outros ${offlineOthersCount}` : ''}
           </small>
         </article>
         <article>

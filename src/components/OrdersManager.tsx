@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { ADMIN_ROLES, hasRole, type CurrentUser } from '../lib/rolePermissions'
+import { queueOfflineUpdate } from '../lib/offlineQueue'
 import './OrdersManager.css'
 
 type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'pago' | 'entregue' | 'cancelado'
@@ -356,21 +357,34 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
 
   const updateStatus = async (order: OrderTicket, status: OrderStatus) => {
     const targetIds = order.ids.length > 0 ? order.ids : [order.id]
-    const { error } = await supabase
-      .from(order.tableName)
-      .update({
-        status,
-        customer_message: statusMessages[status],
-      })
-      .in('id', targetIds)
-
-    if (error) {
-      console.error('Erro ao atualizar pedido:', error)
-      setMessage('Nao foi possivel atualizar o status.')
-      return
+    const updatePayload = {
+      status,
+      customer_message: statusMessages[status],
     }
 
-    fetchOrders()
+    try {
+      const { error } = await supabase
+        .from(order.tableName)
+        .update(updatePayload)
+        .in('id', targetIds)
+
+      if (error) throw error
+
+      fetchOrders()
+    } catch (err) {
+      queueOfflineUpdate(
+        order.tableName,
+        targetIds,
+        updatePayload,
+        (err as Error).message || 'Falha de conexao ou Supabase indisponivel.',
+      )
+      setOrders((current) =>
+        current.map((item) =>
+          item.id === order.id ? { ...item, status, customer_message: statusMessages[status] } : item,
+        ),
+      )
+      setMessage('Sem conexao: status salvo neste computador e sera sincronizado quando a internet voltar.')
+    }
   }
 
   const cancelOrder = async (order: OrderTicket) => {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { ADMIN_ROLES, hasRole, type CurrentUser } from '../lib/rolePermissions'
+import { queueOfflineDelete, queueOfflineRecord, queueOfflineUpdate } from '../lib/offlineQueue'
 import './PendingPayments.css'
 
 interface PendingPayment {
@@ -268,22 +269,36 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
       status: 'ativo',
     }
 
+    const updatePayload = {
+      name: payload.name,
+      phone: payload.phone,
+      position: payload.position,
+      notes: payload.notes,
+    }
+
     const { error } = editingPdvCustomerId
-      ? await supabase
-          .from('pdv_customers')
-          .update({
-            name: payload.name,
-            phone: payload.phone,
-            position: payload.position,
-            notes: payload.notes,
-          })
-          .eq('id', editingPdvCustomerId)
-      : await supabase
-          .from('pdv_customers')
-          .upsert([payload], { onConflict: 'phone' })
+      ? await supabase.from('pdv_customers').update(updatePayload).eq('id', editingPdvCustomerId)
+      : await supabase.from('pdv_customers').upsert([payload], { onConflict: 'phone' })
 
     if (error) {
-      setMessage(`Nao foi possivel salvar cliente PDV: ${error.message}`)
+      const reason = error.message || 'Falha de conexao ou Supabase indisponivel.'
+
+      if (editingPdvCustomerId) {
+        queueOfflineUpdate('pdv_customers', [editingPdvCustomerId], updatePayload, reason)
+        setPdvCustomers((current) =>
+          current.map((customer) =>
+            customer.id === editingPdvCustomerId ? { ...customer, ...updatePayload } : customer,
+          ),
+        )
+      } else {
+        queueOfflineRecord('pdv_customers', payload, reason)
+      }
+
+      setNewPdvCustomer(initialPdvCustomer)
+      setEditingPdvCustomerId(null)
+      setMessage(
+        `Sem conexao: cliente PDV ${name} salvo neste computador e sera sincronizado quando a internet voltar.`,
+      )
       return
     }
 
@@ -318,7 +333,18 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
       .eq('id', customer.id)
 
     if (error) {
-      setMessage(`Nao foi possivel atualizar cliente PDV: ${error.message}`)
+      queueOfflineUpdate(
+        'pdv_customers',
+        [customer.id],
+        { status: nextStatus },
+        error.message || 'Falha de conexao ou Supabase indisponivel.',
+      )
+      setPdvCustomers((current) =>
+        current.map((item) => (item.id === customer.id ? { ...item, status: nextStatus } : item)),
+      )
+      setMessage(
+        `Sem conexao: ${customer.name} ${nextStatus === 'ativo' ? 'ativado' : 'bloqueado'} neste computador, sera sincronizado quando a internet voltar.`,
+      )
       return
     }
 
@@ -335,7 +361,21 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     const { error } = await supabase.from('pdv_customers').delete().eq('id', customer.id)
 
     if (error) {
-      setMessage(`Nao foi possivel excluir cliente PDV: ${error.message}`)
+      queueOfflineDelete(
+        'pdv_customers',
+        [customer.id],
+        error.message || 'Falha de conexao ou Supabase indisponivel.',
+      )
+      setPdvCustomers((current) => current.filter((item) => item.id !== customer.id))
+
+      if (editingPdvCustomerId === customer.id) {
+        setEditingPdvCustomerId(null)
+        setNewPdvCustomer(initialPdvCustomer)
+      }
+
+      setMessage(
+        `Sem conexao: exclusao de ${customer.name} salva neste computador e sera sincronizada quando a internet voltar.`,
+      )
       return
     }
 

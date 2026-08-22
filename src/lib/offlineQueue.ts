@@ -1,13 +1,16 @@
 const OFFLINE_SALES_KEY = 'dr-cafe-offline-sales'
 const OFFLINE_RETENTION_DAYS = 7
 
-export type OfflineTargetTable = 'sales' | 'pending_payments'
+export type OfflineTargetTable = 'sales' | 'pending_payments' | 'products' | 'pdv_customers' | 'room_orders' | 'service_orders' | 'app_orders'
+export type OfflineOperation = 'insert' | 'update' | 'delete'
 
 export interface OfflineSale {
   id: string
   createdAt: string
   targetTable: OfflineTargetTable
-  payload: Record<string, unknown>
+  operation: OfflineOperation
+  payload?: Record<string, unknown>
+  recordIds?: Array<number | string>
   reason: string
 }
 
@@ -30,6 +33,7 @@ export function readOfflineSales(): OfflineSale[] {
     const normalized = parsed.map((sale) => ({
       ...sale,
       targetTable: sale.targetTable ?? 'sales',
+      operation: sale.operation ?? 'insert',
     })) as OfflineSale[]
     const retained = normalized.filter(isWithinRetention)
 
@@ -43,24 +47,45 @@ export function readOfflineSales(): OfflineSale[] {
   }
 }
 
+function queueOffline(sale: Omit<OfflineSale, 'id' | 'createdAt'>) {
+  const record: OfflineSale = {
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    createdAt: new Date().toISOString(),
+    ...sale,
+  }
+  // Mantem ordem cronologica (mais antigo primeiro) para que edicoes e
+  // exclusoes offline do mesmo registro sejam replicadas na ordem certa.
+  persistOfflineSales([...readOfflineSales(), record])
+  return record
+}
+
 export function queueOfflineRecord(
   targetTable: OfflineTargetTable,
   payload: Record<string, unknown>,
   reason: string,
 ) {
-  const sale: OfflineSale = {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    createdAt: new Date().toISOString(),
-    targetTable,
-    payload,
-    reason,
-  }
-  persistOfflineSales([sale, ...readOfflineSales()])
-  return sale
+  return queueOffline({ targetTable, operation: 'insert', payload, reason })
 }
 
 export function queueOfflineSale(payload: Record<string, unknown>, reason: string) {
   return queueOfflineRecord('sales', payload, reason)
+}
+
+export function queueOfflineUpdate(
+  targetTable: OfflineTargetTable,
+  recordIds: Array<number | string>,
+  payload: Record<string, unknown>,
+  reason: string,
+) {
+  return queueOffline({ targetTable, operation: 'update', payload, recordIds, reason })
+}
+
+export function queueOfflineDelete(
+  targetTable: OfflineTargetTable,
+  recordIds: Array<number | string>,
+  reason: string,
+) {
+  return queueOffline({ targetTable, operation: 'delete', recordIds, reason })
 }
 
 export function removeOfflineSale(id: string) {
@@ -68,7 +93,7 @@ export function removeOfflineSale(id: string) {
 }
 
 export async function syncOfflineRecords(
-  insertRecord: (sale: OfflineSale) => Promise<{ error?: unknown }>,
+  runRecord: (sale: OfflineSale) => Promise<{ error?: unknown }>,
 ) {
   const queuedSales = readOfflineSales()
   let synced = 0
@@ -76,7 +101,7 @@ export async function syncOfflineRecords(
   const errors: Array<{ id: string; targetTable: OfflineTargetTable; error: unknown }> = []
 
   for (const sale of queuedSales) {
-    const { error } = await insertRecord(sale)
+    const { error } = await runRecord(sale)
 
     if (error) {
       failed += 1

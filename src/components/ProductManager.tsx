@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { queueOfflineDelete, queueOfflineRecord, queueOfflineUpdate } from '../lib/offlineQueue'
 import './ProductManager.css'
 
 interface Product {
@@ -97,18 +98,18 @@ export default function ProductManager() {
       Number.parseInt(newProduct.low_stock_threshold || '0', 10) || 0,
     )
 
-    try {
-      const productData = {
-        name: newProduct.name,
-        unit_price: parseFloat(newProduct.price),
-        description: newProduct.description,
-        image_url: newProduct.image_url,
-        barcode: barcode || null,
-        category: newProduct.category,
-        stock_quantity: stockQuantity,
-        low_stock_threshold: lowStockThreshold,
-      }
+    const productData = {
+      name: newProduct.name,
+      unit_price: parseFloat(newProduct.price),
+      description: newProduct.description,
+      image_url: newProduct.image_url,
+      barcode: barcode || null,
+      category: newProduct.category,
+      stock_quantity: stockQuantity,
+      low_stock_threshold: lowStockThreshold,
+    }
 
+    try {
       if (editingId) {
         const { error } = await supabase
           .from('products')
@@ -125,7 +126,24 @@ export default function ProductManager() {
       cancelEdit()
       fetchProducts()
     } catch (err) {
-      alert('Erro ao salvar produto: ' + (err as Error).message)
+      const reason = (err as Error).message || 'Falha de conexao ou Supabase indisponivel.'
+
+      if (editingId) {
+        queueOfflineUpdate('products', [editingId], productData, reason)
+        setProducts((current) =>
+          current.map((product) =>
+            product.id === editingId
+              ? { ...product, ...productData, barcode: productData.barcode ?? undefined }
+              : product,
+          ),
+        )
+        alert('Sem conexao: alteracao do produto salva neste computador e sera sincronizada quando a internet voltar.')
+      } else {
+        queueOfflineRecord('products', productData, reason)
+        alert('Sem conexao: produto salvo neste computador e sera enviado quando a internet voltar. Ele ainda nao aparece na lista abaixo ate sincronizar.')
+      }
+
+      cancelEdit()
     }
   }
 
@@ -168,7 +186,15 @@ export default function ProductManager() {
       )
       fetchProducts()
     } catch (err) {
-      alert('Erro ao apagar produto: ' + (err as Error).message)
+      queueOfflineDelete(
+        'products',
+        [id],
+        (err as Error).message || 'Falha de conexao ou Supabase indisponivel.',
+      )
+      setProducts((currentProducts) =>
+        currentProducts.filter((product) => product.id !== id),
+      )
+      alert('Sem conexao: exclusao salva neste computador e sera sincronizada quando a internet voltar.')
     }
   }
 

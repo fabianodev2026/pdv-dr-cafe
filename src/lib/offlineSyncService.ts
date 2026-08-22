@@ -2,8 +2,24 @@ import { logAppError, logAppEvent } from './appLogger'
 import {
   readOfflineSales,
   syncOfflineRecords as syncQueuedOfflineRecords,
+  type OfflineSale,
 } from './offlineQueue'
 import { supabase } from './supabaseClient'
+
+async function runOfflineRecord(sale: OfflineSale) {
+  if (sale.operation === 'update') {
+    return supabase
+      .from(sale.targetTable)
+      .update(sale.payload ?? {})
+      .in('id', sale.recordIds ?? [])
+  }
+
+  if (sale.operation === 'delete') {
+    return supabase.from(sale.targetTable).delete().in('id', sale.recordIds ?? [])
+  }
+
+  return supabase.from(sale.targetTable).insert([sale.payload ?? {}])
+}
 
 const AUTO_SYNC_INTERVAL_MS = 60 * 1000
 
@@ -33,7 +49,7 @@ export async function syncOfflineQueue(reason = 'Sincronizacao manual') {
 
   try {
     const result = await syncQueuedOfflineRecords(async (sale) => {
-      const { error } = await supabase.from(sale.targetTable).insert([sale.payload])
+      const { error } = await runOfflineRecord(sale)
       return { error }
     })
 
