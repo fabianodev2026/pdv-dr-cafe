@@ -669,7 +669,7 @@ export default function SettingsManager() {
           className={activeTab === 'funcionamento' ? 'active' : ''}
           onClick={() => setActiveTab('funcionamento')}
         >
-          Funcionamento do app
+          Configuracao do app
         </button>
         <button
           className={activeTab === 'qrcodes' ? 'active' : ''}
@@ -1297,7 +1297,7 @@ export default function SettingsManager() {
         <section className="settings-panel">
           <div className="settings-panel-heading">
             <div>
-              <h2>Funcionamento do app</h2>
+              <h2>Configuracao do app</h2>
               <p>Defina os horarios em que os clientes podem fazer pedidos pelo app. Altere quando o horario da loja mudar, sem precisar de ajuda tecnica.</p>
             </div>
             <button
