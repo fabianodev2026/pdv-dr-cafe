@@ -18,6 +18,12 @@ import {
   type NfceIssuerConfig,
 } from '../lib/nfceService'
 import { invokeDesktopCommand, isDesktopApp } from '../lib/desktopNative'
+import {
+  DEFAULT_STORE_SCHEDULE,
+  fetchStoreSchedule,
+  saveStoreSchedule,
+  type StoreSchedule,
+} from '../lib/storeSchedule'
 import DiagnosticsManager from './DiagnosticsManager'
 import QrCodePrintManager from './QrCodePrintManager'
 import SupportAiManager from './SupportAiManager'
@@ -29,6 +35,7 @@ type SettingsTab =
   | 'certificado'
   | 'balanco'
   | 'mais-vendidos'
+  | 'funcionamento'
   | 'qrcodes'
   | 'backup'
   | 'atualizacao'
@@ -232,6 +239,8 @@ export default function SettingsManager() {
     certificatePassword: '',
   })
   const [nfceConfig, setNfceConfig] = useState<NfceIssuerConfig>(() => readNfceIssuerConfig())
+  const [storeSchedule, setStoreSchedule] = useState<StoreSchedule>(DEFAULT_STORE_SCHEDULE)
+  const [storeScheduleSaving, setStoreScheduleSaving] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -253,6 +262,23 @@ export default function SettingsManager() {
 
     fetchData()
   }, [])
+
+  useEffect(() => {
+    fetchStoreSchedule().then(setStoreSchedule)
+  }, [])
+
+  const saveStoreScheduleSettings = async () => {
+    setStoreScheduleSaving(true)
+    const { error } = await saveStoreSchedule(storeSchedule)
+    setStoreScheduleSaving(false)
+
+    if (error) {
+      setMessage(`Nao foi possivel salvar o horario: ${error.message}`)
+      return
+    }
+
+    setMessage('Horario de funcionamento do app atualizado.')
+  }
 
   useEffect(() => {
     setLastUpdateStarted(localStorage.getItem(LAST_UPDATE_STARTED_KEY) || '')
@@ -638,6 +664,12 @@ export default function SettingsManager() {
           onClick={() => setActiveTab('mais-vendidos')}
         >
           Produtos mais vendidos
+        </button>
+        <button
+          className={activeTab === 'funcionamento' ? 'active' : ''}
+          onClick={() => setActiveTab('funcionamento')}
+        >
+          Funcionamento do app
         </button>
         <button
           className={activeTab === 'qrcodes' ? 'active' : ''}
@@ -1259,6 +1291,105 @@ export default function SettingsManager() {
               </table>
             )}
           </div>
+        </section>
+      )}
+      {activeTab === 'funcionamento' && (
+        <section className="settings-panel">
+          <div className="settings-panel-heading">
+            <div>
+              <h2>Funcionamento do app</h2>
+              <p>Defina os horarios em que os clientes podem fazer pedidos pelo app. Altere quando o horario da loja mudar, sem precisar de ajuda tecnica.</p>
+            </div>
+            <button
+              className="settings-save"
+              onClick={saveStoreScheduleSettings}
+              disabled={storeScheduleSaving}
+            >
+              {storeScheduleSaving ? 'Salvando...' : 'Salvar horario'}
+            </button>
+          </div>
+
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Abertura (segunda a sexta)</label>
+              <input
+                type="time"
+                value={storeSchedule.weekdayOpen}
+                onChange={(e) =>
+                  setStoreSchedule({ ...storeSchedule, weekdayOpen: e.target.value })
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label>Fechamento (segunda a sexta)</label>
+              <input
+                type="time"
+                value={storeSchedule.weekdayClose}
+                onChange={(e) =>
+                  setStoreSchedule({ ...storeSchedule, weekdayClose: e.target.value })
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label>Abertura (sabado)</label>
+              <input
+                type="time"
+                value={storeSchedule.saturdayOpen}
+                onChange={(e) =>
+                  setStoreSchedule({ ...storeSchedule, saturdayOpen: e.target.value })
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label>Fechamento (sabado)</label>
+              <input
+                type="time"
+                value={storeSchedule.saturdayClose}
+                onChange={(e) =>
+                  setStoreSchedule({ ...storeSchedule, saturdayClose: e.target.value })
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={storeSchedule.sundayEnabled}
+                  onChange={(e) =>
+                    setStoreSchedule({ ...storeSchedule, sundayEnabled: e.target.checked })
+                  }
+                />
+                {' '}Abrir aos domingos
+              </label>
+            </div>
+            {storeSchedule.sundayEnabled && (
+              <>
+                <div className="form-group">
+                  <label>Abertura (domingo)</label>
+                  <input
+                    type="time"
+                    value={storeSchedule.sundayOpen}
+                    onChange={(e) =>
+                      setStoreSchedule({ ...storeSchedule, sundayOpen: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Fechamento (domingo)</label>
+                  <input
+                    type="time"
+                    value={storeSchedule.sundayClose}
+                    onChange={(e) =>
+                      setStoreSchedule({ ...storeSchedule, sundayClose: e.target.value })
+                    }
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <p className="settings-note">
+            O app para de aceitar novos pedidos fora desses horarios automaticamente. A mudanca vale para todos os clientes em ate 1 minuto.
+          </p>
         </section>
       )}
       {activeTab === 'qrcodes' && (

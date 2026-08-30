@@ -3,6 +3,12 @@ import { supabase } from '../lib/supabaseClient'
 import { logAppError, normalizeError } from '../lib/appLogger'
 import { markBackupNeededAfterClosing } from '../lib/backupService'
 import { customerFieldLimits } from '../lib/customerLimits'
+import {
+  DEFAULT_STORE_SCHEDULE,
+  fetchStoreSchedule,
+  getAppOrderAvailability,
+  getScheduleMessage,
+} from '../lib/storeSchedule'
 import './CustomerApp.css'
 
 type CustomerStatus = 'pendente' | 'ativo' | 'bloqueado'
@@ -121,32 +127,6 @@ const saveCustomerSession = (customer: AppCustomer) => {
 
 const createPasskeyChallenge = () => window.crypto.getRandomValues(new Uint8Array(32))
 
-const getAppOrderAvailability = (date = new Date()) => {
-  const weekDay = date.getDay()
-  const isSunday = weekDay === 0
-  const isSaturday = weekDay === 6
-  const opensAtMinutes = 8 * 60
-  const closesAtMinutes = isSaturday ? 14 * 60 + 30 : 20 * 60
-  const currentMinutes = date.getHours() * 60 + date.getMinutes()
-  const scheduleMessage = 'Funcionamento do app: segunda a sexta das 8h as 20h e sabado das 8h as 14:30.'
-
-  if (isSunday) {
-    return {
-      isOpen: false,
-      message: `Pedidos pelo app ficam fechados aos domingos. A loja nao abre no domingo. ${scheduleMessage}`,
-    }
-  }
-
-  if (currentMinutes < opensAtMinutes || currentMinutes > closesAtMinutes) {
-    return {
-      isOpen: false,
-      message: scheduleMessage,
-    }
-  }
-
-  return { isOpen: true, message: '' }
-}
-
 const getFifthBusinessDay = () => {
   const now = new Date()
   const targetMonth = now.getMonth() + 1
@@ -239,7 +219,10 @@ export default function CustomerApp() {
   const [nextDueDate, setNextDueDate] = useState('')
   const [isBlockedByDebt, setIsBlockedByDebt] = useState(false)
   const [isSendingOrder, setIsSendingOrder] = useState(false)
-  const [orderAvailability, setOrderAvailability] = useState(() => getAppOrderAvailability())
+  const [storeSchedule, setStoreSchedule] = useState(DEFAULT_STORE_SCHEDULE)
+  const [orderAvailability, setOrderAvailability] = useState(() =>
+    getAppOrderAvailability(DEFAULT_STORE_SCHEDULE),
+  )
   const [storedPasskey, setStoredPasskey] = useState<StoredPasskey | null>(() => readStoredPasskey())
   const [isPasskeyAvailable, setIsPasskeyAvailable] = useState(false)
   const [form, setForm] = useState({
@@ -402,11 +385,22 @@ export default function CustomerApp() {
   }, [customer?.phone])
 
   useEffect(() => {
-    const updateAvailability = () => setOrderAvailability(getAppOrderAvailability())
+    let cancelled = false
+
+    const updateAvailability = async () => {
+      const schedule = await fetchStoreSchedule()
+      if (cancelled) return
+      setStoreSchedule(schedule)
+      setOrderAvailability(getAppOrderAvailability(schedule))
+    }
+
     updateAvailability()
     const intervalId = window.setInterval(updateAvailability, 60000)
 
-    return () => window.clearInterval(intervalId)
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
   }, [])
 
   useEffect(() => {
@@ -1507,7 +1501,7 @@ export default function CustomerApp() {
                 </p>
               )}
               <p>Pagamento: pagar depois, Pix ou dinheiro no dia combinado.</p>
-              <p>Funcionamento do app: segunda a sexta das 8h as 20h, sabado das 8h as 14:30 e domingo fechado.</p>
+              <p>{getScheduleMessage(storeSchedule)}</p>
               <button
                 onClick={sendOrder}
                 disabled={
