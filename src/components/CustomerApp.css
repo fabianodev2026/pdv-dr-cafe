@@ -8,7 +8,12 @@
   background-repeat: no-repeat;
   background-attachment: fixed;
   color: #fff8ef;
-  font-family: 'Nunito', 'Trebuchet MS', Arial, sans-serif;
+  font-family: 'Outfit', 'Nunito', 'Segoe UI', system-ui, sans-serif;
+  /* mesmo padrao do login do PDV: campos e botoes com a mesma medida */
+  --app-control-height: 52px;
+  --app-control-radius: 10px;
+  --app-font-size: 1.08rem;
+  --app-title-size: 1.45rem;
 }
 
 .customer-app__hero {
@@ -186,21 +191,35 @@
   grid-column: 2;
 }
 
+/* o cadastro tem muitos campos: mesmas caixas do login, em escala menor */
+.customer-app__panel--compacto {
+  --app-control-height: 44px;
+  --app-font-size: 1rem;
+  --app-title-size: 1.2rem;
+  gap: 8px;
+}
+
 .customer-app__panel h2,
 .customer-app__section h2,
 .customer-app__cart h2 {
   margin: 0;
   color: #f5be7d;
+  font-size: var(--app-title-size);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-.customer-app input {
-  min-height: 46px;
+.customer-app input:not([type='checkbox']) {
+  box-sizing: border-box;
+  min-height: var(--app-control-height);
   border: 1px solid rgba(245, 190, 125, 0.35);
-  border-radius: 12px;
+  border-radius: var(--app-control-radius);
   background: rgba(255, 255, 255, 0.1);
   color: #fff8ef;
-  padding: 10px 12px;
-  font: inherit;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: var(--app-font-size);
 }
 
 .customer-app input::placeholder {
@@ -222,8 +241,9 @@
   align-items: center;
   gap: 9px;
   color: #f5d7b1;
-  font-size: 0.92rem;
-  font-weight: 800;
+  font-size: var(--app-font-size);
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .customer-app__keep-login input {
@@ -245,14 +265,28 @@
 }
 
 .customer-app button {
-  min-height: 44px;
+  box-sizing: border-box;
+  min-height: var(--app-control-height);
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--app-control-radius);
   background: #f5be7d;
   color: #24140d;
-  padding: 10px 12px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: var(--app-font-size);
   font-weight: 600;
   cursor: pointer;
+}
+
+.customer-app__auth input::placeholder {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.customer-app__auth .customer-app__panel > button,
+.customer-app__auth .customer-app__password-field button {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .customer-app__link-button {

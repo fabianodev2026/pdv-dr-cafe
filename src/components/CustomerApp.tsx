@@ -1234,7 +1234,7 @@ export default function CustomerApp() {
             </div>
           )}
 
-          <div className="customer-app__panel">
+          <div className="customer-app__panel customer-app__panel--compacto">
             <span className="customer-app__panel-kicker">Primeiro acesso</span>
             <h2>NOVO CADASTRO</h2>
             <input
