@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { logAppError, normalizeError } from '../lib/appLogger'
 import { markBackupNeededAfterClosing } from '../lib/backupService'
@@ -208,6 +208,20 @@ export default function CustomerApp() {
     confirmPassword: '',
   })
   const [showTokenPasswordReset, setShowTokenPasswordReset] = useState(false)
+  const [authTab, setAuthTab] = useState<'entrar' | 'cadastro'>('entrar')
+  const logoRef = useRef<HTMLImageElement>(null)
+
+  const baterLogo = () => {
+    const logo = logoRef.current
+    if (!logo) return
+    logo.classList.remove('customer-app__hero-logo--batendo')
+    void logo.offsetWidth // reinicia a animacao mesmo em toques seguidos
+    logo.classList.add('customer-app__hero-logo--batendo')
+  }
+
+  useEffect(() => {
+    baterLogo()
+  }, [])
   const [products, setProducts] = useState<Product[]>([])
   const [productSearch, setProductSearch] = useState('')
   const [activeMenuTab, setActiveMenuTab] = useState<MenuTab>('bebidas')
@@ -1068,7 +1082,16 @@ export default function CustomerApp() {
   return (
     <div className="customer-app">
       <header className="customer-app__hero">
-        <img src="/logo.jpeg" alt="Dr. Cafe" />
+        <img
+          ref={logoRef}
+          src="/logo.jpeg"
+          alt="Dr. Cafe"
+          className="customer-app__hero-logo"
+          onClick={baterLogo}
+          onAnimationEnd={(e) =>
+            e.currentTarget.classList.remove('customer-app__hero-logo--batendo')
+          }
+        />
         <div>
           <p>Dr. Café</p>
           <h1>Faça seu pedido</h1>
@@ -1092,56 +1115,84 @@ export default function CustomerApp() {
 
       {!customer && (
         <section className="customer-app__auth">
-          <div className="customer-app__panel">
-            <span className="customer-app__panel-kicker">Acesso</span>
-            <h2>Entrar</h2>
-            <input
-              value={loginForm.login}
-              onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
-              placeholder="Login"
-              maxLength={customerFieldLimits.login}
-            />
-            <div className="customer-app__password-field">
-              <input
-                type={showLoginPassword ? 'text' : 'password'}
-                value={loginForm.password}
-                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                placeholder="Senha"
-                maxLength={customerFieldLimits.password}
-              />
-              <button type="button" onClick={() => setShowLoginPassword((current) => !current)}>
-                {showLoginPassword ? 'Ocultar' : 'Ver'}
+          {!showTokenPasswordReset && (
+            <div className="customer-app__auth-tabs">
+              <button
+                type="button"
+                className={authTab === 'entrar' ? 'active' : undefined}
+                onClick={() => setAuthTab('entrar')}
+              >
+                Entrar
+              </button>
+              <button
+                type="button"
+                className={authTab === 'cadastro' ? 'active' : undefined}
+                onClick={() => setAuthTab('cadastro')}
+              >
+                Primeiro acesso
               </button>
             </div>
-            <label className="customer-app__keep-login">
+          )}
+
+          {authTab === 'entrar' && !showTokenPasswordReset && (
+            <div className="customer-app__panel">
+              <span className="customer-app__panel-kicker">Acesso</span>
+              <h2>Entrar</h2>
               <input
-                type="checkbox"
-                checked={keepLoggedIn}
-                onChange={(event) => setKeepLoggedIn(event.target.checked)}
+                value={loginForm.login}
+                onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
+                placeholder="Login"
+                maxLength={customerFieldLimits.login}
               />
-              <span>Manter logado neste aparelho</span>
-            </label>
-            <button onClick={loginCustomer}>Entrar no app</button>
-            {storedPasskey && (
-              <div className="customer-app__passkey-callout">
-                <span>acesso rapido</span>
-                <strong>Entrar com biometria/Face ID</strong>
-                <p>Use o desbloqueio deste aparelho para entrar com seguranca.</p>
-                <button type="button" onClick={unlockWithPasskey}>
-                  Desbloquear agora
+              <div className="customer-app__password-field">
+                <input
+                  type={showLoginPassword ? 'text' : 'password'}
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                  placeholder="Senha"
+                  maxLength={customerFieldLimits.password}
+                />
+                <button type="button" onClick={() => setShowLoginPassword((current) => !current)}>
+                  {showLoginPassword ? 'Ocultar' : 'Ver'}
                 </button>
               </div>
-            )}
-            <button
-              type="button"
-              className="customer-app__link-button"
-              onClick={() => setShowPasswordReset((current) => !current)}
-            >
-              Esqueci a senha
-            </button>
-          </div>
+              <label className="customer-app__keep-login">
+                <input
+                  type="checkbox"
+                  checked={keepLoggedIn}
+                  onChange={(event) => setKeepLoggedIn(event.target.checked)}
+                />
+                <span>Manter logado neste aparelho</span>
+              </label>
+              <button onClick={loginCustomer}>Entrar no app</button>
+              {storedPasskey && (
+                <div className="customer-app__passkey-callout">
+                  <span>acesso rapido</span>
+                  <strong>Entrar com biometria/Face ID</strong>
+                  <p>Use o desbloqueio deste aparelho para entrar com seguranca.</p>
+                  <button type="button" onClick={unlockWithPasskey}>
+                    Desbloquear agora
+                  </button>
+                </div>
+              )}
+              <button
+                type="button"
+                className="customer-app__link-button"
+                onClick={() => setShowPasswordReset((current) => !current)}
+              >
+                Esqueci a senha
+              </button>
+              <button
+                type="button"
+                className="customer-app__link-button"
+                onClick={() => setAuthTab('cadastro')}
+              >
+                Nao tem login? Clique aqui
+              </button>
+            </div>
+          )}
 
-          {showPasswordReset && (
+          {authTab === 'entrar' && showPasswordReset && !showTokenPasswordReset && (
             <div className="customer-app__panel">
               <span className="customer-app__panel-kicker">Seguranca</span>
               <h2>RECUPERAR SENHA</h2>
@@ -1221,74 +1272,83 @@ export default function CustomerApp() {
             </div>
           )}
 
-          <div className="customer-app__panel customer-app__panel--compacto">
-            <span className="customer-app__panel-kicker">Primeiro acesso</span>
-            <h2>NOVO CADASTRO</h2>
-            <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value.toUpperCase() })}
-              placeholder="Nome"
-              maxLength={customerFieldLimits.firstName}
-            />
-            <input
-              value={form.lastName}
-              onChange={(e) => setForm({ ...form, lastName: e.target.value.toUpperCase() })}
-              placeholder="Sobrenome"
-              maxLength={customerFieldLimits.lastName}
-            />
-            <input
-              value={form.login}
-              onChange={(e) => setForm({ ...form, login: e.target.value })}
-              placeholder="Criar login"
-              maxLength={customerFieldLimits.login}
-            />
-            <div className="customer-app__password-field">
+          {authTab === 'cadastro' && !showTokenPasswordReset && (
+            <div className="customer-app__panel customer-app__panel--compacto">
+              <span className="customer-app__panel-kicker">Primeiro acesso</span>
+              <h2>NOVO CADASTRO</h2>
               <input
-                type={showRegisterPassword ? 'text' : 'password'}
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="Criar senha"
-                maxLength={customerFieldLimits.password}
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value.toUpperCase() })}
+                placeholder="Nome"
+                maxLength={customerFieldLimits.firstName}
               />
+              <input
+                value={form.lastName}
+                onChange={(e) => setForm({ ...form, lastName: e.target.value.toUpperCase() })}
+                placeholder="Sobrenome"
+                maxLength={customerFieldLimits.lastName}
+              />
+              <input
+                value={form.login}
+                onChange={(e) => setForm({ ...form, login: e.target.value })}
+                placeholder="Criar login"
+                maxLength={customerFieldLimits.login}
+              />
+              <div className="customer-app__password-field">
+                <input
+                  type={showRegisterPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Criar senha"
+                  maxLength={customerFieldLimits.password}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterPassword((current) => !current)}
+                >
+                  {showRegisterPassword ? 'Ocultar' : 'Ver'}
+                </button>
+              </div>
+              <input
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
+                placeholder="Telefone"
+                inputMode="numeric"
+                maxLength={customerFieldLimits.phone}
+              />
+              <input
+                value={form.position}
+                onChange={(e) => setForm({ ...form, position: e.target.value.toUpperCase() })}
+                placeholder="Cargo"
+                maxLength={customerFieldLimits.position}
+              />
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="Email"
+                maxLength={customerFieldLimits.email}
+              />
+              <input
+                type="email"
+                value={form.emailConfirmation}
+                onChange={(e) => setForm({ ...form, emailConfirmation: e.target.value })}
+                placeholder="Confirmar email"
+                maxLength={customerFieldLimits.email}
+              />
+              <button onClick={registerCustomer}>Enviar cadastro</button>
               <button
                 type="button"
-                onClick={() => setShowRegisterPassword((current) => !current)}
+                className="customer-app__link-button"
+                onClick={() => setAuthTab('entrar')}
               >
-                {showRegisterPassword ? 'Ocultar' : 'Ver'}
+                Ja tenho login
               </button>
+              <small>
+                O cafe confirma o cadastro no sistema. Depois disso o app libera os pedidos.
+              </small>
             </div>
-            <input
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
-              placeholder="Telefone"
-              inputMode="numeric"
-              maxLength={customerFieldLimits.phone}
-            />
-            <input
-              value={form.position}
-              onChange={(e) => setForm({ ...form, position: e.target.value.toUpperCase() })}
-              placeholder="Cargo"
-              maxLength={customerFieldLimits.position}
-            />
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="Email"
-              maxLength={customerFieldLimits.email}
-            />
-            <input
-              type="email"
-              value={form.emailConfirmation}
-              onChange={(e) => setForm({ ...form, emailConfirmation: e.target.value })}
-              placeholder="Confirmar email"
-              maxLength={customerFieldLimits.email}
-            />
-            <button onClick={registerCustomer}>Enviar cadastro</button>
-            <small>
-              O cafe confirma o cadastro no sistema. Depois disso o app libera os pedidos.
-            </small>
-          </div>
+          )}
         </section>
       )}
 

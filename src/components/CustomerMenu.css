@@ -10,9 +10,9 @@
   color: #f8f3ed;
   font-family: 'Outfit', 'Nunito', 'Segoe UI', system-ui, sans-serif;
   /* mesmo padrao de controle do app do cliente e do login do PDV */
-  --app-control-height: 52px;
+  --app-control-height: 44px;
   --app-control-radius: 10px;
-  --app-font-size: 1.08rem;
+  --app-font-size: 0.94rem;
 }
 
 .customer-menu__header {
