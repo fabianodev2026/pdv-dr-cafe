@@ -28,10 +28,4 @@
     linear-gradient(rgba(43, 22, 13, 0.82), rgba(20, 12, 8, 0.93)),
     url('/fundo-seda.svg'),
     linear-gradient(155deg, #3d2315 0%, var(--coffee-roast-800) 48%, #170d07 100%);
-
-  /* Variante mais fechada para cards internos */
-  --bg-coffee-roast-card:
-    linear-gradient(rgba(20, 12, 8, 0.28), rgba(14, 8, 5, 0.86)),
-    url('/fundo-seda.svg'),
-    linear-gradient(155deg, #4a2d1b 0%, #2b160d 55%, #180e08 100%);
 }

@@ -1070,8 +1070,9 @@ export default function CustomerApp() {
       <header className="customer-app__hero">
         <img src="/logo.jpeg" alt="Dr. Cafe" />
         <div>
-          <p>DR. CAFÉ</p>
-          <h1>Faça Seu Pedido</h1>
+          <p>Dr. Café</p>
+          <h1>Faça seu pedido</h1>
+          <span>Cuidando de você</span>
         </div>
       </header>
 
@@ -1091,20 +1092,6 @@ export default function CustomerApp() {
 
       {!customer && (
         <section className="customer-app__auth">
-          <div className="customer-app__auth-card customer-app__auth-card--brand">
-            <div className="customer-app__auth-brand">
-              <img src="/logo.jpeg" alt="Dr. Cafe" />
-              <div>
-                <span>Dr. Cafe</span>
-                <strong>Cuidando de voce</strong>
-              </div>
-            </div>
-            <div className="customer-app__auth-callout">
-              <span>Pedido pelo app</span>
-              <strong>Escolha, envie e acompanhe seu saldo.</strong>
-            </div>
-          </div>
-
           <div className="customer-app__panel">
             <span className="customer-app__panel-kicker">Acesso</span>
             <h2>Entrar</h2>
