@@ -1080,7 +1080,7 @@ export default function CustomerApp() {
     nextDueDate && dateDiffInDays(nextDueDate) <= 5 && dateDiffInDays(nextDueDate) >= 0
 
   return (
-    <div className="customer-app">
+    <div className={customer ? 'customer-app' : 'customer-app customer-app--acesso'}>
       <header className="customer-app__hero">
         <img
           ref={logoRef}

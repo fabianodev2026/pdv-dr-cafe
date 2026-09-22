@@ -10,10 +10,10 @@
   color: #fff8ef;
   font-family: 'Outfit', 'Nunito', 'Segoe UI', system-ui, sans-serif;
   /* mesmo padrao do login do PDV: campos e botoes com a mesma medida */
-  --app-control-height: 44px;
+  --app-control-height: 40px;
   --app-control-radius: 10px;
-  --app-font-size: 0.94rem;
-  --app-title-size: 1.15rem;
+  --app-font-size: 0.875rem;
+  --app-title-size: 1rem;
 }
 
 .customer-app__hero {
@@ -24,9 +24,30 @@
   margin: 0 auto 18px;
 }
 
+/* tela de acesso: tudo centralizado na vertical e na horizontal */
+.customer-app--acesso {
+  display: grid;
+  align-content: center;
+  gap: 10px;
+}
+
+.customer-app--acesso > * {
+  width: 100%;
+  max-width: 340px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.customer-app--acesso .customer-app__hero {
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 6px;
+  text-align: center;
+}
+
 .customer-app__hero img {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
   object-fit: cover;
   border: 1px solid rgba(245, 190, 125, 0.35);
@@ -77,7 +98,7 @@
 
 .customer-app__hero p {
   color: #f5be7d;
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -151,9 +172,9 @@
 
 .customer-app__auth {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   align-items: start;
-  max-width: 520px;
+  max-width: 340px;
   margin: 0 auto;
 }
 
@@ -185,10 +206,10 @@
 
 /* o cadastro tem muitos campos: mesmas caixas do login, em escala menor */
 .customer-app__panel--compacto {
-  --app-control-height: 40px;
-  --app-font-size: 0.9rem;
-  --app-title-size: 1.05rem;
-  gap: 8px;
+  --app-control-height: 38px;
+  --app-font-size: 0.84rem;
+  --app-title-size: 0.95rem;
+  gap: 7px;
 }
 
 .customer-app__panel h2,
@@ -233,7 +254,7 @@
   align-items: center;
   gap: 9px;
   color: #f5d7b1;
-  font-size: var(--app-font-size);
+  font-size: 0.82rem;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
@@ -281,10 +302,21 @@
   text-transform: uppercase;
 }
 
-.customer-app__link-button {
+/* precisa da mesma forca do seletor generico .customer-app button,
+   senao a acao secundaria herda o botao cheio */
+.customer-app button.customer-app__link-button {
+  min-height: 30px;
+  padding: 4px 6px;
   background: transparent;
-  border: 1px solid rgba(245, 190, 125, 0.35);
+  border: 0;
+  border-radius: 6px;
   color: #f5be7d;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* abas de acesso: entrar x primeiro acesso */
@@ -295,13 +327,13 @@
 }
 
 .customer-app__auth-tabs button {
-  min-height: 38px;
+  min-height: 34px;
   border: 1px solid rgba(245, 190, 125, 0.28);
   border-radius: var(--app-control-radius);
   background: rgba(255, 248, 239, 0.08);
   color: #f9ead6;
-  font-size: 0.86rem;
-  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
