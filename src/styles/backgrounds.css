@@ -1,0 +1,37 @@
+/*
+ * Fundos do app em gradiente puro (sem imagem de graos de cafe).
+ * Paleta: creme claro -> caramelo -> cafe torrado, com varredura diagonal
+ * para imitar o degrade sedoso da referencia.
+ */
+:root {
+  --coffee-cream-050: #f7e7cf;
+  --coffee-cream-100: #efd7b3;
+  --coffee-caramel-200: #e0bd8c;
+  --coffee-caramel-400: #c9985f;
+  --coffee-caramel-600: #a9773f;
+  --coffee-roast-800: #2b160d;
+
+  /* Fundo claro (tela de login): seda em SVG sobre a base em degrade */
+  --bg-coffee-cream:
+    url('/fundo-seda.svg'),
+    linear-gradient(
+      155deg,
+      var(--coffee-cream-050) 0%,
+      var(--coffee-cream-100) 26%,
+      var(--coffee-caramel-200) 52%,
+      var(--coffee-caramel-400) 76%,
+      var(--coffee-caramel-600) 100%
+    );
+
+  /* Fundo escuro (app do cliente / cardapio): mesma seda com veu torrado */
+  --bg-coffee-roast:
+    linear-gradient(rgba(43, 22, 13, 0.82), rgba(20, 12, 8, 0.93)),
+    url('/fundo-seda.svg'),
+    linear-gradient(155deg, #3d2315 0%, var(--coffee-roast-800) 48%, #170d07 100%);
+
+  /* Variante mais fechada para cards internos */
+  --bg-coffee-roast-card:
+    linear-gradient(rgba(20, 12, 8, 0.28), rgba(14, 8, 5, 0.86)),
+    url('/fundo-seda.svg'),
+    linear-gradient(155deg, #4a2d1b 0%, #2b160d 55%, #180e08 100%);
+}

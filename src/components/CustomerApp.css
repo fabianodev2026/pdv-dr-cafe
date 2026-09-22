@@ -1,11 +1,12 @@
 .customer-app {
   min-height: 100vh;
   padding: 18px;
-  background:
-    linear-gradient(rgba(43, 22, 13, 0.72), rgba(43, 22, 13, 0.92)),
-    url('/fundo.jpg');
+  background-color: var(--coffee-roast-800, #2b160d);
+  background-image: var(--bg-coffee-roast);
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: #fff8ef;
   font-family: 'Nunito', 'Trebuchet MS', Arial, sans-serif;
 }
@@ -103,11 +104,11 @@
   min-height: 360px;
   border-radius: 18px;
   border: 1px solid rgba(245, 190, 125, 0.25);
-  background:
-    linear-gradient(rgba(20, 12, 8, 0.22), rgba(20, 12, 8, 0.78)),
-    url('/fundo.jpg');
+  background-color: var(--coffee-roast-800, #2b160d);
+  background-image: var(--bg-coffee-roast-card);
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
   padding: 18px;
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.25);
 }

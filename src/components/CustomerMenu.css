@@ -1,11 +1,12 @@
 .customer-menu {
   min-height: 100vh;
   padding: 18px;
-  background:
-    linear-gradient(rgba(43, 22, 13, 0.76), rgba(20, 12, 8, 0.96)),
-    url('/fundo.jpg');
+  background-color: var(--coffee-roast-800, #2b160d);
+  background-image: var(--bg-coffee-roast);
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: #f8f3ed;
   font-family: 'Nunito', 'Trebuchet MS', Arial, sans-serif;
 }
