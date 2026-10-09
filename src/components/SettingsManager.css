@@ -1,7 +1,7 @@
 .settings-manager {
-  min-height: 100vh;
+  min-height: 100%;
   padding: 24px;
-  background: #f3e4d2;
+  background: transparent;
   color: #2b160d;
 }
 
