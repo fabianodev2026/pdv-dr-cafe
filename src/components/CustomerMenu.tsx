@@ -60,6 +60,13 @@ export default function CustomerMenu() {
   const [patientName, setPatientName] = useState('')
   const [phone, setPhone] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+
+  // Mesmo fundo do app do cliente no documento inteiro, para nao sobrar
+  // faixa branca atras da barra do sistema.
+  useEffect(() => {
+    document.body.classList.add('tema-cliente')
+    return () => document.body.classList.remove('tema-cliente')
+  }, [])
   const [isSending, setIsSending] = useState(false)
   const [message, setMessage] = useState('')
   const [lastOrderId, setLastOrderId] = useState<number | null>(null)

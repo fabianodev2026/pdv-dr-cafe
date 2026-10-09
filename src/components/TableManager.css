@@ -1,8 +1,8 @@
 /* ESTILOS GERAIS */
 .pdv-container {
   padding: 20px;
-  background: linear-gradient(135deg, #f5e6d3 0%, #efebe9 100%);
-  min-height: 100vh;
+  background: transparent;
+  min-height: 100%;
   font-family: 'Poppins', sans-serif;
 }
 

@@ -1,0 +1,51 @@
+/*
+ * Fundos do app em gradiente puro (sem imagem de graos de cafe).
+ * Paleta: creme claro -> caramelo -> cafe torrado, com varredura diagonal
+ * para imitar o degrade sedoso da referencia.
+ */
+:root {
+  --coffee-cream-050: #f7e7cf;
+  --coffee-cream-100: #efd7b3;
+  --coffee-caramel-200: #e0bd8c;
+  --coffee-caramel-400: #c9985f;
+  --coffee-caramel-600: #a9773f;
+  --coffee-roast-800: #2b160d;
+
+  /* Fundo claro (tela de login): seda em SVG sobre a base em degrade */
+  --bg-coffee-cream:
+    url('/fundo-seda.svg'),
+    linear-gradient(
+      155deg,
+      var(--coffee-cream-050) 0%,
+      var(--coffee-cream-100) 26%,
+      var(--coffee-caramel-200) 52%,
+      var(--coffee-caramel-400) 76%,
+      var(--coffee-caramel-600) 100%
+    );
+
+  /* Fundo escuro (app do cliente / cardapio): mesma seda com veu torrado */
+  --bg-coffee-roast:
+    linear-gradient(rgba(43, 22, 13, 0.82), rgba(20, 12, 8, 0.93)),
+    url('/fundo-seda.svg'),
+    linear-gradient(155deg, #3d2315 0%, var(--coffee-roast-800) 48%, #170d07 100%);
+}
+
+/*
+ * Fundo do documento. Sem isto, a faixa atras da barra de navegacao e o
+ * respiro do scroll mostram o branco padrao do navegador no PWA.
+ * O app do cliente e o cardapio marcam o body com .tema-cliente ao montar.
+ */
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background-color: var(--coffee-cream-100);
+}
+
+body.tema-cliente {
+  background-color: var(--coffee-roast-800);
+}
+
+body {
+  overscroll-behavior-y: none;
+}

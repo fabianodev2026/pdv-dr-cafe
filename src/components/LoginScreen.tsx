@@ -70,7 +70,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         <img src="/logo.jpeg" alt="Dr. Cafe" className="login-logo" />
         <h2>Acesso ao Sistema</h2>
 
-        <div className="form-group">
+        <div className="login-field">
           <label>Usuario</label>
           <input
             type="text"
@@ -82,7 +82,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           />
         </div>
 
-        <div className="form-group">
+        <div className="login-field">
           <label>Senha</label>
           <input
             type="password"
