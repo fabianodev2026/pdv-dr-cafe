@@ -1,8 +1,11 @@
 .login-wrapper {
+  box-sizing: border-box;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
+  align-items: safe center;
   background-color: var(--coffee-cream-100, #efd7b3);
   background-image: var(--bg-coffee-cream);
   background-size: cover;

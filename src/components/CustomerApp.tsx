@@ -409,6 +409,13 @@ export default function CustomerApp() {
   // sincronizador aqui tambem; antes so o PDV subia pendencia atrasada.
   useEffect(() => startOfflineAutoSync(), [])
 
+  // Pinta o documento inteiro de cafe: sem isso sobra uma faixa branca atras
+  // da barra de navegacao e no respiro do scroll quando instalado como app.
+  useEffect(() => {
+    document.body.classList.add('tema-cliente')
+    return () => document.body.classList.remove('tema-cliente')
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 

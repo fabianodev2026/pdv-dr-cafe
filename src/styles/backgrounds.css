@@ -29,3 +29,23 @@
     url('/fundo-seda.svg'),
     linear-gradient(155deg, #3d2315 0%, var(--coffee-roast-800) 48%, #170d07 100%);
 }
+
+/*
+ * Fundo do documento. Sem isto, a faixa atras da barra de navegacao e o
+ * respiro do scroll mostram o branco padrao do navegador no PWA.
+ * O app do cliente e o cardapio marcam o body com .tema-cliente ao montar.
+ */
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background-color: var(--coffee-cream-100);
+}
+
+body.tema-cliente {
+  background-color: var(--coffee-roast-800);
+}
+
+body {
+  overscroll-behavior-y: none;
+}

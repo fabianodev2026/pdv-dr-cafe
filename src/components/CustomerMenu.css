@@ -1,5 +1,7 @@
 .customer-menu {
+  box-sizing: border-box;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 18px;
   background-color: var(--coffee-roast-800, #2b160d);
   background-image: var(--bg-coffee-roast);

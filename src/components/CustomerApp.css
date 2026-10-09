@@ -1,5 +1,9 @@
 .customer-app {
+  /* Sem border-box, o min-height de 100vh somava os 18px de padding de cima e
+     de baixo e a tela rolava 36px mesmo sem conteudo sobrando. */
+  box-sizing: border-box;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 18px;
   background-color: var(--coffee-roast-800, #2b160d);
   background-image: var(--bg-coffee-roast);
@@ -24,10 +28,13 @@
   margin: 0 auto 18px;
 }
 
-/* tela de acesso: tudo centralizado na vertical e na horizontal */
+/* tela de acesso: tudo centralizado na vertical e na horizontal.
+   O "safe" e necessario no cadastro: quando o conteudo passa da altura da
+   tela, centralizar sozinho esconderia o topo fora da area rolavel. */
 .customer-app--acesso {
   display: grid;
   align-content: center;
+  align-content: safe center;
   gap: 10px;
 }
 
