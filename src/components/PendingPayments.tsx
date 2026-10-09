@@ -96,6 +96,34 @@ const getPendingItemAmount = (item: string, fallbackAmount: number) => {
   return amount > 0 ? amount : fallbackAmount
 }
 
+const TELEFONE_VAZIO = '(  ) ____-____'
+
+/**
+ * Telefone para exibicao. So mostra o numero quando ele e um telefone
+ * plausivel: 10 ou 11 digitos e nao uma sequencia de digitos repetidos.
+ * Cadastro antigo com traco, zeros ou numero pela metade aparece como a
+ * mascara vazia, que fica mais limpo e nao finge ser um telefone.
+ */
+const exibeTelefone = (valor?: string | null) => {
+  const limpo = String(valor ?? '')
+    .split('')
+    .filter((caractere) => caractere >= '0' && caractere <= '9')
+    .join('')
+
+  // numero salvo com o codigo do pais continua sendo numero valido
+  const digitos =
+    limpo.length >= 12 && limpo.startsWith('55') ? limpo.slice(2) : limpo
+
+  if (digitos.length !== 10 && digitos.length !== 11) return TELEFONE_VAZIO
+  if (digitos.split('').every((digito) => digito === digitos[0])) return TELEFONE_VAZIO
+
+  if (digitos.length === 11) {
+    return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7)}`
+  }
+
+  return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`
+}
+
 const normalizeText = (value?: string | null) =>
   String(value ?? '')
     .normalize('NFD')
@@ -144,6 +172,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
   const [pendingItem, setPendingItem] = useState('')
   const [pendingItems, setPendingItems] = useState<string[]>([])
   const [message, setMessage] = useState('')
+  const [aba, setAba] = useState<'pendentes' | 'clientes'>('pendentes')
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [expandedPendingGroups, setExpandedPendingGroups] = useState<Record<string, boolean>>({})
@@ -783,6 +812,28 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
 
       {message && <div className="payment-note">{message}</div>}
 
+      <nav className="pending-tabs" aria-label="Secoes do pagar depois">
+        <button
+          type="button"
+          className={aba === 'pendentes' ? 'active' : undefined}
+          onClick={() => setAba('pendentes')}
+        >
+          Contas pendentes
+          <small>
+            {Object.keys(groupedPending).length} cliente(s) - R$ {totalPending.toFixed(2)}
+          </small>
+        </button>
+        <button
+          type="button"
+          className={aba === 'clientes' ? 'active' : undefined}
+          onClick={() => setAba('clientes')}
+        >
+          Clientes PDV
+          <small>{pdvCustomers.length} cadastrado(s)</small>
+        </button>
+      </nav>
+
+      {aba === 'clientes' && (
       <section className="add-form pdv-customer-section">
         <div className="pending-list-header">
           <div>
@@ -863,7 +914,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
               <article key={customer.id} className={`pdv-customer-card ${customer.status}`}>
                 <div>
                   <strong>{customer.name}</strong>
-                  <span>{customer.phone}</span>
+                  <span>{exibeTelefone(customer.phone)}</span>
                   <small>{customer.position || 'Sem referencia'}</small>
                   {customer.notes && <small>{customer.notes}</small>}
                 </div>
@@ -894,7 +945,10 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
           )}
         </div>
       </section>
+      )}
 
+      {aba === 'pendentes' && (
+      <>
       <section className="add-form">
         <h2>Nova pendencia</h2>
         <div className="form-grid">
@@ -1038,7 +1092,9 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
                 <div className="person-header">
                   <div>
                     <h3>{first.customer_name}</h3>
-                    <p>{first.phone} - {first.position || 'Sem cargo'}</p>
+                    <p>
+                      {exibeTelefone(first.phone)} - {first.position || 'Sem cargo'}
+                    </p>
                   </div>
                   <div className="person-summary">
                     <span>Aberto</span>
@@ -1102,6 +1158,8 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
           })}
         </div>
       </section>
+      </>
+      )}
       <button type="button" className="pending-scroll-top" onClick={scrollToTop}>
         Voltar ao topo
       </button>

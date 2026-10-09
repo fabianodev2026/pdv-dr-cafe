@@ -6,12 +6,11 @@
   grid-template-columns: 224px minmax(0, 1fr);
   gap: 14px;
   padding: 14px;
-  /* Mesmo fundo de seda do login, com um veu claro por cima para o conteudo
-     das telas continuar legivel sobre as dobras. */
+  /* Mesmo fundo da tela de login, sem veu: a seda aparece por inteiro.
+     As telas internas sao transparentes e seus cartoes sao opacos, entao o
+     texto continua sobre fundo solido. */
   background-color: var(--coffee-cream-100, #efd7b3);
-  background-image:
-    linear-gradient(rgba(255, 251, 245, 0.74), rgba(255, 245, 232, 0.84)),
-    var(--bg-coffee-cream);
+  background-image: var(--bg-coffee-cream);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

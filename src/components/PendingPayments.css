@@ -33,7 +33,7 @@
 .add-form,
 .list-section {
   background: rgba(255, 248, 239, 0.9);
-  border: 1px solid rgba(107, 76, 58, 0.18);
+  border: 2px solid #5d4037;
   border-radius: 8px;
   padding: 18px;
   margin-bottom: 18px;
@@ -43,8 +43,50 @@
   font-weight: 800;
 }
 
+/* Duas abas lado a lado: as pendencias ficavam no fim da pagina e passavam
+   despercebidas. */
+.pending-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.pending-tabs button {
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+  text-align: left;
+  padding: 12px 22px;
+  border: 2px solid #5d4037;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.6);
+  color: #5d4037;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.pending-tabs button small {
+  font-weight: 600;
+  font-size: 0.82em;
+  opacity: 0.8;
+}
+
+.pending-tabs button:hover {
+  transform: translateY(-2px);
+}
+
+.pending-tabs button.active {
+  background: #5d4037;
+  color: #fff;
+}
+
 .pdv-customer-section {
-  border-left: 5px solid #006c67;
+  border-left: 5px solid #5d4037;
 }
 
 .form-grid {
@@ -235,8 +277,8 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  border: 1px solid #ead4b9;
-  border-left: 4px solid #006c67;
+  border: 1px solid rgba(93, 64, 55, 0.35);
+  border-left: 4px solid #5d4037;
   border-radius: 8px;
   background: #fffaf5;
   padding: 12px;
@@ -251,6 +293,9 @@
 .pdv-customer-card span,
 .pdv-customer-card small {
   display: block;
+  /* telefone digitado sem espaco, tipo 0000000000000, vazava do cartao */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .pdv-customer-card strong {
