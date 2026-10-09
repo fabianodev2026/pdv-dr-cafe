@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { formatPhone } from '../lib/matching'
 import './CustomerMenu.css'
 
 interface Product {
@@ -282,7 +283,7 @@ export default function CustomerMenu() {
         />
         <input
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => setPhone(formatPhone(e.target.value))}
           placeholder="Telefone"
           maxLength={20}
         />

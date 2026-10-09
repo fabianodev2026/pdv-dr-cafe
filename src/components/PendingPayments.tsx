@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { ADMIN_ROLES, hasRole, type CurrentUser } from '../lib/rolePermissions'
 import { queueOfflineDelete, queueOfflineRecord, queueOfflineUpdate } from '../lib/offlineQueue'
+import { formatPhone, matchesTerm, phoneKey } from '../lib/matching'
 import './PendingPayments.css'
 
 interface PendingPayment {
@@ -173,19 +174,22 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
   )
 
   const filteredPendingList = useMemo(() => {
-    const search = searchTerm.trim().toLowerCase()
+    // Busca livre por qualquer dado: nome, telefone em qualquer formato,
+    // cargo, descricao, data ou item da compra.
+    const search = searchTerm.trim()
     if (!search) return pendingList
 
     return pendingList.filter((payment) =>
-      [
+      matchesTerm(search, [
         payment.customer_name,
         payment.phone,
         payment.position,
         payment.description,
         payment.items_detail,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(search)),
+        payment.purchase_date,
+        payment.due_date,
+        payment.total_amount,
+      ]),
     )
   }, [pendingList, searchTerm])
 
@@ -193,7 +197,9 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     const groups = filteredPendingList
       .filter((payment) => payment.status === 'pendente')
       .reduce<Record<string, PendingPayment[]>>((grouped, payment) => {
-        const key = `${payment.customer_name}__${payment.phone}`
+        // Normaliza o telefone para o mesmo cliente nao abrir dois grupos
+        // quando o numero foi digitado em formatos diferentes.
+        const key = `${payment.customer_name.trim().toLowerCase()}__${phoneKey(payment.phone)}`
         grouped[key] = [...(grouped[key] ?? []), payment]
         return grouped
       }, {})
@@ -254,7 +260,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
 
   const savePdvCustomer = async () => {
     const name = newPdvCustomer.name.trim()
-    const phone = newPdvCustomer.phone.trim()
+    const phone = formatPhone(newPdvCustomer.phone)
 
     if (!name || !phone) {
       setMessage('Informe nome e telefone para cadastrar cliente PDV.')
@@ -397,6 +403,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     const { error } = await supabase.from('pending_payments').insert([
       {
         ...newPending,
+        phone: formatPhone(newPending.phone),
         items_detail: pendingItems.join('\n'),
         total_amount: Number(newPending.total_amount || 0),
         status: 'pendente',
@@ -815,7 +822,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
             <input
               value={newPdvCustomer.phone}
               onChange={(event) =>
-                setNewPdvCustomer({ ...newPdvCustomer, phone: event.target.value })
+                setNewPdvCustomer({ ...newPdvCustomer, phone: formatPhone(event.target.value) })
               }
               placeholder="Telefone"
               maxLength={25}
@@ -914,7 +921,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
             <input
               value={newPending.phone}
               onChange={(e) =>
-                setNewPending({ ...newPending, phone: e.target.value })
+                setNewPending({ ...newPending, phone: formatPhone(e.target.value) })
               }
               placeholder="Telefone"
               maxLength={25}

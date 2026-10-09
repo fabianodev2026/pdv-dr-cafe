@@ -3,6 +3,10 @@ import { supabase } from '../lib/supabaseClient'
 import { logAppError, normalizeError } from '../lib/appLogger'
 import { markBackupNeededAfterClosing } from '../lib/backupService'
 import { customerFieldLimits } from '../lib/customerLimits'
+import { formatPhone } from '../lib/matching'
+import { fetchPendingByPhone } from '../lib/pendingPayments'
+import { queueOfflineRecord } from '../lib/offlineQueue'
+import { startOfflineAutoSync } from '../lib/offlineSyncService'
 import {
   DEFAULT_STORE_SCHEDULE,
   fetchStoreSchedule,
@@ -52,6 +56,7 @@ interface CartItem {
 
 interface PendingPayment {
   id: number
+  phone?: string | null
   description?: string
   items_detail?: string
   total_amount: number
@@ -149,16 +154,6 @@ const dateDiffInDays = (date: string) => {
   return Math.ceil((target.getTime() - today.getTime()) / 86400000)
 }
 
-const formatPhone = (value: string) => {
-  const digits = value.replace(/\D/g, '').slice(0, 11)
-  if (digits.length <= 2) return digits ? `(${digits}` : ''
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
-  if (digits.length <= 10) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
-  }
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
-}
-
 type MenuTab = 'bebidas' | 'comidas' | 'fitness' | 'presentes'
 
 const menuTabs: Array<{ id: MenuTab; label: string }> = [
@@ -229,6 +224,7 @@ export default function CustomerApp() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [pendingTotal, setPendingTotal] = useState(0)
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([])
+  const [pendingLoadFailed, setPendingLoadFailed] = useState(false)
   const [appOrders, setAppOrders] = useState<AppOrderProgress[]>([])
   const [nextDueDate, setNextDueDate] = useState('')
   const [isBlockedByDebt, setIsBlockedByDebt] = useState(false)
@@ -351,19 +347,19 @@ export default function CustomerApp() {
   }
 
   const loadPending = async (phone: string) => {
-    const { data, error } = await supabase
-      .from('pending_payments')
-      .select('*')
-      .eq('phone', phone)
-      .eq('status', 'pendente')
+    // O telefone e digitado livre no caixa, entao a busca ignora a formatacao.
+    // O filtro roda no banco quando a funcao get_pending_by_phone existe.
+    const { data, error, source } = await fetchPendingByPhone<PendingPayment>(phone)
 
     if (error) {
       logAppError({
         source: 'CustomerApp',
         action: 'loadPending',
         error,
-        details: { table: 'pending_payments' },
+        details: { table: 'pending_payments', lookup: source },
       })
+      // Antes isso virava "saldo zero" e liberava pedido sem conferir limite.
+      setPendingLoadFailed(true)
       setPendingTotal(0)
       setPendingPayments([])
       setNextDueDate(getFifthBusinessDay())
@@ -371,6 +367,8 @@ export default function CustomerApp() {
       loadAppOrders(phone)
       return
     }
+
+    setPendingLoadFailed(false)
 
     const payments = data ?? []
     setPendingPayments(payments)
@@ -397,6 +395,10 @@ export default function CustomerApp() {
 
     return () => window.clearInterval(intervalId)
   }, [customer?.phone])
+
+  // A fila offline do app fica no aparelho do cliente, entao precisa de um
+  // sincronizador aqui tambem; antes so o PDV subia pendencia atrasada.
+  useEffect(() => startOfflineAutoSync(), [])
 
   // Pinta o documento inteiro de cafe: sem isso sobra uma faixa branca atras
   // da barra de navegacao e no respiro do scroll quando instalado como app.
@@ -996,6 +998,14 @@ export default function CustomerApp() {
       return
     }
 
+    if (pendingLoadFailed) {
+      showMessage(
+        'Nao conseguimos conferir seu saldo agora. Toque em atualizar e tente de novo em instantes.',
+        'error',
+      )
+      return
+    }
+
     if (cart.length === 0) {
       setMessage('Adicione pelo menos um item.')
       return
@@ -1047,28 +1057,43 @@ export default function CustomerApp() {
         )
         .join('; ')
 
-      const { error: pendingError } = await supabase.from('pending_payments').insert([
-        {
-          customer_name: customer.name,
-          phone: customer.phone,
-          position: customer.position,
-          description: 'Compra pelo app Dr. Cafe',
-          items_detail: itemsDetail,
-          total_amount: orderTotal,
-          purchase_date: new Date().toISOString().slice(0, 10),
-          due_date: dueDate,
-          status: 'pendente',
-        },
-      ])
+      const pendingPayload = {
+        customer_name: customer.name,
+        phone: customer.phone,
+        position: customer.position,
+        description: 'Compra pelo app Dr. Cafe',
+        items_detail: itemsDetail,
+        total_amount: orderTotal,
+        purchase_date: new Date().toISOString().slice(0, 10),
+        due_date: dueDate,
+        status: 'pendente',
+      }
+
+      const { error: pendingError } = await supabase
+        .from('pending_payments')
+        .insert([pendingPayload])
 
       if (pendingError) {
+        // O pedido ja entrou: sem esta fila a divida se perdia e o saldo
+        // devedor nunca aparecia para o cliente nem para o caixa.
+        const offlinePending = queueOfflineRecord(
+          'pending_payments',
+          pendingPayload,
+          pendingError.message || 'Falha ao registrar compra do app.',
+        )
         logAppError({
           source: 'CustomerApp',
-          action: 'sendOrder.pendingPayment',
+          action: 'sendOrder.pendingPaymentQueue',
           error: pendingError,
-          details: { table: 'pending_payments', itemCount: cart.length, total: orderTotal },
+          details: {
+            table: 'pending_payments',
+            itemCount: cart.length,
+            total: orderTotal,
+            offlineId: offlinePending.id,
+          },
         })
-        setMessage('Pedido enviado. O cafe vai conferir seu consumo no sistema.')
+        setCart([])
+        setMessage('Pedido enviado. O valor entra no seu saldo assim que a conexao voltar.')
         return
       }
 
@@ -1368,8 +1393,10 @@ export default function CustomerApp() {
               <span>Status: {customer.status}</span>
             </div>
             <div>
-              <strong>{currencyFormatter.format(pendingTotal)}</strong>
-              <span>em aberto</span>
+              <strong>
+                {pendingLoadFailed ? '--' : currencyFormatter.format(pendingTotal)}
+              </strong>
+              <span>{pendingLoadFailed ? 'saldo indisponivel' : 'em aberto'}</span>
               <span>
                 Vencimento: {new Date(`${nextDueDate}T00:00:00`).toLocaleDateString('pt-BR')}
               </span>

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { createFiscalPayload, formatCpf, isCompleteCpf, queueFiscalPayload } from '../lib/fiscalService'
 import { logAppError } from '../lib/appLogger'
 import { queueOfflineRecord, queueOfflineSale } from '../lib/offlineQueue'
+import { matchesTerm, phoneKey } from '../lib/matching'
 import { markBackupNeededAfterClosing } from '../lib/backupService'
 import { openCashDrawer } from '../lib/cashDrawerService'
 import { readReceiptPrinterSettings, type ReceiptPrinterSettings } from '../lib/printerSettings'
@@ -250,6 +251,7 @@ export default function TableManager({
   const [productQuantities, setProductQuantities] = useState<Record<number, string>>({})
   const [productTab, setProductTab] = useState<ProductTab>('todos')
   const [orderMessage, setOrderMessage] = useState('')
+  const [appPendingUnavailable, setAppPendingUnavailable] = useState(false)
 
   const fetchProducts = async () => {
     const { data } = await supabase.from('products').select('*').order('name')
@@ -270,12 +272,22 @@ export default function TableManager({
       .select('phone, total_amount')
       .eq('status', 'pendente')
 
+    // Sem esta marcacao a tela mostrava todo mundo zerado, como se ninguem devesse.
+    setAppPendingUnavailable(Boolean(pendingResult.error))
+
+    if (pendingResult.error) {
+      console.error('Erro ao buscar pendencias dos clientes do app:', pendingResult.error)
+    }
+
+    // Agrupa por telefone so em digitos: o mesmo numero gravado com mascara no
+    // app e solto no caixa precisa cair no mesmo saldo.
     const pendingByPhone = (pendingResult.data ?? []).reduce<Record<string, number>>(
       (totals, payment) => {
-        const phone = String(payment.phone || '')
+        const key = phoneKey(payment.phone)
+        if (!key) return totals
         return {
           ...totals,
-          [phone]: toMoney((totals[phone] ?? 0) + Number(payment.total_amount || 0)),
+          [key]: toMoney((totals[key] ?? 0) + Number(payment.total_amount || 0)),
         }
       },
       {},
@@ -284,7 +296,7 @@ export default function TableManager({
     setAppCustomers(
       (customersResult.data ?? []).map((customer) => ({
         ...customer,
-        pending_total: pendingByPhone[customer.phone] ?? 0,
+        pending_total: pendingByPhone[phoneKey(customer.phone)] ?? 0,
       })),
     )
   }
@@ -894,7 +906,16 @@ export default function TableManager({
       const pendingTotal = Number(selectedAppCustomer.pending_total || 0)
       const availableCredit = Math.max(creditLimit - pendingTotal, 0)
 
-      if (creditLimit > 0 && activeItem.total > availableCredit) {
+      // Saldo nao carregado conta como zero devido, e o limite passaria sem
+      // conferencia. Quem decide e o caixa, mas avisado.
+      if (appPendingUnavailable) {
+        const seguir = window.confirm(
+          'Nao foi possivel carregar o saldo devedor deste cliente. Lancar a compra mesmo assim?',
+        )
+        if (!seguir) return
+      }
+
+      if (!appPendingUnavailable && creditLimit > 0 && activeItem.total > availableCredit) {
         alert('Compra acima do saldo disponivel deste cliente app.')
         return
       }
@@ -1129,23 +1150,21 @@ export default function TableManager({
       )
     : 0
   const filteredAppCustomers = useMemo(() => {
-    const search = appCustomerSearchTerm.trim().toLowerCase()
+    // Busca livre: nome, telefone em qualquer formato, cargo. Digitar
+    // "11999998888" acha o numero gravado como "(11) 99999-8888".
+    const search = appCustomerSearchTerm.trim()
     if (!search) return appCustomers
 
     return appCustomers.filter((customer) =>
-      [customer.name, customer.phone, customer.position]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(search)),
+      matchesTerm(search, [customer.name, customer.phone, customer.position]),
     )
   }, [appCustomerSearchTerm, appCustomers])
   const filteredPdvCustomers = useMemo(() => {
-    const search = pdvCustomerSearchTerm.trim().toLowerCase()
+    const search = pdvCustomerSearchTerm.trim()
     if (!search) return pdvCustomers
 
     return pdvCustomers.filter((customer) =>
-      [customer.name, customer.phone, customer.position]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(search)),
+      matchesTerm(search, [customer.name, customer.phone, customer.position]),
     )
   }, [pdvCustomerSearchTerm, pdvCustomers])
 
