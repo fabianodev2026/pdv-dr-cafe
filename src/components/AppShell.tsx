@@ -87,7 +87,8 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
         </nav>
 
         <div className="user-badge">
-          <strong>{currentUser.username}</strong>
+          <span>{currentUser.username}</span>
+          <strong>{currentUser.role}</strong>
           <button onClick={onLogout}>Sair</button>
         </div>
       </aside>

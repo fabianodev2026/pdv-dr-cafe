@@ -1,8 +1,8 @@
 .finance-manager {
   color: #3e2723;
-  background: transparent;
+  background-color: #fafafa;
   padding: 20px;
-  min-height: 100%;
+  min-height: 100vh;
 }
 
 .header {

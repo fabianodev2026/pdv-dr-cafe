@@ -164,41 +164,12 @@ block('TypeScript', () => {
 })
 
 block('Public limpo', () => {
+  const files = readdirSync(join(root, 'public'))
   const allowed = new Set(['.ico', '.jpg', '.jpeg', '.png', '.webp', '.svg'])
   const allowedFiles = new Set(['manifest.webmanifest', 'manifest-app.webmanifest', 'sw.js'])
-  // Pastas que a aplicacao serve de proposito, com o que cada uma aceita.
-  // A regra anterior olhava so a extensao do nome, entao qualquer diretorio
-  // caia como arquivo invalido.
-  const allowedDirs = new Map([
-    ['atualizacao', new Set(['.exe', '.msi', '.zip', '.json', '.sig'])],
-  ])
-
-  const entries = readdirSync(join(root, 'public'), { withFileTypes: true })
-  const invalid = []
-
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      if (!allowedDirs.has(entry.name)) {
-        invalid.push(`${entry.name}/`)
-        continue
-      }
-
-      const dirAllowed = allowedDirs.get(entry.name)
-      const dirEntries = readdirSync(join(root, 'public', entry.name), { withFileTypes: true })
-
-      for (const dirEntry of dirEntries) {
-        if (dirEntry.isDirectory() || !dirAllowed.has(extname(dirEntry.name).toLowerCase())) {
-          invalid.push(`${entry.name}/${dirEntry.name}`)
-        }
-      }
-
-      continue
-    }
-
-    if (!allowedFiles.has(entry.name) && !allowed.has(extname(entry.name).toLowerCase())) {
-      invalid.push(entry.name)
-    }
-  }
+  const invalid = files.filter(
+    (file) => !allowedFiles.has(file) && !allowed.has(extname(file).toLowerCase()),
+  )
 
   if (invalid.length > 0) {
     throw new Error(`Arquivos inesperados em public: ${invalid.join(', ')}`)

@@ -1,7 +1,7 @@
 .product-manager {
   padding: 20px;
-  background: transparent;
-  min-height: 100%;
+  background-color: #f3e4d2;
+  min-height: 100vh;
 }
 
 .product-manager *,

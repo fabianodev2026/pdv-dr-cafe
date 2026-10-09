@@ -1,20 +1,13 @@
 .customer-menu {
-  box-sizing: border-box;
   min-height: 100vh;
-  min-height: 100dvh;
   padding: 18px;
-  background-color: var(--coffee-roast-800, #2b160d);
-  background-image: var(--bg-coffee-roast);
+  background:
+    linear-gradient(rgba(43, 22, 13, 0.76), rgba(20, 12, 8, 0.96)),
+    url('/fundo.jpg');
   background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
   color: #f8f3ed;
-  font-family: 'Outfit', 'Nunito', 'Segoe UI', system-ui, sans-serif;
-  /* mesmo padrao de controle do app do cliente e do login do PDV */
-  --app-control-height: 44px;
-  --app-control-radius: 10px;
-  --app-font-size: 0.94rem;
+  font-family: 'Nunito', 'Trebuchet MS', Arial, sans-serif;
 }
 
 .customer-menu__header {
@@ -112,16 +105,12 @@
 
 .customer-menu__patient input,
 .customer-menu__filters input {
-  box-sizing: border-box;
   min-width: 0;
-  min-height: var(--app-control-height);
-  padding: 0 14px;
+  padding: 12px;
   border: 1px solid rgba(245, 190, 125, 0.35);
-  border-radius: var(--app-control-radius);
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.08);
   color: #fffaf5;
-  font-family: inherit;
-  font-size: var(--app-font-size);
 }
 
 .customer-menu__filters {

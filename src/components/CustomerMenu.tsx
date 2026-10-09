@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { formatPhone } from '../lib/matching'
 import './CustomerMenu.css'
 
 interface Product {
@@ -61,13 +60,6 @@ export default function CustomerMenu() {
   const [patientName, setPatientName] = useState('')
   const [phone, setPhone] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-
-  // Mesmo fundo do app do cliente no documento inteiro, para nao sobrar
-  // faixa branca atras da barra do sistema.
-  useEffect(() => {
-    document.body.classList.add('tema-cliente')
-    return () => document.body.classList.remove('tema-cliente')
-  }, [])
   const [isSending, setIsSending] = useState(false)
   const [message, setMessage] = useState('')
   const [lastOrderId, setLastOrderId] = useState<number | null>(null)
@@ -283,7 +275,7 @@ export default function CustomerMenu() {
         />
         <input
           value={phone}
-          onChange={(e) => setPhone(formatPhone(e.target.value))}
+          onChange={(e) => setPhone(e.target.value)}
           placeholder="Telefone"
           maxLength={20}
         />

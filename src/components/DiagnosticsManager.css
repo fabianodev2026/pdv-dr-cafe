@@ -1,7 +1,7 @@
 .diagnostics-page {
-  min-height: 100%;
+  min-height: 100vh;
   padding: 24px;
-  background: transparent;
+  background: #f3e4d2;
   color: #2b160d;
 }
 

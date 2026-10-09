@@ -1,12 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { logAppError, normalizeError } from '../lib/appLogger'
 import { markBackupNeededAfterClosing } from '../lib/backupService'
 import { customerFieldLimits } from '../lib/customerLimits'
-import { formatPhone } from '../lib/matching'
-import { fetchPendingByPhone } from '../lib/pendingPayments'
-import { queueOfflineRecord } from '../lib/offlineQueue'
-import { startOfflineAutoSync } from '../lib/offlineSyncService'
 import {
   DEFAULT_STORE_SCHEDULE,
   fetchStoreSchedule,
@@ -56,7 +52,6 @@ interface CartItem {
 
 interface PendingPayment {
   id: number
-  phone?: string | null
   description?: string
   items_detail?: string
   total_amount: number
@@ -154,6 +149,16 @@ const dateDiffInDays = (date: string) => {
   return Math.ceil((target.getTime() - today.getTime()) / 86400000)
 }
 
+const formatPhone = (value: string) => {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 2) return digits ? `(${digits}` : ''
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  }
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
 type MenuTab = 'bebidas' | 'comidas' | 'fitness' | 'presentes'
 
 const menuTabs: Array<{ id: MenuTab; label: string }> = [
@@ -203,20 +208,6 @@ export default function CustomerApp() {
     confirmPassword: '',
   })
   const [showTokenPasswordReset, setShowTokenPasswordReset] = useState(false)
-  const [authTab, setAuthTab] = useState<'entrar' | 'cadastro'>('entrar')
-  const logoRef = useRef<HTMLImageElement>(null)
-
-  const baterLogo = () => {
-    const logo = logoRef.current
-    if (!logo) return
-    logo.classList.remove('customer-app__hero-logo--batendo')
-    void logo.offsetWidth // reinicia a animacao mesmo em toques seguidos
-    logo.classList.add('customer-app__hero-logo--batendo')
-  }
-
-  useEffect(() => {
-    baterLogo()
-  }, [])
   const [products, setProducts] = useState<Product[]>([])
   const [productSearch, setProductSearch] = useState('')
   const [activeMenuTab, setActiveMenuTab] = useState<MenuTab>('bebidas')
@@ -224,7 +215,6 @@ export default function CustomerApp() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [pendingTotal, setPendingTotal] = useState(0)
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([])
-  const [pendingLoadFailed, setPendingLoadFailed] = useState(false)
   const [appOrders, setAppOrders] = useState<AppOrderProgress[]>([])
   const [nextDueDate, setNextDueDate] = useState('')
   const [isBlockedByDebt, setIsBlockedByDebt] = useState(false)
@@ -347,19 +337,19 @@ export default function CustomerApp() {
   }
 
   const loadPending = async (phone: string) => {
-    // O telefone e digitado livre no caixa, entao a busca ignora a formatacao.
-    // O filtro roda no banco quando a funcao get_pending_by_phone existe.
-    const { data, error, source } = await fetchPendingByPhone<PendingPayment>(phone)
+    const { data, error } = await supabase
+      .from('pending_payments')
+      .select('*')
+      .eq('phone', phone)
+      .eq('status', 'pendente')
 
     if (error) {
       logAppError({
         source: 'CustomerApp',
         action: 'loadPending',
         error,
-        details: { table: 'pending_payments', lookup: source },
+        details: { table: 'pending_payments' },
       })
-      // Antes isso virava "saldo zero" e liberava pedido sem conferir limite.
-      setPendingLoadFailed(true)
       setPendingTotal(0)
       setPendingPayments([])
       setNextDueDate(getFifthBusinessDay())
@@ -367,8 +357,6 @@ export default function CustomerApp() {
       loadAppOrders(phone)
       return
     }
-
-    setPendingLoadFailed(false)
 
     const payments = data ?? []
     setPendingPayments(payments)
@@ -395,17 +383,6 @@ export default function CustomerApp() {
 
     return () => window.clearInterval(intervalId)
   }, [customer?.phone])
-
-  // A fila offline do app fica no aparelho do cliente, entao precisa de um
-  // sincronizador aqui tambem; antes so o PDV subia pendencia atrasada.
-  useEffect(() => startOfflineAutoSync(), [])
-
-  // Pinta o documento inteiro de cafe: sem isso sobra uma faixa branca atras
-  // da barra de navegacao e no respiro do scroll quando instalado como app.
-  useEffect(() => {
-    document.body.classList.add('tema-cliente')
-    return () => document.body.classList.remove('tema-cliente')
-  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -998,14 +975,6 @@ export default function CustomerApp() {
       return
     }
 
-    if (pendingLoadFailed) {
-      showMessage(
-        'Nao conseguimos conferir seu saldo agora. Toque em atualizar e tente de novo em instantes.',
-        'error',
-      )
-      return
-    }
-
     if (cart.length === 0) {
       setMessage('Adicione pelo menos um item.')
       return
@@ -1057,43 +1026,28 @@ export default function CustomerApp() {
         )
         .join('; ')
 
-      const pendingPayload = {
-        customer_name: customer.name,
-        phone: customer.phone,
-        position: customer.position,
-        description: 'Compra pelo app Dr. Cafe',
-        items_detail: itemsDetail,
-        total_amount: orderTotal,
-        purchase_date: new Date().toISOString().slice(0, 10),
-        due_date: dueDate,
-        status: 'pendente',
-      }
-
-      const { error: pendingError } = await supabase
-        .from('pending_payments')
-        .insert([pendingPayload])
+      const { error: pendingError } = await supabase.from('pending_payments').insert([
+        {
+          customer_name: customer.name,
+          phone: customer.phone,
+          position: customer.position,
+          description: 'Compra pelo app Dr. Cafe',
+          items_detail: itemsDetail,
+          total_amount: orderTotal,
+          purchase_date: new Date().toISOString().slice(0, 10),
+          due_date: dueDate,
+          status: 'pendente',
+        },
+      ])
 
       if (pendingError) {
-        // O pedido ja entrou: sem esta fila a divida se perdia e o saldo
-        // devedor nunca aparecia para o cliente nem para o caixa.
-        const offlinePending = queueOfflineRecord(
-          'pending_payments',
-          pendingPayload,
-          pendingError.message || 'Falha ao registrar compra do app.',
-        )
         logAppError({
           source: 'CustomerApp',
-          action: 'sendOrder.pendingPaymentQueue',
+          action: 'sendOrder.pendingPayment',
           error: pendingError,
-          details: {
-            table: 'pending_payments',
-            itemCount: cart.length,
-            total: orderTotal,
-            offlineId: offlinePending.id,
-          },
+          details: { table: 'pending_payments', itemCount: cart.length, total: orderTotal },
         })
-        setCart([])
-        setMessage('Pedido enviado. O valor entra no seu saldo assim que a conexao voltar.')
+        setMessage('Pedido enviado. O cafe vai conferir seu consumo no sistema.')
         return
       }
 
@@ -1112,22 +1066,12 @@ export default function CustomerApp() {
     nextDueDate && dateDiffInDays(nextDueDate) <= 5 && dateDiffInDays(nextDueDate) >= 0
 
   return (
-    <div className={customer ? 'customer-app' : 'customer-app customer-app--acesso'}>
+    <div className="customer-app">
       <header className="customer-app__hero">
-        <img
-          ref={logoRef}
-          src="/logo.jpeg"
-          alt="Dr. Cafe"
-          className="customer-app__hero-logo"
-          onClick={baterLogo}
-          onAnimationEnd={(e) =>
-            e.currentTarget.classList.remove('customer-app__hero-logo--batendo')
-          }
-        />
+        <img src="/logo.jpeg" alt="Dr. Cafe" />
         <div>
-          <p>Dr. Café</p>
-          <h1>Faça seu pedido</h1>
-          <span>Cuidando de você</span>
+          <p>DR. CAFÉ</p>
+          <h1>Faça Seu Pedido</h1>
         </div>
       </header>
 
@@ -1147,84 +1091,70 @@ export default function CustomerApp() {
 
       {!customer && (
         <section className="customer-app__auth">
-          {!showTokenPasswordReset && (
-            <div className="customer-app__auth-tabs">
-              <button
-                type="button"
-                className={authTab === 'entrar' ? 'active' : undefined}
-                onClick={() => setAuthTab('entrar')}
-              >
-                Entrar
-              </button>
-              <button
-                type="button"
-                className={authTab === 'cadastro' ? 'active' : undefined}
-                onClick={() => setAuthTab('cadastro')}
-              >
-                Primeiro acesso
+          <div className="customer-app__auth-card customer-app__auth-card--brand">
+            <div className="customer-app__auth-brand">
+              <img src="/logo.jpeg" alt="Dr. Cafe" />
+              <div>
+                <span>Dr. Cafe</span>
+                <strong>Cuidando de voce</strong>
+              </div>
+            </div>
+            <div className="customer-app__auth-callout">
+              <span>Pedido pelo app</span>
+              <strong>Escolha, envie e acompanhe seu saldo.</strong>
+            </div>
+          </div>
+
+          <div className="customer-app__panel">
+            <span className="customer-app__panel-kicker">Acesso</span>
+            <h2>Entrar</h2>
+            <input
+              value={loginForm.login}
+              onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
+              placeholder="Login"
+              maxLength={customerFieldLimits.login}
+            />
+            <div className="customer-app__password-field">
+              <input
+                type={showLoginPassword ? 'text' : 'password'}
+                value={loginForm.password}
+                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                placeholder="Senha"
+                maxLength={customerFieldLimits.password}
+              />
+              <button type="button" onClick={() => setShowLoginPassword((current) => !current)}>
+                {showLoginPassword ? 'Ocultar' : 'Ver'}
               </button>
             </div>
-          )}
-
-          {authTab === 'entrar' && !showTokenPasswordReset && (
-            <div className="customer-app__panel">
-              <span className="customer-app__panel-kicker">Acesso</span>
-              <h2>Entrar</h2>
+            <label className="customer-app__keep-login">
               <input
-                value={loginForm.login}
-                onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
-                placeholder="Login"
-                maxLength={customerFieldLimits.login}
+                type="checkbox"
+                checked={keepLoggedIn}
+                onChange={(event) => setKeepLoggedIn(event.target.checked)}
               />
-              <div className="customer-app__password-field">
-                <input
-                  type={showLoginPassword ? 'text' : 'password'}
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  placeholder="Senha"
-                  maxLength={customerFieldLimits.password}
-                />
-                <button type="button" onClick={() => setShowLoginPassword((current) => !current)}>
-                  {showLoginPassword ? 'Ocultar' : 'Ver'}
+              <span>Manter logado neste aparelho</span>
+            </label>
+            <button onClick={loginCustomer}>Entrar no app</button>
+            {storedPasskey && (
+              <div className="customer-app__passkey-callout">
+                <span>acesso rapido</span>
+                <strong>Entrar com biometria/Face ID</strong>
+                <p>Use o desbloqueio deste aparelho para entrar com seguranca.</p>
+                <button type="button" onClick={unlockWithPasskey}>
+                  Desbloquear agora
                 </button>
               </div>
-              <label className="customer-app__keep-login">
-                <input
-                  type="checkbox"
-                  checked={keepLoggedIn}
-                  onChange={(event) => setKeepLoggedIn(event.target.checked)}
-                />
-                <span>Manter logado neste aparelho</span>
-              </label>
-              <button onClick={loginCustomer}>Entrar no app</button>
-              {storedPasskey && (
-                <div className="customer-app__passkey-callout">
-                  <span>acesso rapido</span>
-                  <strong>Entrar com biometria/Face ID</strong>
-                  <p>Use o desbloqueio deste aparelho para entrar com seguranca.</p>
-                  <button type="button" onClick={unlockWithPasskey}>
-                    Desbloquear agora
-                  </button>
-                </div>
-              )}
-              <button
-                type="button"
-                className="customer-app__link-button"
-                onClick={() => setShowPasswordReset((current) => !current)}
-              >
-                Esqueci a senha
-              </button>
-              <button
-                type="button"
-                className="customer-app__link-button"
-                onClick={() => setAuthTab('cadastro')}
-              >
-                Nao tem login? Clique aqui
-              </button>
-            </div>
-          )}
+            )}
+            <button
+              type="button"
+              className="customer-app__link-button"
+              onClick={() => setShowPasswordReset((current) => !current)}
+            >
+              Esqueci a senha
+            </button>
+          </div>
 
-          {authTab === 'entrar' && showPasswordReset && !showTokenPasswordReset && (
+          {showPasswordReset && (
             <div className="customer-app__panel">
               <span className="customer-app__panel-kicker">Seguranca</span>
               <h2>RECUPERAR SENHA</h2>
@@ -1304,83 +1234,74 @@ export default function CustomerApp() {
             </div>
           )}
 
-          {authTab === 'cadastro' && !showTokenPasswordReset && (
-            <div className="customer-app__panel customer-app__panel--compacto">
-              <span className="customer-app__panel-kicker">Primeiro acesso</span>
-              <h2>NOVO CADASTRO</h2>
+          <div className="customer-app__panel">
+            <span className="customer-app__panel-kicker">Primeiro acesso</span>
+            <h2>NOVO CADASTRO</h2>
+            <input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value.toUpperCase() })}
+              placeholder="Nome"
+              maxLength={customerFieldLimits.firstName}
+            />
+            <input
+              value={form.lastName}
+              onChange={(e) => setForm({ ...form, lastName: e.target.value.toUpperCase() })}
+              placeholder="Sobrenome"
+              maxLength={customerFieldLimits.lastName}
+            />
+            <input
+              value={form.login}
+              onChange={(e) => setForm({ ...form, login: e.target.value })}
+              placeholder="Criar login"
+              maxLength={customerFieldLimits.login}
+            />
+            <div className="customer-app__password-field">
               <input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value.toUpperCase() })}
-                placeholder="Nome"
-                maxLength={customerFieldLimits.firstName}
+                type={showRegisterPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder="Criar senha"
+                maxLength={customerFieldLimits.password}
               />
-              <input
-                value={form.lastName}
-                onChange={(e) => setForm({ ...form, lastName: e.target.value.toUpperCase() })}
-                placeholder="Sobrenome"
-                maxLength={customerFieldLimits.lastName}
-              />
-              <input
-                value={form.login}
-                onChange={(e) => setForm({ ...form, login: e.target.value })}
-                placeholder="Criar login"
-                maxLength={customerFieldLimits.login}
-              />
-              <div className="customer-app__password-field">
-                <input
-                  type={showRegisterPassword ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder="Criar senha"
-                  maxLength={customerFieldLimits.password}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowRegisterPassword((current) => !current)}
-                >
-                  {showRegisterPassword ? 'Ocultar' : 'Ver'}
-                </button>
-              </div>
-              <input
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
-                placeholder="Telefone"
-                inputMode="numeric"
-                maxLength={customerFieldLimits.phone}
-              />
-              <input
-                value={form.position}
-                onChange={(e) => setForm({ ...form, position: e.target.value.toUpperCase() })}
-                placeholder="Cargo"
-                maxLength={customerFieldLimits.position}
-              />
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="Email"
-                maxLength={customerFieldLimits.email}
-              />
-              <input
-                type="email"
-                value={form.emailConfirmation}
-                onChange={(e) => setForm({ ...form, emailConfirmation: e.target.value })}
-                placeholder="Confirmar email"
-                maxLength={customerFieldLimits.email}
-              />
-              <button onClick={registerCustomer}>Enviar cadastro</button>
               <button
                 type="button"
-                className="customer-app__link-button"
-                onClick={() => setAuthTab('entrar')}
+                onClick={() => setShowRegisterPassword((current) => !current)}
               >
-                Ja tenho login
+                {showRegisterPassword ? 'Ocultar' : 'Ver'}
               </button>
-              <small>
-                O cafe confirma o cadastro no sistema. Depois disso o app libera os pedidos.
-              </small>
             </div>
-          )}
+            <input
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
+              placeholder="Telefone"
+              inputMode="numeric"
+              maxLength={customerFieldLimits.phone}
+            />
+            <input
+              value={form.position}
+              onChange={(e) => setForm({ ...form, position: e.target.value.toUpperCase() })}
+              placeholder="Cargo"
+              maxLength={customerFieldLimits.position}
+            />
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="Email"
+              maxLength={customerFieldLimits.email}
+            />
+            <input
+              type="email"
+              value={form.emailConfirmation}
+              onChange={(e) => setForm({ ...form, emailConfirmation: e.target.value })}
+              placeholder="Confirmar email"
+              maxLength={customerFieldLimits.email}
+            />
+            <button onClick={registerCustomer}>Enviar cadastro</button>
+            <small>
+              O cafe confirma o cadastro no sistema. Depois disso o app libera os pedidos.
+            </small>
+          </div>
         </section>
       )}
 
@@ -1393,10 +1314,8 @@ export default function CustomerApp() {
               <span>Status: {customer.status}</span>
             </div>
             <div>
-              <strong>
-                {pendingLoadFailed ? '--' : currencyFormatter.format(pendingTotal)}
-              </strong>
-              <span>{pendingLoadFailed ? 'saldo indisponivel' : 'em aberto'}</span>
+              <strong>{currencyFormatter.format(pendingTotal)}</strong>
+              <span>em aberto</span>
               <span>
                 Vencimento: {new Date(`${nextDueDate}T00:00:00`).toLocaleDateString('pt-BR')}
               </span>
