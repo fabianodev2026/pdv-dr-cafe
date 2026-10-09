@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { ADMIN_ROLES, hasRole, type CurrentUser } from '../lib/rolePermissions'
 import { queueOfflineDelete, queueOfflineRecord, queueOfflineUpdate } from '../lib/offlineQueue'
-import { matchesTerm, phoneKey } from '../lib/matching'
+import { formatPhone, matchesTerm, phoneKey } from '../lib/matching'
 import './PendingPayments.css'
 
 interface PendingPayment {
@@ -260,7 +260,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
 
   const savePdvCustomer = async () => {
     const name = newPdvCustomer.name.trim()
-    const phone = newPdvCustomer.phone.trim()
+    const phone = formatPhone(newPdvCustomer.phone)
 
     if (!name || !phone) {
       setMessage('Informe nome e telefone para cadastrar cliente PDV.')
@@ -403,6 +403,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
     const { error } = await supabase.from('pending_payments').insert([
       {
         ...newPending,
+        phone: formatPhone(newPending.phone),
         items_detail: pendingItems.join('\n'),
         total_amount: Number(newPending.total_amount || 0),
         status: 'pendente',
@@ -821,7 +822,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
             <input
               value={newPdvCustomer.phone}
               onChange={(event) =>
-                setNewPdvCustomer({ ...newPdvCustomer, phone: event.target.value })
+                setNewPdvCustomer({ ...newPdvCustomer, phone: formatPhone(event.target.value) })
               }
               placeholder="Telefone"
               maxLength={25}
@@ -920,7 +921,7 @@ export default function PendingPayments({ currentUser }: PendingPaymentsProps) {
             <input
               value={newPending.phone}
               onChange={(e) =>
-                setNewPending({ ...newPending, phone: e.target.value })
+                setNewPending({ ...newPending, phone: formatPhone(e.target.value) })
               }
               placeholder="Telefone"
               maxLength={25}

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { logAppError, normalizeError } from '../lib/appLogger'
 import { markBackupNeededAfterClosing } from '../lib/backupService'
 import { customerFieldLimits } from '../lib/customerLimits'
+import { formatPhone } from '../lib/matching'
 import { fetchPendingByPhone } from '../lib/pendingPayments'
 import { queueOfflineRecord } from '../lib/offlineQueue'
 import { startOfflineAutoSync } from '../lib/offlineSyncService'
@@ -151,16 +152,6 @@ const dateDiffInDays = (date: string) => {
   const target = new Date(`${date}T00:00:00`)
   today.setHours(0, 0, 0, 0)
   return Math.ceil((target.getTime() - today.getTime()) / 86400000)
-}
-
-const formatPhone = (value: string) => {
-  const digits = value.replace(/\D/g, '').slice(0, 11)
-  if (digits.length <= 2) return digits ? `(${digits}` : ''
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
-  if (digits.length <= 10) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
-  }
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
 }
 
 type MenuTab = 'bebidas' | 'comidas' | 'fitness' | 'presentes'

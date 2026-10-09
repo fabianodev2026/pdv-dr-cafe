@@ -86,3 +86,21 @@ export function matchesTerm(term: string, fields: Array<unknown>): boolean {
     return false
   })
 }
+
+/**
+ * Formato padrao do telefone: (DD) 99999-8888.
+ * Numero de 11 digitos sai com 5 digitos antes do traco e 4 depois; o de 10
+ * digitos mantem 4 e 4. Nunca inventa o nono digito: numero curto demais fica
+ * como o usuario digitou, para nao gravar um telefone que nao existe.
+ */
+export function formatPhone(value: string): string {
+  const digits = phoneKey(value).slice(0, 11)
+
+  if (digits.length <= 2) return digits ? `(${digits}` : ''
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  }
+
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
