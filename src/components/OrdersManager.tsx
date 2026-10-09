@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { ADMIN_ROLES, hasRole, type CurrentUser } from '../lib/rolePermissions'
 import { queueOfflineUpdate } from '../lib/offlineQueue'
-import { phoneKey } from '../lib/matching'
 import './OrdersManager.css'
 
 type OrderStatus = 'novo' | 'recebido' | 'preparo' | 'pronto' | 'pago' | 'entregue' | 'cancelado'
@@ -193,11 +192,9 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
       credit_limit: Number(customer.credit_limit || 0),
       pending_total: Number(customer.pending_total || 0),
     }))
-    // Compara por digitos: o mesmo cliente cadastrado nos dois lugares com o
-    // telefone escrito diferente aparecia duas vezes na lista.
-    const appCustomerPhones = new Set(appCustomers.map((customer) => phoneKey(customer.phone)))
+    const appCustomerPhones = new Set(appCustomers.map((customer) => customer.phone))
     const pdvCustomerOptions = pdvCustomers
-      .filter((customer) => !appCustomerPhones.has(phoneKey(customer.phone)))
+      .filter((customer) => !appCustomerPhones.has(customer.phone))
       .map((customer) => ({
         key: `pdv-${customer.id}`,
         source: 'pdv' as const,
@@ -315,23 +312,12 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
       .select('phone, total_amount')
       .eq('status', 'pendente')
 
-    if (pendingResult.error) {
-      // Sem isso a tela mostrava todo mundo zerado como se ninguem devesse.
-      console.error('Erro ao buscar pendencias dos clientes do app:', pendingResult.error)
-      setMessage(
-        'Nao foi possivel carregar o saldo devedor dos clientes. Confira a conexao antes de lancar a compra.',
-      )
-    }
-
-    // Agrupa por telefone so em digitos: o mesmo numero gravado com mascara no
-    // app e solto no caixa precisa cair no mesmo saldo.
     const pendingByPhone = (pendingResult.data ?? []).reduce<Record<string, number>>(
       (totals, payment) => {
-        const key = phoneKey(payment.phone)
-        if (!key) return totals
+        const phone = String(payment.phone || '')
         return {
           ...totals,
-          [key]: toMoney((totals[key] ?? 0) + Number(payment.total_amount || 0)),
+          [phone]: toMoney((totals[phone] ?? 0) + Number(payment.total_amount || 0)),
         }
       },
       {},
@@ -340,7 +326,7 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
     setAppCustomers(
       (customersResult.data ?? []).map((customer) => ({
         ...customer,
-        pending_total: pendingByPhone[phoneKey(customer.phone)] ?? 0,
+        pending_total: pendingByPhone[customer.phone] ?? 0,
       })),
     )
   }

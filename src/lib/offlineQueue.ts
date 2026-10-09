@@ -18,17 +18,7 @@ function persistOfflineSales(sales: OfflineSale[]) {
   localStorage.setItem(OFFLINE_SALES_KEY, JSON.stringify(sales))
 }
 
-// Venda e pendencia sao dinheiro: ficam na fila ate subirem, mesmo que
-// demorem. So o resto expira, para o localStorage nao crescer sem limite.
-const FINANCIAL_TABLES: OfflineTargetTable[] = ['sales', 'pending_payments']
-
-export function isFinancialRecord(sale: OfflineSale) {
-  return FINANCIAL_TABLES.includes(sale.targetTable)
-}
-
 function isWithinRetention(sale: OfflineSale) {
-  if (isFinancialRecord(sale)) return true
-
   const createdAt = new Date(sale.createdAt).getTime()
   if (Number.isNaN(createdAt)) return false
 
