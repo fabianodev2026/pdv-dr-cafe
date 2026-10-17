@@ -29,7 +29,7 @@
 ## Perfis do sistema
 
 - `admin`: acesso total, usuarios, configuracoes, produtos, clientes app, financeiro, diagnostico e PDV.
-- `gerente`: operacao, produtos, almoco do dia, clientes app, financeiro e diagnostico.
+- `gerente`: operacao, produtos, clientes app, financeiro e diagnostico.
 - `caixa`: PDV, fechamento, pagar depois, pedidos e financeiro.
 - `garcom`: lancar pedido e enviar para preparo, sem finalizar pagamento.
 - `suporte_tecnico`: diagnostico e suporte IA, sem operar caixa.

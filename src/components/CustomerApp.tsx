@@ -35,14 +35,6 @@ interface Product {
   category?: string
 }
 
-interface DailyLunch {
-  id: number
-  dish_name: string
-  description?: string
-  price: number
-  image_url?: string
-}
-
 interface CartItem {
   id: string
   name: string
@@ -225,7 +217,6 @@ export default function CustomerApp() {
   const [products, setProducts] = useState<Product[]>([])
   const [productSearch, setProductSearch] = useState('')
   const [activeMenuTab, setActiveMenuTab] = useState<MenuTab>('bebidas')
-  const [dailyLunch, setDailyLunch] = useState<DailyLunch | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [pendingTotal, setPendingTotal] = useState(0)
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([])
@@ -307,25 +298,6 @@ export default function CustomerApp() {
       setMenuMessage('Cardapio temporariamente indisponivel.')
     }
 
-    const lunchResult = await supabase
-      .from('daily_lunches')
-      .select('*')
-      .eq('active', true)
-      .gte('serving_date', new Date().toISOString().slice(0, 10))
-      .order('serving_date', { ascending: true })
-      .limit(1)
-      .maybeSingle()
-
-    if (!lunchResult.error && lunchResult.data) {
-      setDailyLunch(lunchResult.data)
-    } else if (lunchResult.error) {
-      logAppError({
-        source: 'CustomerApp',
-        action: 'loadMenu.dailyLunch',
-        error: lunchResult.error,
-        details: { table: 'daily_lunches' },
-      })
-    }
   }
 
   const loadAppOrders = async (phone: string) => {
@@ -1591,34 +1563,6 @@ export default function CustomerApp() {
                   ))}
                 </div>
               </div>
-
-              {dailyLunch && activeMenuTab === 'comidas' && (
-                <div className="customer-app__section">
-                  <h2>Almoco do dia</h2>
-                  <article className="customer-app__item customer-app__item--lunch">
-                    {dailyLunch.image_url && (
-                      <img src={dailyLunch.image_url} alt={dailyLunch.dish_name} />
-                    )}
-                    <div>
-                      <strong>{dailyLunch.dish_name}</strong>
-                      <p>{dailyLunch.description}</p>
-                      <span>{currencyFormatter.format(Number(dailyLunch.price))}</span>
-                      <button
-                        disabled={!isOrderingOpen}
-                        onClick={() =>
-                          addToCart({
-                            id: `lunch-${dailyLunch.id}`,
-                            name: dailyLunch.dish_name,
-                            unit_price: Number(dailyLunch.price),
-                          })
-                        }
-                      >
-                        Pedir almoco
-                      </button>
-                    </div>
-                  </article>
-                </div>
-              )}
 
               <div className="customer-app__section">
                 <div className="customer-app__section-heading">

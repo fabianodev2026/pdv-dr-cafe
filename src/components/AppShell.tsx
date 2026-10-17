@@ -76,7 +76,6 @@ export default function AppShell({ currentUser, onLogout }: AppShellProps) {
           {canOperate && <NavLink to="/mesas">PDV</NavLink>}
           {canOperate && <NavLink to="/pedidos">Ultimos pedidos feitos</NavLink>}
           {canUseCashier && <NavLink to="/pendencias">Pagar depois</NavLink>}
-          {canManage && <NavLink to="/almoco-do-dia">Almoco do dia</NavLink>}
           {canManage && <NavLink to="/clientes-app">Clientes app</NavLink>}
           {canManage && <NavLink to="/produtos">Produtos</NavLink>}
           {canAdmin && <NavLink to="/configuracoes">Usuarios</NavLink>}

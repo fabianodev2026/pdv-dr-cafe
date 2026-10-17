@@ -8,7 +8,6 @@ import LoginScreen from '../components/LoginScreen'
 import ConfigManager from '../components/ConfigManager'
 import CustomerApp from '../components/CustomerApp'
 import CustomerMenu from '../components/CustomerMenu'
-import DailyLunchManager from '../components/DailyLunchManager'
 import DiagnosticsManager from '../components/DiagnosticsManager'
 import FinanceManager from '../components/FinanceManager'
 import OrdersManager from '../components/OrdersManager'
@@ -94,10 +93,6 @@ export default function AppRouter() {
             <Route
               path="/produtos"
               element={requireRole(<ProductManager />, MANAGER_ROLES)}
-            />
-            <Route
-              path="/almoco-do-dia"
-              element={requireRole(<DailyLunchManager />, MANAGER_ROLES)}
             />
             <Route
               path="/clientes-app"
