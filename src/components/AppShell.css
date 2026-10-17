@@ -3,7 +3,7 @@
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: 224px minmax(0, 1fr);
+  grid-template-columns: 270px minmax(0, 1fr);
   gap: 14px;
   padding: 14px;
   /* Mesmo fundo da tela de login, sem veu: a seda aparece por inteiro.
@@ -17,18 +17,19 @@
   background-attachment: fixed;
   font-family: 'Outfit', 'Nunito', 'Segoe UI', system-ui, sans-serif;
   /* tamanho unico para todo o texto da lateral */
-  --sidebar-font-size: 0.78rem;
+  --sidebar-font-size: 1rem;
 }
 
-/* Barra lateral como cartao flutuante: nao encosta nas bordas e acompanha a
-   rolagem em vez de esticar a pagina. */
+/* A barra ocupa toda a altura util da tela, com rolagem propria em janelas
+   menores para manter o menu e o acesso ao usuario sempre organizados. */
 .app-sidebar {
   position: sticky;
   top: 14px;
   align-self: start;
   box-sizing: border-box;
+  height: calc(100dvh - 28px);
   max-height: calc(100dvh - 28px);
-  padding: 14px;
+  padding: 18px 16px;
   border-radius: 14px;
   border: 1px solid rgba(245, 190, 125, 0.22);
   background: linear-gradient(165deg, #3b2214 0%, #2b160d 55%, #1d1008 100%);
@@ -36,8 +37,9 @@
   color: #f9ead6;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  overflow: auto;
+  gap: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .brand-block {
@@ -47,8 +49,8 @@
 }
 
 .brand-logo {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 8px;
   object-fit: cover;
   background: #edd8bd;
@@ -84,17 +86,23 @@
 
 .app-tabs {
   display: grid;
-  gap: 5px;
+  flex: 1;
+  align-content: space-evenly;
+  gap: 9px;
+  padding: 8px 0;
 }
 
 .app-tabs a {
   color: #f2dec4;
   text-decoration: none;
-  padding: 8px 11px;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid transparent;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.35;
 }
 
 .app-tabs a.active,
@@ -105,10 +113,10 @@
 }
 
 .user-badge {
-  margin-top: auto;
   display: grid;
-  gap: 5px;
-  padding-top: 10px;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(245, 190, 125, 0.25);
 }
 
 .user-badge span,
@@ -126,7 +134,8 @@
   background: transparent;
   color: #f7d7aa;
   border-radius: 8px;
-  padding: 7px 10px;
+  min-height: 44px;
+  padding: 9px 12px;
   cursor: pointer;
   font-family: inherit;
   font-weight: 600;
@@ -186,10 +195,13 @@
 
   .app-sidebar {
     position: static;
+    height: auto;
     max-height: none;
   }
 
   .app-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: initial;
+    flex: initial;
   }
 }
