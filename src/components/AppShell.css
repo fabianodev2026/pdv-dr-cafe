@@ -207,7 +207,8 @@
 }
 
 /* Compacta os botoes em notebooks para manter todo o menu visivel. */
-@media (min-width: 821px) and (max-height: 820px) {
+@media (min-width: 821px) and (max-width: 1440px),
+  (min-width: 821px) and (max-height: 820px) {
   .app-sidebar {
     padding: 10px 12px;
     gap: 6px;
