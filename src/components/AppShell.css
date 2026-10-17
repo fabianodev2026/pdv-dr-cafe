@@ -224,6 +224,7 @@
   }
 
   .app-tabs a {
+    box-sizing: border-box;
     min-height: 36px;
     padding: 6px 9px;
     line-height: 1.12;
@@ -235,6 +236,7 @@
   }
 
   .user-badge button {
+    box-sizing: border-box;
     min-height: 36px;
     margin-top: 1px;
     padding: 6px 9px;
