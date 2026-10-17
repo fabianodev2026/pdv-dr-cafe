@@ -1,22 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import type { ReactElement } from 'react'
 import AppShell from '../components/AppShell'
-import AppCustomersManager from '../components/AppCustomersManager'
-import CashClosingManager from '../components/CashClosingManager'
 import LoginScreen from '../components/LoginScreen'
-import ConfigManager from '../components/ConfigManager'
-import CustomerApp from '../components/CustomerApp'
-import CustomerMenu from '../components/CustomerMenu'
-import DiagnosticsManager from '../components/DiagnosticsManager'
-import FinanceManager from '../components/FinanceManager'
-import OrdersManager from '../components/OrdersManager'
-import PendingPayments from '../components/PendingPayments'
-import ProductManager from '../components/ProductManager'
-import RoomPanel from '../components/RoomPanel'
-import SettingsManager from '../components/SettingsManager'
-import SupportAiManager from '../components/SupportAiManager'
-import TableManager from '../components/TableManager'
 import {
   ADMIN_ROLES,
   CASHIER_ROLES,
@@ -29,6 +15,21 @@ import {
   getHomePath,
   hasRole,
 } from '../lib/rolePermissions'
+
+const AppCustomersManager = lazy(() => import('../components/AppCustomersManager'))
+const CashClosingManager = lazy(() => import('../components/CashClosingManager'))
+const ConfigManager = lazy(() => import('../components/ConfigManager'))
+const CustomerApp = lazy(() => import('../components/CustomerApp'))
+const CustomerMenu = lazy(() => import('../components/CustomerMenu'))
+const DiagnosticsManager = lazy(() => import('../components/DiagnosticsManager'))
+const FinanceManager = lazy(() => import('../components/FinanceManager'))
+const OrdersManager = lazy(() => import('../components/OrdersManager'))
+const PendingPayments = lazy(() => import('../components/PendingPayments'))
+const ProductManager = lazy(() => import('../components/ProductManager'))
+const RoomPanel = lazy(() => import('../components/RoomPanel'))
+const SettingsManager = lazy(() => import('../components/SettingsManager'))
+const SupportAiManager = lazy(() => import('../components/SupportAiManager'))
+const TableManager = lazy(() => import('../components/TableManager'))
 
 export default function AppRouter() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
@@ -51,23 +52,24 @@ export default function AppRouter() {
 
   return (
     <Router>
-      <Routes>
-        {/* Cardapio publico via QR Code */}
-        <Route path="/cardapio" element={<CustomerMenu />} />
-        <Route path="/menu" element={<CustomerMenu />} />
-        <Route path="/app" element={<CustomerApp />} />
+      <Suspense fallback={<div role="status" aria-live="polite">Carregando tela...</div>}>
+        <Routes>
+          {/* Cardapio publico via QR Code */}
+          <Route path="/cardapio" element={<CustomerMenu />} />
+          <Route path="/menu" element={<CustomerMenu />} />
+          <Route path="/app" element={<CustomerApp />} />
 
-        {!currentUser ? (
-          <Route
-            path="*"
-            element={<LoginScreen onLoginSuccess={handleLoginSuccess} />}
-          />
-        ) : (
-          <Route
-            element={
-              <AppShell currentUser={currentUser} onLogout={handleLogout} />
-            }
-          >
+          {!currentUser ? (
+            <Route
+              path="*"
+              element={<LoginScreen onLoginSuccess={handleLoginSuccess} />}
+            />
+          ) : (
+            <Route
+              element={
+                <AppShell currentUser={currentUser} onLogout={handleLogout} />
+              }
+            >
             {/* Redirecionamento para principal */}
             <Route path="/" element={<Navigate to={getHomePath(currentUser)} replace />} />
 
@@ -146,9 +148,10 @@ export default function AppRouter() {
 
             {/* 404 */}
             <Route path="*" element={<Navigate to="/mesas" replace />} />
-          </Route>
-        )}
-      </Routes>
+            </Route>
+          )}
+        </Routes>
+      </Suspense>
     </Router>
   )
 }

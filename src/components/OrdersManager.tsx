@@ -168,6 +168,7 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
   const [cashReceivedByOrder, setCashReceivedByOrder] = useState<Record<string, string>>({})
   const [sendingToAppOrderId, setSendingToAppOrderId] = useState<string | null>(null)
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null)
+  const [updatingOrderKey, setUpdatingOrderKey] = useState<string | null>(null)
   const [showOrderLog, setShowOrderLog] = useState(false)
   const [orderLog, setOrderLog] = useState<SaleRecord[]>([])
   const [orderLogDate, setOrderLogDate] = useState(getLocalDateInputValue())
@@ -212,31 +213,28 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
   }, [appCustomers, pdvCustomers])
 
   const fetchOrders = async () => {
-    const roomResult = await supabase
-      .from('room_orders')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const openOrders = (table: 'room_orders' | 'service_orders' | 'app_orders') =>
+      supabase
+        .from(table)
+        .select('*')
+        .not('status', 'in', '("entregue","cancelado")')
+        .order('created_at', { ascending: false })
 
-    if (roomResult.error) {
-      console.error('Erro ao buscar pedidos de quartos:', roomResult.error)
-      setMessage(`Erro ao buscar pedidos de quartos: ${roomResult.error.message}`)
-      return
-    }
+    const [roomResult, serviceResult, appResult] = await Promise.all([
+      openOrders('room_orders'),
+      openOrders('service_orders'),
+      openOrders('app_orders'),
+    ])
 
-    const serviceResult = await supabase
-      .from('service_orders')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const fetchErrors = [
+      roomResult.error && `quartos: ${roomResult.error.message}`,
+      serviceResult.error && `mesas/comandas: ${serviceResult.error.message}`,
+      appResult.error && `app: ${appResult.error.message}`,
+    ].filter(Boolean)
 
-    const appResult = await supabase
-      .from('app_orders')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (serviceResult.error || appResult.error) {
-      console.error('Erro ao buscar pedidos internos:', serviceResult.error)
-      console.error('Erro ao buscar pedidos do app:', appResult.error)
-      setMessage('Execute o SQL atualizado para pedidos de mesa e app.')
+    if (fetchErrors.length > 0) {
+      console.error('Erro ao buscar pedidos:', fetchErrors)
+      setMessage(`Nao foi possivel atualizar todos os pedidos (${fetchErrors.join(' | ')}).`)
     } else {
       setMessage('')
     }
@@ -286,16 +284,24 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
       customer_message: order.customer_message,
     }))
 
-    setOrders(
-      [
-        ...mergeOpenOrders([...roomOrders, ...serviceOrders]),
-        ...appOrders.filter((order) => !closedStatuses.includes(order.status)),
-      ]
-        .sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-        ),
-    )
+    setOrders((current) => {
+      const visibleRoomOrders = roomResult.error
+        ? current.filter((order) => order.tableName === 'room_orders')
+        : roomOrders
+      const visibleServiceOrders = serviceResult.error
+        ? current.filter((order) => order.tableName === 'service_orders')
+        : serviceOrders
+      const visibleAppOrders = appResult.error
+        ? current.filter((order) => order.tableName === 'app_orders')
+        : appOrders
+
+      return [
+        ...mergeOpenOrders([...visibleRoomOrders, ...visibleServiceOrders]),
+        ...visibleAppOrders,
+      ].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+    })
   }
 
   const fetchAppCustomers = async () => {
@@ -357,10 +363,14 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
 
   const updateStatus = async (order: OrderTicket, status: OrderStatus) => {
     const targetIds = order.ids.length > 0 ? order.ids : [order.id]
+    const orderKey = `${order.tableName}-${order.id}`
     const updatePayload = {
       status,
       customer_message: statusMessages[status],
     }
+
+    if (updatingOrderKey === orderKey) return
+    setUpdatingOrderKey(orderKey)
 
     try {
       const { error } = await supabase
@@ -370,20 +380,40 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
 
       if (error) throw error
 
-      fetchOrders()
-    } catch (err) {
-      queueOfflineUpdate(
-        order.tableName,
-        targetIds,
-        updatePayload,
-        (err as Error).message || 'Falha de conexao ou Supabase indisponivel.',
-      )
       setOrders((current) =>
-        current.map((item) =>
-          item.id === order.id ? { ...item, status, customer_message: statusMessages[status] } : item,
-        ),
+        current
+          .map((item) =>
+            item.tableName === order.tableName && item.ids.some((id) => targetIds.includes(id))
+              ? { ...item, status, customer_message: statusMessages[status] }
+              : item,
+          )
+          .filter((item) => !closedStatuses.includes(item.status)),
       )
-      setMessage('Sem conexao: status salvo neste computador e sera sincronizado quando a internet voltar.')
+      setMessage(`Pedido marcado como ${statusMessages[status].toLowerCase()}`)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      const isNetworkError =
+        !navigator.onLine ||
+        err instanceof TypeError ||
+        /network|fetch|conex[aã]o/i.test(errorMessage)
+
+      if (isNetworkError) {
+        queueOfflineUpdate(order.tableName, targetIds, updatePayload, errorMessage)
+        setOrders((current) =>
+          current
+            .map((item) =>
+              item.tableName === order.tableName && item.ids.some((id) => targetIds.includes(id))
+                ? { ...item, status, customer_message: statusMessages[status] }
+                : item,
+            )
+            .filter((item) => !closedStatuses.includes(item.status)),
+        )
+        setMessage('Sem conexao: status salvo neste computador e sera sincronizado quando a internet voltar.')
+      } else {
+        setMessage(`Nao foi possivel marcar o pedido: ${errorMessage}`)
+      }
+    } finally {
+      setUpdatingOrderKey(null)
     }
   }
 
@@ -1026,9 +1056,33 @@ export default function OrdersManager({ currentUser }: OrdersManagerProps) {
                   </button>
                 </div>
               )}
-              <button onClick={() => updateStatus(order, 'recebido')}>Recebido</button>
-              <button onClick={() => updateStatus(order, 'preparo')}>Preparo</button>
-              <button onClick={() => updateStatus(order, 'pronto')}>Pronto</button>
+              <button
+                type="button"
+                className={`status-button${order.status === 'recebido' ? ' active' : ''}`}
+                aria-pressed={order.status === 'recebido'}
+                disabled={updatingOrderKey === `${order.tableName}-${order.id}` || order.status === 'recebido'}
+                onClick={() => updateStatus(order, 'recebido')}
+              >
+                Recebido
+              </button>
+              <button
+                type="button"
+                className={`status-button${order.status === 'preparo' ? ' active' : ''}`}
+                aria-pressed={order.status === 'preparo'}
+                disabled={updatingOrderKey === `${order.tableName}-${order.id}` || order.status === 'preparo'}
+                onClick={() => updateStatus(order, 'preparo')}
+              >
+                Preparo
+              </button>
+              <button
+                type="button"
+                className={`status-button${order.status === 'pronto' ? ' active' : ''}`}
+                aria-pressed={order.status === 'pronto'}
+                disabled={updatingOrderKey === `${order.tableName}-${order.id}` || order.status === 'pronto'}
+                onClick={() => updateStatus(order, 'pronto')}
+              >
+                Pronto
+              </button>
               {(order.status === 'pronto' || order.status === 'pago') && (
                 <button
                   onClick={() => updateStatus(order, 'entregue')}

@@ -168,6 +168,18 @@
   width: 100%;
 }
 
+.status-actions .status-button.active {
+  background: #2f7d42;
+  color: #fffaf5;
+  box-shadow: inset 0 0 0 2px #1f5b2e;
+  cursor: default;
+}
+
+.status-actions .status-button:disabled:not(.active) {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .status-actions .btn-delivered {
   background: #2f7d42;
 }
