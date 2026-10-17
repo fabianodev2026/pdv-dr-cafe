@@ -44,8 +44,11 @@
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 15px;
+  /* Mantem os cartoes em tamanho confortavel e com largura uniforme mesmo
+     quando ha poucas mesas/quartos cadastrados. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 20px;
+  align-items: stretch;
 }
 
 .room-filters {
@@ -125,7 +128,8 @@
 .item-card {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(5px);
-  padding: 20px;
+  min-height: 132px;
+  padding: 24px 20px;
   border-radius: 15px;
   text-align: center;
   cursor: pointer;
@@ -146,7 +150,7 @@
 
 .item-card h3 {
   margin: 0 0 10px 0;
-  font-size: 1.5em;
+  font-size: clamp(1.35rem, 1.5vw, 1.65rem);
   color: #5d4037;
 }
 
@@ -1088,13 +1092,13 @@
 
   .cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 12px;
   }
 
   .item-card {
     border-radius: 10px;
-    min-height: 96px;
-    padding: 14px 10px;
+    min-height: 112px;
+    padding: 18px 12px;
   }
 
   .item-card h3 {
