@@ -1294,14 +1294,14 @@ export default function SettingsManager() {
         </section>
       )}
       {activeTab === 'funcionamento' && (
-        <section className="settings-panel">
+        <section className="settings-panel schedule-panel">
           <div className="settings-panel-heading">
             <div>
               <h2>Configuracao do app</h2>
-              <p>Defina os horarios em que os clientes podem fazer pedidos pelo app. Altere quando o horario da loja mudar, sem precisar de ajuda tecnica.</p>
+              <p>Defina os horarios em que os clientes podem fazer pedidos pelo app. Altere quando o horario da loja mudar.</p>
             </div>
             <button
-              className="settings-save"
+              className="settings-save settings-save--compact"
               onClick={saveStoreScheduleSettings}
               disabled={storeScheduleSaving}
             >
@@ -1350,7 +1350,7 @@ export default function SettingsManager() {
                 }
               />
             </div>
-            <div className="form-group">
+            <div className="form-group schedule-toggle">
               <label>
                 <input
                   type="checkbox"
@@ -1359,7 +1359,7 @@ export default function SettingsManager() {
                     setStoreSchedule({ ...storeSchedule, sundayEnabled: e.target.checked })
                   }
                 />
-                {' '}Abrir aos domingos
+                <span>Abrir aos domingos</span>
               </label>
             </div>
             {storeSchedule.sundayEnabled && (
