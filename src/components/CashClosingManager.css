@@ -1,4 +1,5 @@
 .cash-closing-page {
+  min-width: 0;
   min-height: 100vh;
   padding: 24px;
   background: #f3e4d2;
@@ -42,6 +43,11 @@
   margin-bottom: 18px;
 }
 
+.cash-closing-page,
+.cash-closing-page * {
+  box-sizing: border-box;
+}
+
 .cash-closing-message {
   font-weight: 800;
 }
@@ -50,6 +56,12 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 12px;
+}
+
+.cash-closing-summary > *,
+.cash-money-grid > *,
+.cash-denominations-grid > * {
+  min-width: 0;
 }
 
 .cash-closing-summary label,
@@ -65,6 +77,8 @@
 
 .cash-closing-summary strong,
 .cash-column-total strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: #2b160d;
   font-size: 1.25rem;
 }
@@ -80,6 +94,7 @@
 .cash-closing-summary input,
 .cash-money-input input,
 .cash-denomination input {
+  min-width: 0;
   min-height: 42px;
   border: 1px solid #b98554;
   border-radius: 8px;
@@ -98,9 +113,13 @@
 
 .cash-closing-columns {
   display: grid;
-  grid-template-columns: minmax(520px, 1.45fr) minmax(260px, 0.75fr);
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.75fr);
   gap: 16px;
   align-items: start;
+}
+
+.cash-closing-columns > * {
+  min-width: 0;
 }
 
 .cash-closing-column {
@@ -115,10 +134,16 @@
 
 .cash-column-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
+}
+
+.cash-column-heading > div {
+  flex: 1 1 150px;
+  min-width: 0;
 }
 
 .cash-column-heading h2,
@@ -134,6 +159,7 @@
 }
 
 .cash-column-heading button {
+  max-width: 100%;
   border: 0;
   border-radius: 8px;
   background: #006c67;
@@ -143,7 +169,8 @@
   font-weight: 900;
   min-height: 40px;
   padding: 9px 12px;
-  white-space: nowrap;
+  line-height: 1.2;
+  white-space: normal;
 }
 
 .cash-column-heading button:disabled {
@@ -176,6 +203,10 @@
   min-width: 180px;
   color: #5a2f17;
   font-weight: 900;
+}
+
+.cash-closing-history-heading > * {
+  min-width: 0;
 }
 
 .cash-closing-history-heading input {
@@ -327,6 +358,8 @@
 }
 
 .cash-pay-later-heading > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: #2b160d;
   font-size: 1.3rem;
 }
