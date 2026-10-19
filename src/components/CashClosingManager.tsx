@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { readOfflineSales } from '../lib/offlineQueue'
-import { syncOfflineQueue } from '../lib/offlineSyncService'
-import { runBackup } from '../lib/backupService'
 import { supabase } from '../lib/supabaseClient'
 import './CashClosingManager.css'
 
@@ -159,7 +156,6 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
   const [message, setMessage] = useState('')
   const [isDraftLoaded, setIsDraftLoaded] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [isEndDaySyncing, setIsEndDaySyncing] = useState(false)
   const [isLoadingMovement, setIsLoadingMovement] = useState(false)
 
   const notes = denominations.filter((item) => item.group === 'notas')
@@ -474,7 +470,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     successMessage = 'Fechamento de caixa salvo com sucesso.',
     resetForNextDay = false,
   ) => {
-    if (isSaving) return false
+    if (isSaving) return
 
     const notesDetail = buildDetail('notas')
     const coinsDetail = buildDetail('moedas')
@@ -511,11 +507,11 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
             'Nao foi possivel salvar o fechamento: falta executar o SQL de Despesas cartao loja no Supabase. ' +
               'Execute o arquivo supabase/sql/cash-closing-card-cash-fields.sql e tente salvar novamente.',
           )
-          return false
+          return
         }
 
         setMessage(`Nao foi possivel salvar o fechamento: ${error.message}`)
-        return false
+        return
       }
 
       const savedMonth = closingDate.slice(0, 7)
@@ -536,18 +532,16 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
           `${successMessage} Dinheiro do dia, cartao e Pix zerados para ${formatClosingDate(nextClosingDate)}. ` +
             `Dinheiro mantido como abertura: ${currencyFormatter.format(countedCash)}.`,
         )
-        return true
+        return
       }
 
       setMessage(`${successMessage} ${new Date().toLocaleTimeString('pt-BR')}`)
-      return true
     } catch (error) {
       setMessage(
         `Nao foi possivel salvar o fechamento: ${
           error instanceof Error ? error.message : 'erro inesperado'
         }`,
       )
-      return false
     } finally {
       setIsSaving(false)
     }
@@ -557,43 +551,11 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
     await saveClosing('Caixa aberto com sucesso.')
   }
 
-  const verifyEndDayPendingRecords = async () => {
-    if (isEndDaySyncing) return
-
-    setIsEndDaySyncing(true)
-    setMessage('Verificando pendencias offline e backup antes do fechamento...')
-
-    try {
-      const pendingBefore = readOfflineSales().length
-      const syncResult = await syncOfflineQueue('Conferencia antes do fechamento do dia')
-      const backupResult = await runBackup('Backup manual antes do fechamento do dia')
-      const pendingAfter = readOfflineSales().length
-      const pendingMessage =
-        pendingBefore === 0 && pendingAfter === 0
-          ? 'Nenhuma venda offline pendente.'
-          : `Pendencias offline: antes ${pendingBefore}, agora ${pendingAfter}.`
-
-      setMessage(`${pendingMessage} ${syncResult.message} Backup: ${backupResult.message}`)
-    } catch (error) {
-      setMessage(
-        `Nao foi possivel concluir a conferencia: ${
-          error instanceof Error ? error.message : 'erro inesperado'
-        }`,
-      )
-    } finally {
-      setIsEndDaySyncing(false)
-    }
-  }
-
   const closeDay = async () => {
     const confirmed = window.confirm('Deseja fechar o dia?')
     if (!confirmed) return
 
-    const saved = await saveClosing('Fechamento de caixa salvo com sucesso.', true)
-    if (!saved) return
-
-    const backupResult = await runBackup('Backup automatico apos fechamento do dia')
-    setMessage((current) => `${current} Backup final: ${backupResult.message}`)
+    await saveClosing('Fechamento de caixa salvo com sucesso.', true)
   }
 
   const renderDenomination = (item: Denomination) => {
@@ -854,10 +816,7 @@ export default function CashClosingManager({ currentUser }: CashClosingManagerPr
         <button type="button" onClick={saveOpening} disabled={isSaving}>
           {isSaving ? 'Salvando...' : 'Abrir caixa'}
         </button>
-        <button type="button" onClick={verifyEndDayPendingRecords} disabled={isEndDaySyncing}>
-          {isEndDaySyncing ? 'Verificando...' : 'Subir pendencias / backup'}
-        </button>
-        <button type="button" onClick={closeDay} disabled={isSaving || isEndDaySyncing}>
+        <button type="button" onClick={closeDay} disabled={isSaving}>
           {isSaving ? 'Salvando...' : 'Fechar o dia'}
         </button>
         <button type="button" onClick={printClosing} className="cash-print-button">
